@@ -8,6 +8,11 @@
 - [Lessons / 经验库（可迁移）](../explanation/LESSONS.md)
 - [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)
 
+## 2026-01-08
+- **Postmortem: tools/分层与全量wrapper生成门禁自举失败 + 退出码契约对齐**
+  - 文件：[`docs/postmortems/2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md`](2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md)
+  - 关键字：tools / wrapper / gen_tools_wrappers / SSOT / exit code / gate
+
 ## 2026-01-07
 - **docs↔code 对齐 + 缺失脚本补齐 + 文档门禁增强 + 输出可读性优化**
   - 文件：[`docs/postmortems/2026-01-07_postmortem_docs_code_alignment_and_doc_gates.md`](2026-01-07_postmortem_docs_code_alignment_and_doc_gates.md)

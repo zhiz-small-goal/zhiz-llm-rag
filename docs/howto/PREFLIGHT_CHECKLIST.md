@@ -60,6 +60,16 @@ python tools\check_cli_entrypoints.py
 **PASS 条件**
 - 输出列出的 `console_scripts` 与 scripts 目录 wrapper 一致（工具输出无 FAIL）
 
+### 1.3a 全量 wrapper 一致性门禁
+**命令（CMD）**
+```cmd
+python tools\gen_tools_wrappers.py --check
+```
+**PASS 条件**
+- 退出码为 0（FAIL=2 / ERROR=3）
+- 输出无 `missing SSOT`
+- 输出无 `wrappers not up-to-date`
+
 ### 1.3b 工具布局审计（tools↔src 分层 / 同名冲突）
 **命令（CMD）**
 ```cmd
@@ -136,6 +146,7 @@ python tools\verify_reports_schema.py
 
 - 依赖缺失/可选依赖：优先参考 [PR/CI Lite 门禁说明](ci_pr_gates.md) 与 [排障手册](TROUBLESHOOTING.md)。
 - 入口点不一致（console_scripts 缺失/路径漂移）：先修复 editable install 或 PATH/venv 激活，再复跑 1.3。
+- wrapper 门禁失败（`missing SSOT` / `wrappers not up-to-date`）：先运行 `python tools\gen_tools_wrappers.py --write` 收敛；若仍提示 `missing SSOT`，检查 `src/mhy_ai_rag_data/tools/<name>.py` 是否存在或该 tools 脚本是否应标记为 REPO-ONLY TOOL（见 [postmortem](../postmortems/2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md)）。
 - 文档引用检查失败：先修复被引用文件路径/编码，再复跑 1.4。
 
 ---

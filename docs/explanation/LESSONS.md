@@ -97,6 +97,25 @@ owner: zhiz
 - 清理规则：若同一问题在 3 篇以上 postmortem 中重复出现，必须：
   - 合并为 1 条经验条目（SSOT）
   - 并在 `../howto/PREFLIGHT_CHECKLIST.md` 中增加或收紧对应检查项
+
+## 2026-01-08｜tools 分层与全量 wrapper 门禁自举（回链）
+
+- 证据锚点：
+  - [Postmortem：tools/分层与全量wrapper生成门禁自举失败 + 退出码契约对齐](../postmortems/2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md)
+
+### 原则库（Principles）
+1) **先排除 repo-only/自举脚本，再做 wrapper->SSOT 映射**：受管对象集合必须可闭合，否则 `missing SSOT` 会让门禁永远 FAIL。
+2) **FAIL/ERROR 退出码必须区分**：规则不满足返回 2，脚本异常返回 3，避免 CI 信号混淆。
+3) **先 `--check` 出清单，再 `--write` 收敛**：全量对齐以可审计 diff 为先，避免一次性无差别改写。
+
+### 反模式库（Anti-patterns）
+- 将 `gen_tools_wrappers.py` 等 repo-only 工具纳入受管集合，触发自举与 `missing SSOT`。
+- wrapper 中混入业务逻辑，造成“入口漂移 + 双实现”。
+- 异常退出码不对齐，CI 无法区分规则失败与脚本异常。
+
+### 控制点与门禁（Controls）
+- wrapper 一致性门禁：`python tools\gen_tools_wrappers.py --check`
+- tools<->src 分层/同名冲突门禁：`python tools\check_tools_layout.py --mode fail`
 ## 2026-01-07｜docs↔code 对齐与文档门禁治理（回链）
 
 - 证据锚点：
