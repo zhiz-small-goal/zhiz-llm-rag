@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+"""REPO-ONLY TOOL
+
 check_cli_entrypoints.py
 
 Purpose

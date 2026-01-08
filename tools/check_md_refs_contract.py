@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""check_md_refs_contract.py
+"""REPO-ONLY TOOL
+
+check_md_refs_contract.py
 
 Purpose
   Gate the stability of the md_refs API contract and its call sites.

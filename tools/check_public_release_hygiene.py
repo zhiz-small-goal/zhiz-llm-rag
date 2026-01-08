@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+"""REPO-ONLY TOOL
+
 Public Release Hygiene Audit (v2)
 
 Changelog v2:

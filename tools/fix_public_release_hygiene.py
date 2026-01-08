@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+"""REPO-ONLY TOOL
+
 Fix Public Release Hygiene (v1)
 
 Goal:

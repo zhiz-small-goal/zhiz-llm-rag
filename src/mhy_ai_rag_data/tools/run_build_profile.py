@@ -7,15 +7,6 @@
 用一个 JSON profile（如 build_profile_schemeB.json）驱动 plan -> build -> check 的一致性执行，
 把“口径”从手工命令行复制升级为可复现的配置文件。
 
-默认执行顺序
-------------
-1) capture env (tools/capture_rag_env.py)
-2) extract units (extract_units.py) - if units missing
-3) validate units (validate_rag_units.py)
-4) plan chunks (tools/plan_chunks_from_units.py)
-5) build chroma (build_chroma_index.py)
-6) check count == plan (check_chroma_build.py --plan ...)
-
 退出码
 ------
 0：PASS
@@ -45,6 +36,10 @@ def _load_profile(p: Path) -> Dict[str, Any]:
     return obj
 
 
+def _boolish(s: str) -> bool:
+    return str(s).lower() in {"1", "true", "yes", "y", "on"}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Run RAG build pipeline from a JSON profile (plan->build->check).")
     ap.add_argument("--profile", default="build_profile_schemeB.json", help="Path to profile json")
@@ -52,6 +47,11 @@ def main() -> int:
         "--build-script",
         default="tools/build_chroma_index_flagembedding.py",
         help="Which build script to call (recommended: tools/build_chroma_index_flagembedding.py).",
+    )
+    ap.add_argument(
+        "--force-extract-units",
+        default="false",
+        help="true/false; force re-generate text_units.jsonl even if it already exists",
     )
     ap.add_argument("--skip-build", default="false", help="true/false; for debugging")
     args = ap.parse_args()
@@ -85,8 +85,18 @@ def main() -> int:
     else:
         print("[WARN] tools/capture_rag_env.py missing; skip env capture")
 
-    # 2) extract units if missing
-    if not units_path.exists():
+    # 2) extract units when missing / inventory newer / forced
+    inv_path = (root / "inventory.csv").resolve()
+    force_extract = _boolish(args.force_extract_units)
+
+    need_extract = force_extract or (not units_path.exists())
+    if not need_extract and inv_path.exists():
+        try:
+            need_extract = inv_path.stat().st_mtime > units_path.stat().st_mtime
+        except Exception:
+            need_extract = True
+
+    if need_extract:
         rc = _run([sys.executable, "extract_units.py"], cwd=root)
         if rc != 0:
             print("STATUS: FAIL (extract_units.py)")
@@ -137,9 +147,9 @@ def main() -> int:
         return 2
 
     # 5) build
-    skip_build = str(args.skip_build).lower() in {"1", "true", "yes", "y", "on"}
+    skip_build = _boolish(args.skip_build)
     if not skip_build:
-        build_script = args.build_script
+        build_script = str(args.build_script)
         if build_script.endswith(".py"):
             build_script_path = (root / build_script).resolve()
             if not build_script_path.exists():
@@ -197,7 +207,18 @@ def main() -> int:
         on_missing_state = str(profile.get("on_missing_state", "reset"))
         schema_change = str(profile.get("schema_change", "reset"))
         strict_sync = "true" if bool(profile.get("strict_sync", True)) else "false"
-        cmd += ["--sync-mode", sync_mode, "--state-root", state_root, "--on-missing-state", on_missing_state, "--schema-change", schema_change, "--strict-sync", strict_sync]
+        cmd += [
+            "--sync-mode",
+            sync_mode,
+            "--state-root",
+            state_root,
+            "--on-missing-state",
+            on_missing_state,
+            "--schema-change",
+            schema_change,
+            "--strict-sync",
+            strict_sync,
+        ]
 
         rc = _run(cmd, cwd=root)
         if rc != 0:
@@ -215,8 +236,6 @@ def main() -> int:
             db_rel,
             "--collection",
             coll,
-            "--plan",
-            plan_rel,
             "--plan",
             str(plan_out),
         ],

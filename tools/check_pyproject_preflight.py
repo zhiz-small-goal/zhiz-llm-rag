@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Preflight: verify pyproject.toml is UTF-8 + sane ASCII-ish, and parseable TOML.
+"""REPO-ONLY TOOL
+
+Preflight: verify pyproject.toml is UTF-8 + sane ASCII-ish, and parseable TOML.
 
 Rationale
 - TOML v1.0 requires UTF-8 documents; non-UTF8 or invisible unicode often causes pip/PEP 517 failure.
