@@ -1,0 +1,16 @@
+{
+  "forbidden_tracked_paths": [
+    "inventory.csv",
+    "chroma.sqlite3",
+    "data_raw/",
+    "data_processed/",
+    "chroma_db/",
+    "chroma_db_*",
+    "*.sqlite3",
+    "*.db",
+    "*.pkl",
+    "*.npz"
+  ],
+  "max_file_size_mb_warn": 5,
+  "max_file_size_mb_high": 20
+}

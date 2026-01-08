@@ -1,0 +1,58 @@
+{
+  "any_local": false,
+  "check_title_backticks": false,
+  "extensions": [
+    ".md",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".bmp",
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".avi",
+    ".webm",
+    ".mp3",
+    ".wav",
+    ".ogg",
+    ".flac",
+    ".pdf",
+    ".txt",
+    ".csv",
+    ".json",
+    ".jsonl"
+  ],
+  "ignore_prefixes": [
+    "data_raw/",
+    "data_processed/",
+    "chroma_db/",
+    ".venv_rag/",
+    ".venv/"
+  ],
+  "ignore_contains": [
+    "llm_probe_report_",
+    "time_report_",
+    "_report_<",
+    "<ts>",
+    "*_report_"
+  ],
+  "ignore_bare_filenames": [
+    "inventory.csv",
+    "check.json",
+    "chunk_plan.json",
+    "env_report.json",
+    "inventory_build_report.json",
+    "eval_cases.jsonl",
+    "eval_retrieval_report.json",
+    "eval_rag_report.json"
+  ],
+  "ignore_bare_regexes": [
+    ".*\\\\.events\\\\.jsonl$",
+    ".*\\\\.progress\\\\.json$"
+  ],
+  "check_backticks": false,
+  "treat_leading_slash_as_repo_root": true
+}

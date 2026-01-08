@@ -1,0 +1,61 @@
+# tools/llm_http_client.py 使用说明（替代方案 B：统一 LLM HTTP Client）
+
+## 目的
+本模块为项目内所有脚本提供统一的 **OpenAI-compatible** HTTP 访问能力，解决以下问题：
+
+1) **本地回环地址不走代理**：在 Windows 上常见 `ALL_PROXY/HTTP_PROXY=127.0.0.1:7890` 会把 `http://127.0.0.1:8000/v1` 劫持到代理端口，导致 `ReadTimeout`。本模块默认对回环地址 `trust_env=False`（`--trust-env auto`）。
+2) **connect/read 超时拆分**：requests 支持 `timeout=(connect, read)`，避免“连接很快但生成较慢”时误判。
+3) **错误可观测**：异常包含 url/base_url/trust_env/timeout/cause，并在发生 4xx/5xx 时尽量携带
+   `status_code/content-type/response_snippet`（正文截断），用于快速定位“服务端立即拒绝”的根因
+   （例如 model id 不存在、上下文超限、参数不兼容等）。
+
+## API
+### 1) GET JSON
+```python
+from mhy_ai_rag_data.tools.llm_http_client import get_json
+data = get_json("http://127.0.0.1:8000/v1", "/models", read_timeout=10)
+```
+
+### 2) POST JSON
+```python
+from mhy_ai_rag_data.tools.llm_http_client import post_json
+data = post_json("http://127.0.0.1:8000/v1", "/chat/completions", payload, read_timeout=120)
+```
+
+### 3) chat_completions + extract_chat_content
+```python
+from mhy_ai_rag_data.tools.llm_http_client import chat_completions, extract_chat_content
+resp = chat_completions(base_url, payload, read_timeout=120)
+answer = extract_chat_content(resp)
+```
+
+## trust_env_mode 说明
+- `auto`（默认）：如果 base_url 指向 `localhost/127.0.0.1/::1`，则 `trust_env=False`；否则 `trust_env=True`
+- `true`：总是读取环境代理（HTTP_PROXY/ALL_PROXY）
+- `false`：总是忽略环境代理（强制直连）
+
+## 推荐默认值（LM Studio）
+- `connect_timeout=10`
+- `read_timeout=120`（评测/回归建议 120~180；探测建议 10~30）
+
+## 兼容性注意
+- 若你以 `python tools/xxx.py`（脚本路径）运行，项目根目录可能不在 `sys.path`。因此推荐以模块方式运行工具脚本：
+  - `python -m tools.probe_llm_server ...`
+  - `python -m tools.run_eval_rag ...`
+本项目已有部分脚本支持两种运行方式；如果你坚持用脚本路径运行，需要确保 import 路径可用。
+
+
+### 4) 自动解析模型 id（/models）
+```python
+from mhy_ai_rag_data.tools.llm_http_client import resolve_model_id
+model, info = resolve_model_id(
+    "http://127.0.0.1:8000/v1",
+    "auto",
+    connect_timeout=10,
+    read_timeout=10,
+    trust_env_mode="auto",
+)
+print(model)
+print(info["selection_reason"], info.get("server_models"))
+```
+说明：当本地服务返回多个模型 id（例如 `qwen2.5-7b` 与 `qwen2.5-7b-instruct`）时，会优先选择 `instruct`/`chat`。

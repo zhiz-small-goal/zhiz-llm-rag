@@ -1,0 +1,742 @@
+diff -ruN /mnt/data/_orig/docs/howto/OPERATION_GUIDE.md /mnt/data/_proj/docs/howto/OPERATION_GUIDE.md
+--- /mnt/data/_orig/docs/howto/OPERATION_GUIDE.md	2026-01-01 21:02:10.000000000 +0000
++++ /mnt/data/_proj/docs/howto/OPERATION_GUIDE.md	2026-01-02 11:52:32.841561761 +0000
+@@ -146,6 +146,19 @@
+ **产物**：`data_processed/index_state/<collection>/<schema_hash>/index_state.json` + `LATEST` 指针文件。  
+ 
+ 
++
++
++**新增（2026-01-02）：DB 构建戳（db_build_stamp.json）**  
++**做什么**：在 `data_processed/index_state/db_build_stamp.json` 写入一份“写库完成”的稳定戳，用于 `rag-status` 的 STALE 判定。该戳只应在 build/upsert/sync 成功后更新（写库），而不应在 query/eval 等读库行为中变化。  
++**为何（因果）**：Windows + SQLite/Chroma 可能在只读查询时更新 DB 目录 mtime，若仅用目录 mtime 推导依赖关系，会让 `check.json` 被误判 STALE，造成重复无效回归。引入 build stamp 相当于给 DB 增加一个“稳定 freshness basis”，从系统角度把“读触发的 mtime 噪声”与“写库导致的语义变化”分离开来。  
++**关键参数/注意**：新版本 build 脚本会自动写入该戳；若你已有旧库（缺此文件），只需手动补一次，然后再重跑一次 Step 6 的 check 生成新的 `check.json`。  
++**推荐命令（CMD）**：
++```cmd
++rag-stamp --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json
++
++:: 无 rag-stamp entrypoint 时
++python tools\write_db_build_stamp.py --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json
++```
+ ---
+ 
+ ### Step 6：check（强校验）——以 plan 为准做 PASS/FAIL 判定
+diff -ruN /mnt/data/_orig/docs/howto/rag_status.md /mnt/data/_proj/docs/howto/rag_status.md
+--- /mnt/data/_orig/docs/howto/rag_status.md	2026-01-02 15:18:34.000000000 +0000
++++ /mnt/data/_proj/docs/howto/rag_status.md	2026-01-02 11:52:32.841366536 +0000
+@@ -1,73 +1,66 @@
+-# How-to：rag-status（跨机续跑/重复构建时的进度自检）
++# rag-status 使用说明
+ 
+-> 目标：当你在两台机器间切换、或同一台机器重复跑不同阶段后，快速回答三个问题：  
+-> 1) **我现在“产物齐不齐、报告 PASS 不 PASS”？**  
+-> 2) **哪些产物已经过期（STALE），需要重跑下游？**  
+-> 3) **下一步应该执行哪条命令（最小动作）？**
+-
+-## 目录
+-- [1) 你应该在什么时候跑它](#1-你应该在什么时候跑它)
+-- [2) 最推荐的用法（有 profile）](#2-最推荐的用法有-profile)
+-- [3) 无 profile 的用法（默认口径）](#3-无-profile-的用法默认口径)
+-- [4) 输出字段与判定口径（OK/MISS/STALE/FAIL）](#4-输出字段与判定口径okmissstalefail)
+-- [5) 常见场景与下一步建议](#5-常见场景与下一步建议)
+-
+-## 1) 你应该在什么时候跑它
+-- **每天开工第一条命令**：进入仓库后先 `rag-status`，确认当前是否缺产物、哪些报告失败、是否存在 STALE。  
+-- **跨机续跑前**：从另一台机器拿到仓库（或产物目录）后，先跑 `rag-status --profile ...`，避免用错 db/collection/plan。  
+-- **重复构建前**：你准备重新 plan/build/check 之前先跑一次，确认上游是否更新导致下游需要重做。
+-
+-## 2) 最推荐的用法（有 profile）
+-> 你在 Step 5（build）已使用 `build_profile_schemeB.json` 固化参数时，`rag-status` 应当同样以 profile 作为“单一事实来源”。
++- [目标](#目标)
++- [输出字段快速理解](#输出字段快速理解)
++- [STALE 的判定规则](#stale-的判定规则)
++- [db_build_stampjson](#db_build_stampjson)
++- [常见问题](#常见问题)
++
++## 目标
++`rag-status` 用于**只读扫描**本地 RAG 管线的关键产物（inventory / units / plan / Chroma DB / reports / index_state），并给出：
++1) 当前每个产物的 OK/MISS/STALE/FAIL 状态；
++2) 下一步建议（NEXT/WHY/CMDS）。
++
++该命令默认不作为门禁（INFO 级别），但可以作为“我现在该跑哪一步”的稳定导航。
++
++## 输出字段快速理解
++- **OK**：文件存在且不需要更新（或虽为旧文件但不影响当前依赖关系）。
++- **MISS**：缺失，需要生成。
++- **FAIL**：存在但无法解析，或报告显示 FAIL/ERROR。
++- **STALE**：存在且可解析，但**上游输入更新**了，需要重跑以确保一致性。
++
++## STALE 的判定规则
++`rag-status` 的 STALE 是“工程依赖”意义上的：
++- 对于大多数产物：如果其任一 `inputs` 的 mtime **晚于**该产物（或其“freshness basis”），则判定为 STALE。
++- 对于 `dir`（例如 Chroma DB 目录）：默认使用目录内“最新 mtime”的文件作为该目录的 mtime。
++
++问题：在 Windows 上，SQLite/Chroma 在**仅查询（read）**时也可能触发 WAL/元数据写入，导致 DB 目录 mtime 变化，进而让 `check.json` 被误判为 STALE。
++
++因此本仓库引入 `db_build_stamp.json` 作为 DB 的稳定 freshness basis（见下文）。
++
++## db_build_stamp.json
++### 为什么需要它
++- **事实**：Windows + SQLite/Chroma 可能在查询时更新 DB 目录/文件 mtime；
++- **后果**：`check.json` 可能在你跑了 `eval_rag.py`/检索回归之后，被 `rag-status` 提示为 STALE（尽管 check 本身仍然 PASS）。
++
++### 它解决什么
++`db_build_stamp.json` 是一个“构建戳”文件：
++- 仅在 build/upsert/sync 等“写库”步骤成功后更新；
++- query/eval/retriever 等“读库”步骤不会触碰它。
++
++`rag-status` 的两处判定会优先使用该戳：
++- **DB 是否 STALE**：用 `plan.mtime` 对比 `db_build_stamp.json.mtime`；
++- **check.json 是否 STALE**：用 `db_build_stamp.json.mtime`（而不是 DB 目录 mtime）作为“DB 变化”的信号。
++
++### 如何生成
++- 新版本 build 脚本成功后会**自动写入**：`data_processed/index_state/db_build_stamp.json`。
++- 如果你的库是在旧版本脚本下构建的（没有该文件），只需手动补一次：
+ 
+ ```cmd
+-rag-status --profile build_profile_schemeB.json
+-```
+-
+-如果你希望把状态也落盘为 JSON（便于 CI 或留证据）：
++rag-stamp --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json
+ 
+-```cmd
+-rag-status --profile build_profile_schemeB.json --strict ^
+-  --json-out data_processed\build_reports\status.json
++:: 没有重新安装 entrypoint 时，用 python 直跑
++python tools\write_db_build_stamp.py --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json
+ ```
+ 
+-说明：
+-- `--strict` 会把 MISS/FAIL/STALE 视为 FAIL 并返回非 0；默认不严格（INFO），更适合日常交互。  
+-- `--json-out` 遵循契约：**只写这一份**（不会额外生成时间戳文件）。
+-
+-## 3) 无 profile 的用法（默认口径）
+-```cmd
+-rag-status
+-```
+-
+-默认将使用：
+-- units：`data_processed/text_units.jsonl`
+-- plan：`data_processed/chunk_plan.json`
+-- db：`chroma_db`
+-- collection：`rag_chunks`
+-- reports：`data_processed/build_reports/`
+-
+-如果你不是用这些默认路径，请改用 `--profile`，或显式覆盖：
++补戳之后，建议再跑一次 check 生成新的 `check.json`：
+ 
+ ```cmd
+-rag-status --db chroma_db --collection rag_chunks --units data_processed\text_units.jsonl
++rag-check --json-out data_processed\build_reports\check.json
+ ```
+ 
+-## 4) 输出字段与判定口径（OK/MISS/STALE/FAIL）
+-- **OK**：对应文件/目录存在（报告类还需 status=PASS 或 overall=PASS）。  
+-- **MISS**：不存在。  
+-- **FAIL**：存在但不可用（空文件、JSON 解析失败、报告 FAIL/ERROR）。  
+-- **STALE**：存在但“上游比它新”（例如 `text_units.jsonl` 更新后 `chunk_plan.json` 仍是旧的）。  
+-
+-> STALE 是跨机/重复构建最常见的坑：你看到“文件都在”，但其实下游已经过期，继续用会产生口径漂移。
+-
+-## 5) 常见场景与下一步建议
+-- `units=MISS` 且 `inventory=MISS`：先跑 `rag-inventory` 再 `rag-extract-units`。  
+-- `units=OK` 但 `units_report=MISS/FAIL/STALE`：跑一次 `rag-validate-units --json-out ...` 固化“硬校验”信号。  
+-- `plan=STALE`：说明 units 更新过，必须重跑 `rag-plan` 或 `run_profile_with_timing`。  
+-- `db=STALE`：plan 更新过但库没重建（或增量同步状态不一致），按 Step 5 的 profile 路径重跑 build。  
+-- `check_report=MISS/FAIL`：按 Step 6 跑 check，确认 expected==count。  
+-
+-关联：
+-- 日常主线：[`docs/howto/OPERATION_GUIDE.md`](OPERATION_GUIDE.md)
+-- 契约：[`docs/reference/REFERENCE.md`](../reference/REFERENCE.md)
++## 常见问题
++### 1) 我刚跑完 `rag-check`，但一跑检索回归就提示 check.json STALE
++优先检查是否存在 `data_processed/index_state/db_build_stamp.json`。
++- 若缺失：按上文先 `rag-stamp` 补戳，再重跑一次 `rag-check --json-out ...`。
++- 若存在：确认 `check.json.mtime` 晚于 `db_build_stamp.json.mtime`（否则就是正常 STALE，需要重跑 check）。
+diff -ruN /mnt/data/_orig/docs/reference/REFERENCE.md /mnt/data/_proj/docs/reference/REFERENCE.md
+--- /mnt/data/_orig/docs/reference/REFERENCE.md	2026-01-02 15:18:34.000000000 +0000
++++ /mnt/data/_proj/docs/reference/REFERENCE.md	2026-01-02 11:52:32.841759053 +0000
+@@ -55,6 +55,7 @@
+ - `check_llm_http.py`：兼容 OpenAI/Ollama 的快速 HTTP 探测（更偏手动排障）；若你要回归/固定落盘，优先使用 `tools/probe_llm_server.py`。
+ - `check_rag_pipeline.py`：检索 + prompt 构造自检（不调用 LLM），输出以人工阅读为主。
+ - `rag-status`：只读扫描本地产物/报告，输出 OK/MISS/STALE/FAIL 并给出下一步命令建议；默认 INFO，不作为门禁（可用 `--strict` 作为门禁）。
++- `rag-stamp`：写入/更新 `data_processed/index_state/db_build_stamp.json`（仅在写库完成后更新），用于让 `rag-status` 的 STALE 判定不受“读库刷新 mtime”噪声影响。
+ - `tools/smoke_test_pipeline.py`：一键串联多个步骤的“冒烟脚本”，其可靠信号是**退出码**；若你需要机器可读回归数据，建议对各子步骤分别使用 `--json-out` 落盘。
+ 
+ ---
+diff -ruN /mnt/data/_orig/pyproject.toml /mnt/data/_proj/pyproject.toml
+--- /mnt/data/_orig/pyproject.toml	2026-01-02 15:18:34.000000000 +0000
++++ /mnt/data/_proj/pyproject.toml	2026-01-02 11:52:32.841258501 +0000
+@@ -61,6 +61,7 @@
+ rag-check-pipeline = "mhy_ai_rag_data.cli:check_rag_pipeline"
+ rag-check-all = "mhy_ai_rag_data.cli:check_all"
+ rag-status = "mhy_ai_rag_data.cli:status"
++rag-stamp = "mhy_ai_rag_data.cli:stamp"
+ rag-init-eval-cases = "mhy_ai_rag_data.tools.init_eval_cases:main"
+ 
+ [tool.setuptools]
+Binary files /mnt/data/_orig/src/mhy_ai_rag_data/__pycache__/build_chroma_index.cpython-311.pyc and /mnt/data/_proj/src/mhy_ai_rag_data/__pycache__/build_chroma_index.cpython-311.pyc differ
+Binary files /mnt/data/_orig/src/mhy_ai_rag_data/__pycache__/cli.cpython-311.pyc and /mnt/data/_proj/src/mhy_ai_rag_data/__pycache__/cli.cpython-311.pyc differ
+diff -ruN /mnt/data/_orig/src/mhy_ai_rag_data/build_chroma_index.py /mnt/data/_proj/src/mhy_ai_rag_data/build_chroma_index.py
+--- /mnt/data/_orig/src/mhy_ai_rag_data/build_chroma_index.py	2025-12-30 22:03:48.000000000 +0000
++++ /mnt/data/_proj/src/mhy_ai_rag_data/build_chroma_index.py	2026-01-02 11:52:32.841095559 +0000
+@@ -370,6 +370,23 @@
+     # compact breakdown for debugging / postmortem
+     top = sorted(((k, v.get("chunks", 0)) for k, v in type_breakdown.items()), key=lambda x: x[1], reverse=True)[:8]
+     print(f"type_breakdown.top_chunks={top}")
++
++    # write DB build stamp (stable freshness basis for rag-status)
++    try:
++        from mhy_ai_rag_data.tools.write_db_build_stamp import write_db_build_stamp
++        state_root = (root / "data_processed" / "index_state").resolve()
++        stamp_out = write_db_build_stamp(
++            root=root,
++            db=db_path,
++            collection=str(args.collection),
++            state_root=state_root,
++            plan_path=None,
++            collection_count=int(collection.count()) if collection else None,
++            writer="build_chroma_index",
++        )
++        print(f"[OK] wrote db_build_stamp: {stamp_out}")
++    except Exception as e:  # noqa: BLE001
++        print(f"[WARN] failed to write db_build_stamp.json: {type(e).__name__}: {e}")
+     return 0
+ 
+ 
+diff -ruN /mnt/data/_orig/src/mhy_ai_rag_data/cli.py /mnt/data/_proj/src/mhy_ai_rag_data/cli.py
+--- /mnt/data/_orig/src/mhy_ai_rag_data/cli.py	2026-01-02 15:18:34.000000000 +0000
++++ /mnt/data/_proj/src/mhy_ai_rag_data/cli.py	2026-01-02 11:52:32.840915342 +0000
+@@ -52,3 +52,8 @@
+ 
+ def status() -> None:
+     runpy.run_module("mhy_ai_rag_data.tools.rag_status", run_name="__main__")
++
++
++def stamp() -> None:
++    """Write/update Chroma DB build stamp (stable freshness basis for status)."""
++    runpy.run_module("mhy_ai_rag_data.tools.write_db_build_stamp", run_name="__main__")
+Binary files /mnt/data/_orig/src/mhy_ai_rag_data/tools/__pycache__/build_chroma_index_flagembedding.cpython-311.pyc and /mnt/data/_proj/src/mhy_ai_rag_data/tools/__pycache__/build_chroma_index_flagembedding.cpython-311.pyc differ
+Binary files /mnt/data/_orig/src/mhy_ai_rag_data/tools/__pycache__/rag_status.cpython-311.pyc and /mnt/data/_proj/src/mhy_ai_rag_data/tools/__pycache__/rag_status.cpython-311.pyc differ
+Binary files /mnt/data/_orig/src/mhy_ai_rag_data/tools/__pycache__/run_build_profile.cpython-311.pyc and /mnt/data/_proj/src/mhy_ai_rag_data/tools/__pycache__/run_build_profile.cpython-311.pyc differ
+Binary files /mnt/data/_orig/src/mhy_ai_rag_data/tools/__pycache__/run_profile_with_timing.cpython-311.pyc and /mnt/data/_proj/src/mhy_ai_rag_data/tools/__pycache__/run_profile_with_timing.cpython-311.pyc differ
+Binary files /mnt/data/_orig/src/mhy_ai_rag_data/tools/__pycache__/write_db_build_stamp.cpython-311.pyc and /mnt/data/_proj/src/mhy_ai_rag_data/tools/__pycache__/write_db_build_stamp.cpython-311.pyc differ
+diff -ruN /mnt/data/_orig/src/mhy_ai_rag_data/tools/build_chroma_index_flagembedding.py /mnt/data/_proj/src/mhy_ai_rag_data/tools/build_chroma_index_flagembedding.py
+--- /mnt/data/_orig/src/mhy_ai_rag_data/tools/build_chroma_index_flagembedding.py	2025-12-30 22:03:48.000000000 +0000
++++ /mnt/data/_proj/src/mhy_ai_rag_data/tools/build_chroma_index_flagembedding.py	2026-01-02 11:52:32.840568249 +0000
+@@ -73,6 +73,7 @@
+     b.add_argument("--units", default="data_processed/text_units.jsonl")
+     b.add_argument("--db", default="chroma_db")
+     b.add_argument("--collection", default="rag_chunks")
++    b.add_argument("--plan", default=None, help="Optional: chunk_plan.json path used only for db_build_stamp traceability.")
+ 
+     b.add_argument("--embed-model", default="BAAI/bge-m3")
+     b.add_argument("--device", default="cpu")
+@@ -534,6 +535,28 @@
+         print("HINT: if你是首次引入 index_state 或 state 丢失，请用 --on-missing-state reset 让库回到干净态。")
+         return 2
+ 
++    # 12) write DB build stamp (stable freshness basis for rag-status)
++    try:
++        from mhy_ai_rag_data.tools.write_db_build_stamp import write_db_build_stamp
++
++        plan_for_stamp = None
++        if args.plan:
++            plan_arg = str(args.plan)
++            plan_for_stamp = (root / plan_arg).resolve() if not Path(plan_arg).is_absolute() else Path(plan_arg).resolve()
++
++        stamp_out = write_db_build_stamp(
++            root=root,
++            db=db_path,
++            collection=str(args.collection),
++            state_root=state_root,
++            plan_path=plan_for_stamp,
++            collection_count=final_count,
++            writer="build_chroma_index_flagembedding",
++        )
++        print(f"[OK] wrote db_build_stamp: {stamp_out}")
++    except Exception as e:  # noqa: BLE001
++        print(f"[WARN] failed to write db_build_stamp.json: {type(e).__name__}: {e}")
++
+     return 0
+ 
+ 
+diff -ruN /mnt/data/_orig/src/mhy_ai_rag_data/tools/rag_status.py /mnt/data/_proj/src/mhy_ai_rag_data/tools/rag_status.py
+--- /mnt/data/_orig/src/mhy_ai_rag_data/tools/rag_status.py	2026-01-02 15:18:34.000000000 +0000
++++ /mnt/data/_proj/src/mhy_ai_rag_data/tools/rag_status.py	2026-01-02 11:52:32.840106844 +0000
+@@ -47,6 +47,7 @@
+     kind: str  # "file" | "json" | "dir" | "report_v1" | "stage1_verify" | "stage1_snapshot"
+     path: Path
+     inputs: Tuple[Path, ...] = ()
++    freshness: Optional[Path] = None  # optional: use this path's mtime as freshness basis
+     optional: bool = False
+ 
+ 
+@@ -109,12 +110,21 @@
+     return st.st_mtime
+ 
+ 
+-def _is_stale(out_path: Path, inputs: Sequence[Path]) -> bool:
++def _is_stale(out_path: Path, inputs: Sequence[Path], *, freshness_path: Optional[Path] = None) -> bool:
++    """Return True if any input is newer than output.
++
++    freshness_path:
++      Some items (notably the Chroma DB dir) have unstable mtimes on Windows/SQLite even in read-only flows.
++      When provided and exists, we use its mtime as the 'output' freshness basis, while still displaying out_path.
++    """
+     if not inputs:
+         return False
+-    out_mt = _dir_latest_mtime(out_path) if out_path.is_dir() else _mtime(out_path)
++
++    basis = freshness_path if (freshness_path is not None and freshness_path.exists()) else out_path
++    out_mt = _dir_latest_mtime(basis) if basis.is_dir() else _mtime(basis)
+     if out_mt is None:
+         return False
++
+     for inp in inputs:
+         inp_mt = _dir_latest_mtime(inp) if inp.is_dir() else _mtime(inp)
+         if inp_mt is None:
+@@ -178,6 +188,10 @@
+         "plan": ["rag-plan", "python tools/plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl --out data_processed/chunk_plan.json"],
+         "build_profile": [f"python tools/run_build_profile.py --profile {prof}", "rag-build  # (不推荐默认：更适合无 profile 的简单构建)"],
+         "build_with_timing": [f"python tools/run_profile_with_timing.py --profile {prof} --smoke"],
++        "stamp": [
++            "rag-stamp --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json",
++            "python tools/write_db_build_stamp.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json --writer manual",
++        ],
+         "check": [
+             "rag-check --json-out data_processed/build_reports/check.json",
+             "python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json --json-out data_processed/build_reports/check.json",
+@@ -217,13 +231,27 @@
+     stage1_verify = reports_dir / "stage1_verify.json"
+     stage1_snapshot = reports_dir / "stage1_baseline_snapshot.json"
+ 
++    # A stable DB freshness basis (updated only on successful write-to-db operations).
++    state_dir = state_root if state_root is not None else (root / "data_processed" / "index_state")
++    stamp_path = state_dir / "db_build_stamp.json"
++    stamp_exists = stamp_path.exists()
++
+     items: List[CheckItem] = [
+         CheckItem("inventory", "inventory.csv（资料清单）", "file", inv, optional=True),
+         CheckItem("units", "text_units.jsonl（抽取产物）", "file", units, inputs=(inv,)),
+         CheckItem("units_report", "units.json（validate 报告）", "report_v1", units_report, inputs=(units,), optional=True),
+         CheckItem("plan", "chunk_plan.json（chunk 计划）", "json", plan, inputs=(units,)),
+-        CheckItem("db", f"Chroma DB（{collection}）", "dir", chroma_dir, inputs=(plan,)),
+-        CheckItem("check_report", "check.json（强校验报告）", "report_v1", check_report, inputs=(plan, chroma_dir), optional=True),
++        # NOTE: DB mtime is unstable on Windows/SQLite in some read flows; prefer stamp_path when available.
++        CheckItem("db", f"Chroma DB（{collection}）", "dir", chroma_dir, inputs=(plan,), freshness=stamp_path if stamp_exists else None),
++        CheckItem("db_stamp", "db_build_stamp.json（DB 构建戳）", "json", stamp_path, optional=True),
++        CheckItem(
++            "check_report",
++            "check.json（强校验报告）",
++            "report_v1",
++            check_report,
++            inputs=(plan, stamp_path) if stamp_exists else (plan, chroma_dir),
++            optional=True,
++        ),
+         CheckItem("llm_probe", "llm_probe.json（LLM 探测报告）", "report_v1", llm_report, optional=True),
+         CheckItem("stage1_verify", "stage1_verify.json（Stage-1 一键验收）", "stage1_verify", stage1_verify, optional=True),
+         CheckItem("stage1_snapshot", "stage1_baseline_snapshot.json（Stage-1 基线快照）", "stage1_snapshot", stage1_snapshot, optional=True),
+@@ -271,7 +299,7 @@
+             out["detail"]["mtime_h"] = _iso_local(mt)
+ 
+     # stale
+-    out["stale"] = _is_stale(it.path, it.inputs)
++    out["stale"] = _is_stale(it.path, it.inputs, freshness_path=it.freshness)
+ 
+     if it.kind == "file":
+         out["status"] = "OK"
+@@ -308,6 +336,11 @@
+                 out["detail"]["chunks"] = len(obj["chunks"])
+             if "n_chunks" in obj and isinstance(obj["n_chunks"], int):
+                 out["detail"]["n_chunks"] = obj["n_chunks"]
++            # db_build_stamp.json / other helper jsons
++            if "collection_count" in obj and isinstance(obj.get("collection_count"), int):
++                out["detail"]["collection_count"] = int(obj["collection_count"])
++            if "schema_hash" in obj and isinstance(obj.get("schema_hash"), str):
++                out["detail"]["schema_hash"] = str(obj["schema_hash"])
+         if out["stale"]:
+             out["status"] = "STALE"
+         return out
+@@ -387,6 +420,7 @@
+         ("units_report", "Step 3（validate units）", "validate_units"),
+         ("plan", "Step 4（plan）", "plan"),
+         ("db", "Step 5（build）", "build_with_timing"),
++        ("db_stamp", "Step 5.5（db stamp）", "stamp"),
+         ("check_report", "Step 6（check）", "check"),
+         ("llm_probe", "Step 8（probe llm）", "probe_llm"),
+         ("stage1_verify", "Step 9（verify stage1）", "verify_stage1"),
+@@ -405,7 +439,7 @@
+     for key, step_label, cmd_key in order:
+         st = evals.get(key, {}).get("status")
+         opt = bool(evals.get(key, {}).get("optional"))
+-        if opt and key in ("inventory", "units_report", "check_report", "llm_probe", "stage1_verify", "stage1_snapshot"):
++        if opt and key in ("inventory", "units_report", "db_stamp", "check_report", "llm_probe", "stage1_verify", "stage1_snapshot"):
+             # optional items don't block unless FAIL/STALE and downstream depends
+             if key == "units_report":
+                 # recommend validate even if optional when units exists
+@@ -416,6 +450,15 @@
+                         "commands": cmds[cmd_key],
+                     }
+                 continue
++            if key == "db_stamp":
++                # 若库存在但 stamp 缺失：建议先补 stamp，避免后续 check 被误判为 STALE。
++                if evals.get("db", {}).get("status") in ("OK", "STALE") and st in ("MISS", "FAIL"):
++                    return {
++                        "stage": key,
++                        "why": f"{step_label}：检测到 DB 已存在，但 db_build_stamp.json 缺失/不可读；建议补写构建戳以获得稳定的 freshness 判定（避免只读评测刷新 DB mtime 导致误 STALE）。",
++                        "commands": cmds[cmd_key],
++                    }
++                continue
+             if key == "check_report":
+                 # if db ok but check missing/fail/stale, recommend check
+                 if evals.get("db", {}).get("status") in ("OK", "STALE") and st in ("MISS", "FAIL", "STALE"):
+@@ -456,6 +499,8 @@
+         print("reports:", cfg.get("reports_dir"))
+     if cfg.get("state_root"):
+         print("state  :", cfg.get("state_root"))
++    if cfg.get("db_stamp"):
++        print("stamp  :", cfg.get("db_stamp"))
+     print("-" * 72)
+ 
+     # stable order
+@@ -465,6 +510,7 @@
+         "units_report",
+         "plan",
+         "db",
++        "db_stamp",
+         "check_report",
+         "llm_probe",
+         "stage1_verify",
+@@ -487,12 +533,18 @@
+             extra.append(f"size={detail['size_h']}")
+         if "mtime_h" in detail:
+             extra.append(f"mtime={detail['mtime_h']}")
++        if "collection_count" in detail:
++            extra.append(f"count={detail['collection_count']}")
+         if "report_status" in detail:
+             extra.append(f"report={detail['report_status']}")
+         if "overall" in detail:
+             extra.append(f"overall={detail['overall']}")
+         if "chunks" in detail:
+             extra.append(f"chunks={detail['chunks']}")
++        if "collection_count" in detail:
++            extra.append(f"count={detail['collection_count']}")
++        if "schema_hash" in detail:
++            extra.append(f"schema={detail['schema_hash']}")
+         if extra:
+             print(" " * 8 + "; ".join(extra))
+         if st == "FAIL" and detail.get("errors"):
+@@ -581,6 +633,8 @@
+         except Exception:  # noqa: BLE001
+             pass
+ 
++    stamp_path = (state_root if state_root is not None else (root / "data_processed" / "index_state")) / "db_build_stamp.json"
++
+     cfg = {
+         "profile": str(profile_path) if profile_path else None,
+         "git": _git_head_short(root),
+@@ -590,6 +644,7 @@
+         "plan": str(plan),
+         "reports_dir": str(reports_dir),
+         "state_root": str(state_root) if state_root else None,
++        "db_stamp": str(stamp_path),
+     }
+     _print_human(root, cfg, evals, next_)
+ 
+diff -ruN /mnt/data/_orig/src/mhy_ai_rag_data/tools/run_build_profile.py /mnt/data/_proj/src/mhy_ai_rag_data/tools/run_build_profile.py
+--- /mnt/data/_orig/src/mhy_ai_rag_data/tools/run_build_profile.py	2025-12-30 22:03:48.000000000 +0000
++++ /mnt/data/_proj/src/mhy_ai_rag_data/tools/run_build_profile.py	2026-01-02 11:52:32.840703790 +0000
+@@ -71,6 +71,7 @@
+     units_path = (root / units_rel).resolve()
+     env_out = (root / str(profile.get("env_out", "data_processed/env_report.json"))).resolve()
+     plan_out = (root / str(profile.get("planner_out", "data_processed/chunk_plan.json"))).resolve()
++    plan_rel = str(profile.get("planner_out", "data_processed/chunk_plan.json"))
+     reports_dir = (root / str(profile.get("reports_dir", "data_processed/build_reports"))).resolve()
+     reports_dir.mkdir(parents=True, exist_ok=True)
+ 
+@@ -170,6 +171,8 @@
+             db_rel,
+             "--collection",
+             coll,
++            "--plan",
++            plan_rel,
+             "--embed-model",
+             embed_model,
+             "--device",
+@@ -213,6 +216,8 @@
+             "--collection",
+             coll,
+             "--plan",
++            plan_rel,
++            "--plan",
+             str(plan_out),
+         ],
+         cwd=root,
+diff -ruN /mnt/data/_orig/src/mhy_ai_rag_data/tools/run_profile_with_timing.py /mnt/data/_proj/src/mhy_ai_rag_data/tools/run_profile_with_timing.py
+--- /mnt/data/_orig/src/mhy_ai_rag_data/tools/run_profile_with_timing.py	2025-12-30 22:03:48.000000000 +0000
++++ /mnt/data/_proj/src/mhy_ai_rag_data/tools/run_profile_with_timing.py	2026-01-02 11:52:32.840814250 +0000
+@@ -121,6 +121,7 @@
+         sys.executable, "tools/build_chroma_index_flagembedding.py", "build",
+         "--root", ".", "--units", units,
+         "--db", db, "--collection", collection,
++        "--plan", "data_processed/chunk_plan.json",
+         "--embed-model", embed_model, "--device", device,
+         "--embed-batch", str(embed_batch), "--upsert-batch", str(upsert_batch),
+         "--chunk-chars", str(chunk_chars), "--overlap-chars", str(overlap_chars), "--min-chunk-chars", str(min_chunk_chars),
+@@ -137,6 +138,7 @@
+     add_step("check_chroma_build", [
+         sys.executable, "check_chroma_build.py",
+         "--db", db, "--collection", collection,
++        "--plan", "data_processed/chunk_plan.json",
+         "--plan", "data_processed/chunk_plan.json"
+     ])
+ 
+diff -ruN /mnt/data/_orig/src/mhy_ai_rag_data/tools/write_db_build_stamp.py /mnt/data/_proj/src/mhy_ai_rag_data/tools/write_db_build_stamp.py
+--- /mnt/data/_orig/src/mhy_ai_rag_data/tools/write_db_build_stamp.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/_proj/src/mhy_ai_rag_data/tools/write_db_build_stamp.py	2026-01-02 11:52:32.840277975 +0000
+@@ -0,0 +1,202 @@
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
++"""write_db_build_stamp.py
++
++目标
++----
++为 Chroma 持久化库写入一个“构建戳（build stamp）”文件，用于：
++- 在 rag-status 中提供**稳定**的“DB 是否新于 plan/check”等依赖判定；
++- 避免 Windows/SQLite 在仅查询（read）场景下也刷新 DB 目录/文件 mtime，导致 check.json 被误判为 STALE。
++
++设计要点
++--------
++- 构建戳文件仅应在“写库”行为成功完成后更新（build/upsert/sync），而不应在 query/eval/retriever 等只读行为中变化。
++- stamp 文件放在 state_root（默认 data_processed/index_state）下，便于与增量同步状态同域管理。
++
++默认输出
++--------
++<state_root>/db_build_stamp.json
++
++"""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import time
++from pathlib import Path
++from typing import Any, Dict, Optional, Tuple
++
++from mhy_ai_rag_data.tools import index_state as index_state_mod
++
++
++def _now_iso() -> str:
++    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
++
++
++def _sha256_file(p: Path, *, chunk_size: int = 1024 * 1024) -> str:
++    h = hashlib.sha256()
++    with p.open("rb") as f:
++        while True:
++            b = f.read(chunk_size)
++            if not b:
++                break
++            h.update(b)
++    return h.hexdigest()
++
++
++def _read_json(path: Path) -> Tuple[Optional[Any], Optional[str]]:
++    try:
++        return json.loads(path.read_text(encoding="utf-8")), None
++    except Exception as e:  # noqa: BLE001
++        return None, f"json_parse_error: {type(e).__name__}: {e}"
++
++
++def _infer_planned_chunks(plan_obj: Any) -> Optional[int]:
++    # 支持历史/不同脚本可能产出的几种形态。
++    if isinstance(plan_obj, dict):
++        if isinstance(plan_obj.get("planned_chunks"), int):
++            return int(plan_obj["planned_chunks"])
++        if isinstance(plan_obj.get("n_chunks"), int):
++            return int(plan_obj["n_chunks"])
++        chunks = plan_obj.get("chunks")
++        if isinstance(chunks, list):
++            return len(chunks)
++        planned = plan_obj.get("planned")
++        if isinstance(planned, list):
++            return len(planned)
++        return None
++    if isinstance(plan_obj, list):
++        return len(plan_obj)
++    return None
++
++
++def _maybe_get_collection_count(db: Path, collection: str) -> Tuple[Optional[int], Optional[str]]:
++    try:
++        import chromadb  # type: ignore
++    except Exception as e:  # noqa: BLE001
++        return None, f"chromadb_import_failed: {type(e).__name__}: {e}"
++
++    try:
++        client = chromadb.PersistentClient(path=str(db))
++        col = client.get_collection(collection)
++        return int(col.count()), None
++    except Exception as e:  # noqa: BLE001
++        return None, f"chroma_count_failed: {type(e).__name__}: {e}"
++
++
++def write_db_build_stamp(
++    *,
++    root: Path,
++    db: Path,
++    collection: str,
++    state_root: Path,
++    plan_path: Optional[Path] = None,
++    collection_count: Optional[int] = None,
++    writer: str = "manual",
++    out_path: Optional[Path] = None,
++) -> Path:
++    """Write a stable build-stamp json file.
++
++    - 若 collection_count 未提供，将尝试连接 Chroma 读取 count（可失败，失败时写入 None + error）。
++    - 若 plan_path 提供且存在，将写入其 sha256 与 planned_chunks，便于离线审计。
++    """
++
++    root = root.resolve()
++    db = db.resolve()
++    state_root = state_root.resolve()
++
++    if out_path is None:
++        out_path = state_root / "db_build_stamp.json"
++    out_path = out_path.resolve()
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++
++    schema_hash: Optional[str] = None
++    try:
++        schema_hash = index_state_mod.read_latest_pointer(state_root, collection)
++    except Exception:  # noqa: BLE001
++        schema_hash = None
++
++    plan_info: Dict[str, Any] = {"path": None, "sha256": None, "planned_chunks": None, "read_error": None}
++    if plan_path is not None:
++        plan_path = plan_path.resolve()
++        plan_info["path"] = str(plan_path)
++        if plan_path.exists() and plan_path.is_file():
++            try:
++                plan_info["sha256"] = _sha256_file(plan_path)
++            except Exception as e:  # noqa: BLE001
++                plan_info["read_error"] = f"plan_hash_failed: {type(e).__name__}: {e}"
++            obj, err = _read_json(plan_path)
++            if err:
++                plan_info["read_error"] = err
++            else:
++                plan_info["planned_chunks"] = _infer_planned_chunks(obj)
++        else:
++            plan_info["read_error"] = "plan_not_found"
++
++    count_err: Optional[str] = None
++    if collection_count is None:
++        if db.exists():
++            collection_count, count_err = _maybe_get_collection_count(db, collection)
++        else:
++            count_err = "db_not_found"
++
++    payload: Dict[str, Any] = {
++        "schema_version": 1,
++        "updated_at": _now_iso(),
++        "writer": writer,
++        "root": str(root),
++        "db": str(db),
++        "collection": collection,
++        "schema_hash": schema_hash,
++        "collection_count": collection_count,
++        "count_error": count_err,
++        "plan": plan_info,
++        "note": "Updated only by successful write-to-db operations (build/upsert/sync) or explicit manual stamp.",
++    }
++
++    index_state_mod.atomic_write_text(out_path, json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
++    return out_path
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Write a stable DB build-stamp for rag-status freshness.")
++    ap.add_argument("--root", default=".", help="Project root")
++    ap.add_argument("--db", default="chroma_db", help="Chroma persistent dir")
++    ap.add_argument("--collection", default="rag_chunks", help="Chroma collection")
++    ap.add_argument("--state-root", default="data_processed/index_state", help="index_state root (default: data_processed/index_state)")
++    ap.add_argument("--plan", default="data_processed/chunk_plan.json", help="plan path (optional; default points to standard location)")
++    ap.add_argument("--writer", default="manual", help="writer tag (e.g., build_chroma_index_flagembedding)")
++    ap.add_argument("--count", type=int, default=None, help="optional: override collection_count (skip opening chroma)")
++    ap.add_argument("--out", default=None, help="output path (default: <state_root>/db_build_stamp.json)")
++    args = ap.parse_args()
++
++    root = Path(args.root).resolve()
++    db = (root / args.db).resolve() if not Path(args.db).is_absolute() else Path(args.db).resolve()
++    state_root = (root / args.state_root).resolve() if not Path(args.state_root).is_absolute() else Path(args.state_root).resolve()
++
++    plan_path: Optional[Path] = None
++    if args.plan:
++        plan_path = (root / args.plan).resolve() if not Path(args.plan).is_absolute() else Path(args.plan).resolve()
++
++    out_path: Optional[Path] = None
++    if args.out:
++        out_path = (root / args.out).resolve() if not Path(args.out).is_absolute() else Path(args.out).resolve()
++
++    p = write_db_build_stamp(
++        root=root,
++        db=db,
++        collection=str(args.collection),
++        state_root=state_root,
++        plan_path=plan_path,
++        collection_count=args.count,
++        writer=str(args.writer),
++        out_path=out_path,
++    )
++    print(f"Wrote db build stamp: {p}")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff -ruN /mnt/data/_orig/tools/write_db_build_stamp.py /mnt/data/_proj/tools/write_db_build_stamp.py
+--- /mnt/data/_orig/tools/write_db_build_stamp.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/_proj/tools/write_db_build_stamp.py	2026-01-02 11:52:32.840392960 +0000
+@@ -0,0 +1,37 @@
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
++"""AUTO-GENERATED WRAPPER
++
++兼容入口：允许在仓库根目录下继续使用 `python tools/write_db_build_stamp.py ...`。
++
++权威实现位于：src/mhy_ai_rag_data/tools/write_db_build_stamp.py
++推荐用法：
++- pip install -e .
++- 使用 console scripts: rag-*
++- 或 python -m mhy_ai_rag_data.tools.write_db_build_stamp ...
++"""
++
++from __future__ import annotations
++
++import runpy
++import sys
++from pathlib import Path
++
++
++def _ensure_src_on_path() -> None:
++    root = Path(__file__).resolve().parent
++    if root.name == "tools":
++        root = root.parent
++    src = root / "src"
++    if src.exists():
++        sys.path.insert(0, str(src))
++
++
++def main() -> int:
++    _ensure_src_on_path()
++    runpy.run_module("mhy_ai_rag_data.tools.write_db_build_stamp", run_name="__main__")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

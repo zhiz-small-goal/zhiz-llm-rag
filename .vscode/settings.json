@@ -1,0 +1,9 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python-envs.pythonProjects": [],
+    // 新增：本工作区默认终端用 CMD
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    "python.analysis.extraPaths": [
+        "./src"
+    ]
+}

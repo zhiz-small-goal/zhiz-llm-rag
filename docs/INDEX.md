@@ -1,0 +1,34 @@
+# 文档导航（Diátaxis）
+
+> 目标：按“用途”而不是按“文件名”组织文档，降低重复与漂移，提升可维护性与可操作性。
+
+## Tutorials（教程：从 0 到 1）
+- [Getting Started：跑通 Stage-1 + PR/CI Lite 回归](tutorials/01_getting_started.md)
+
+## How-to（操作指南：如何完成具体任务）
+- [日常操作主线（管线 + 参数 + 验收）](howto/OPERATION_GUIDE.md)
+- [rag-status：跨机续跑/重复构建的进度自检](howto/rag_status.md)
+- [rag-accept：一键验收入口](howto/rag_accept.md)
+- [建立“口语 vs 官方术语”检索回归（分桶）](howto/ORAL_OFFICIAL_RETRIEVAL_REGRESSION.md)
+- [PR/CI Lite 门禁（快速回归）](howto/ci_pr_gates.md)
+- [Preflight Checklist（重构/换机/换环境后必跑）](howto/PREFLIGHT_CHECKLIST.md)
+- [Postmortem 工作流（写回协议：模板 → LESSONS → PREFLIGHT → HANDOFF）](howto/POSTMORTEM_WORKFLOW.md)
+- [排障手册（Runbook）](howto/TROUBLESHOOTING.md)
+
+## Reference（参考：契约/参数/格式）
+- [参考与契约（口径、产物、架构）](reference/REFERENCE.md)
+- [Stage-2 评测契约：eval_cases.jsonl / eval_retrieval_report.json](reference/EVAL_CASES_SCHEMA.md)
+- [Index State 与 Stamps（db_build_stamp.json 等）](reference/index_state_and_stamps.md)
+- [Postmortem 提示词模板（清晰/准确/必要）](reference/postmortem_prompt_template.md)
+
+## Explanation（解释：架构/取舍/演进）
+- [文档体系第一性原理与写作规范（可复用）](explanation/documentation_principles.md)
+- [阶段计划与变更记录（STAGE_PLAN）](explanation/STAGE_PLAN.md)
+- [检索系统演进摘要（Stage-2 retrieval evolution）](explanation/2026-01-04_retrieval_evolution_summary.md)
+
+- [Lessons / 经验库（可迁移）](explanation/LESSONS.md)
+## Postmortems（复盘：事故记录与证据链）
+- [INDEX](postmortems/INDEX.md)
+
+## Archive（归档：仅重定向，不再维护）
+- [PACKAGED_USAGE_GUIDE（Deprecated）](archive/PACKAGED_USAGE_GUIDE.md)

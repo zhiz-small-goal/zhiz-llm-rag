@@ -1,0 +1,8 @@
+# Legacy convenience wrapper: install Stage-1 + CI/test dependencies.
+#
+# 推荐：
+#   pip install -e .[ci]
+#
+# 之所以保留本文件：兼容历史/手动命令 `pip install -r requirements-ci.txt`。
+
+-e .[ci]

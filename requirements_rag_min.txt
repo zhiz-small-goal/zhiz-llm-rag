@@ -1,0 +1,9 @@
+# Legacy convenience wrapper: install Stage-2 dependencies (embedding/chroma/检索闭环).
+#
+# 推荐（更清晰的安装矩阵）：
+#   pip install -e .        # Stage-1：inventory → units → validate → plan
+#   pip install -e .[embed] # Stage-2：embedding/chroma/检索闭环（重依赖）
+#
+# 之所以保留本文件：兼容历史命令 `pip install -r requirements_rag_min.txt`。
+
+-e .[embed]

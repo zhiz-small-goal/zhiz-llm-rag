@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mhy-ai-rag-data"
+version = "0.1.0"
+description = "Local RAG data pipeline: inventory -> units -> chunk plan -> Chroma build -> checks."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Dependency policy: see docs/reference/deps_policy.md
+# - Default install: Stage-1 only (inventory -> units -> validate -> plan).
+# - Heavy deps for Stage-2 (embedding/chroma/retrieval loop) must live in extras.
+# - Goal: keep `pip install -e .` lightweight and CI-friendly.
+dependencies = [
+  "pydantic",
+  "pandas",
+  "numpy",
+  "tqdm",
+  "rich",
+  "PyYAML",
+  "markdown-it-py",
+  "mdurl",
+  "requests",
+]
+
+[project.optional-dependencies]
+# Stage-2 extras (embedding/chroma/retrieval loop). See docs/reference/deps_policy.md#embed-extras
+embed = [
+  # Fail-fast for py>=3.13: avoid backtracking/source builds. See docs/reference/deps_policy.md#embed-extras
+  "mhy-ai-rag-data-embed-unsupported; python_version >= '3.13'",
+
+  # Heavy deps only for py<3.13 (i.e., 3.12 and below). See docs/reference/deps_policy.md#embed-extras
+  "chromadb; python_version < '3.13'",
+  "FlagEmbedding; python_version < '3.13'",
+  "huggingface-hub; python_version < '3.13'",
+  "sentence-transformers; python_version < '3.13'",
+]
+
+# CI extras: minimal deps only. See docs/reference/deps_policy.md#ci-extras
+ci = [
+  "pytest>=7",
+]
+
+# Dev extras: optional local tooling. See docs/reference/deps_policy.md#dev-extras
+dev = [
+  "pytest>=7",
+]
+
+[project.scripts]
+rag-inventory = "mhy_ai_rag_data.cli:inventory"
+rag-extract-units = "mhy_ai_rag_data.cli:extract_units"
+rag-validate-units = "mhy_ai_rag_data.cli:validate_units"
+rag-plan = "mhy_ai_rag_data.cli:plan_chunks"
+rag-build = "mhy_ai_rag_data.cli:build_chroma"
+rag-check = "mhy_ai_rag_data.cli:check_chroma"
+rag-probe-llm = "mhy_ai_rag_data.cli:probe_llm"
+rag-check-pipeline = "mhy_ai_rag_data.cli:check_rag_pipeline"
+rag-check-all = "mhy_ai_rag_data.cli:check_all"
+rag-status = "mhy_ai_rag_data.cli:status"
+rag-stamp = "mhy_ai_rag_data.cli:stamp"
+rag-accept = "mhy_ai_rag_data.cli:accept"
+rag-init-eval-cases = "mhy_ai_rag_data.cli:init_eval_cases"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

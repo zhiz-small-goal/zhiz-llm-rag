@@ -1,0 +1,36 @@
+data_raw/
+data_processed/
+__pycache__/
+chroma_db*/
+chroma_db/
+llm_probe_report_*.json
+inventory.csv
+node_modules/
+package-lock.json
+package.json
+src/mhy_ai_rag_data.egg-info/
+tmp_report.json
+.venv*/inventory.csv
+.venv*/
+.pytest_cache/
+待办事项/
+
+# --- public-release hygiene (auto-added) ---
+data_raw/
+data_processed/
+chroma_db/
+*.sqlite3
+*.db
+*.mp4
+*.gif
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+# --- end public-release hygiene ---
+

@@ -1,0 +1,23 @@
+{
+  "profile_name": "schemeB_media_stub",
+  "root": ".",
+  "units": "data_processed/text_units.jsonl",
+  "db": "chroma_db",
+  "collection": "rag_chunks",
+  "embed_model": "BAAI/bge-m3",
+  "device": "cuda:0",
+  "embed_batch": 32,
+  "upsert_batch": 256,
+  "chunk_chars": 1200,
+  "overlap_chars": 120,
+  "min_chunk_chars": 200,
+  "include_media_stub": true,
+  "planner_out": "data_processed/chunk_plan.json",
+  "env_out": "data_processed/env_report.json",
+  "reports_dir": "data_processed/build_reports",
+  "sync_mode": "incremental",
+  "state_root": "data_processed/index_state",
+  "strict_sync": true,
+  "on_missing_state": "reset",
+  "schema_change": "reset"
+}
