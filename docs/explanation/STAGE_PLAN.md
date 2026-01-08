@@ -423,3 +423,38 @@
 - eval case 新增可选字段：`bucket/pair_id/concept_id`
 - eval retrieval 报告 schema 升级：`schema_version=2`，新增 `buckets` 与 `warnings`
 - Stage-2 汇总工具显示分桶指标（若存在）
+
+### [011] 2026-01-08 补充 fsspec 依赖冲突处理说明
+
+日期：2026-01-08  
+状态：已完成  
+
+**变更类型：**  
+- 行为调整
+
+**目标：**  
+- 明确 CUDA 版 torch 安装后可能触发 datasets/fsspec 冲突  
+- 给出最短可执行的修复命令  
+- 避免误判为 torch 版本过高
+
+**触发原因：**  
+- 用户安装 CUDA torch 后出现 pip resolver 冲突警告
+
+**涉及文件：**  
+- docs/howto/OPERATION_GUIDE.md  
+- docs/explanation/STAGE_PLAN.md
+
+**改动概览：**  
+- docs/howto/OPERATION_GUIDE.md  
+  - Step 0：新增 fsspec 冲突提示与单指令约束安装
+
+**关键点说明：**  
+- 冲突来自 datasets 对 fsspec 的版本上限，不是 torch 版本问题  
+- 以降级 fsspec 为默认稳态处理；升级 datasets 需自行确认兼容性
+
+**测试验证：**  
+- [ ] 在 `.venv_embed` 中运行 `python -m pip check`，确认无冲突  
+- [ ] 重新执行相关命令后确保 `verify_torch_cuda.py` 通过（若 GPU 可用）
+
+**后续 TODO：**  
+- 无

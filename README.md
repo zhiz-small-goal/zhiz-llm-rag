@@ -35,6 +35,8 @@ pytest -q
 - Stage-2（embedding/chroma）：`pip install -e ".[embed]"`
 - 合并：`pip install -e ".[ci,embed]"`
 
+**默认的安装器安装到是 torch-only cpu, 想使用 GPU 需要先安装支持的 torch, 详见[OPERATION_GUIDE.md-环境与安装依赖-如需GPU](docs/howto/OPERATION_GUIDE.md#step-0环境与依赖安装core-vs-embed避免在-python-313-及以上误装-stage-2)
+
 ## 旧版 README（已归档）
 - 归档位置：[`docs/archive/README_LEGACY_FULL.md`](docs/archive/README_LEGACY_FULL.md)
 - 说明：旧版包含大量操作细节，易与运行手册重复；现按 Diátaxis 分类收敛到 docs/ 下。

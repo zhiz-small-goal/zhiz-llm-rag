@@ -41,6 +41,8 @@
 **为何（因果）**：embedding/chroma 依赖链会牵涉 NumPy/pandas 等编译型包；在最新 Python 次版本（如 3.14）生态过渡期，解析器回溯可能把你带到“只能源码构建”的组合，进而被本机编译器链路击穿。将 **core 与 embed 分层**可以把不稳定性限制在可选 extra 内：你仍可在新 Python 上跑 Stage-1 工具链，但 Stage-2 永远在“wheel 覆盖成熟”的解释器上执行，从而把安装失败从“长日志排障”变成“安装期明确拒绝”。
 
 **关键参数/注意**：始终用 `python -m pip ...`（避免 PATH 抢占导致用错解释器）；执行任何安装前先 `python -V` 与 `python -m pip -V` 确认正在使用目标 venv。若你想彻底禁止源码构建，可在 Stage-2 安装时加 `--only-binary=:all:` 作为硬护栏。
+如需 GPU：先安装 PyTorch 官方 CUDA 版 torch（见下方示例），再安装 `.[embed]`；否则会默认拉取 CPU-only torch。
+装完使用 `python tools\verify_torch_cuda.py` 检测, 如果出现 `torch_cuda_buidl=<版本号>` `[RESULT] PASS` 即视为安装通过, GPU 可用.
 
 **推荐命令（Windows CMD）**：
 ```cmd
@@ -54,8 +56,27 @@ py -3.12 -m venv .venv_embed
 .\.venv_embed\Scripts\activate
 python -m pip install -U pip setuptools wheel
 python tools\check_pyproject_preflight.py --ascii-only
+
+:: GPU（CUDA）：先装 CUDA 版 torch（示例：CUDA 13.0 / cu130 无代理直连）
+$env:HTTP_PROXY=""; $env:HTTPS_PROXY=""; $env:ALL_PROXY=""
+python -m pip install --upgrade --force-reinstall --no-cache-dir --retries 5 --timeout 120 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130 --extra-index-url https://pypi.org/simple
+
+:: 走代理稳定下载
+$env:HTTP_PROXY="http://127.0.0.1:7890"; $env:HTTPS_PROXY="http://127.0.0.1:7890"
+python -m pip install --upgrade --force-reinstall --no-cache-dir --retries 10 --timeout 180 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130 --extra-index-url https://pypi.org/simple --proxy http://127.0.0.1:7890
+python tools\verify_torch_cuda.py
+
 python -m pip install -e ".[embed]"
 ```
+**常见依赖冲突（pip resolver 提示）**：若出现 `datasets ... requires fsspec[http]<=2025.10.0` 之类警告，通常是 CUDA 版 torch 的依赖链把 `fsspec` 升到 `2025.12.0` 导致上限不满足。推荐用**单指令**一次性装齐并锁住 `fsspec` 上限（避免冲突）：
+```cmd
+python -m pip install --upgrade --force-reinstall --no-cache-dir ^
+  torch torchvision torchaudio "fsspec[http]<=2025.10.0,>=2023.1.0" ^
+  --index-url https://download.pytorch.org/whl/cu130 --extra-index-url https://pypi.org/simple
+python -m pip check
+```
+若你确认 `datasets` 已升级并允许更高版本，也可以改为升级 `datasets`；否则以限制 `fsspec` 为准更稳。
+
 使用这个指令验证是否安装通过:
 ```cmd
 python -c "import sys; print(sys.executable)"
