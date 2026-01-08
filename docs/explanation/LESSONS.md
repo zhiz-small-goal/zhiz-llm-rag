@@ -1,7 +1,7 @@
 ---
 title: Lessons / 经验库（可迁移）
-version: 0.1
-last_updated: 2026-01-06
+version: 0.2
+last_updated: 2026-01-08
 scope: "跨 postmortem 的失败模式、控制点、门禁与清单"
 owner: zhiz
 ---
@@ -17,7 +17,8 @@ owner: zhiz
 - [2. 控制点与门禁设计原则](#2-控制点与门禁设计原则)
 - [3. 复用资产入口](#3-复用资产入口)
 - [4. 经验条目模板](#4-经验条目模板)
-- [5. 待办与清理规则](#5-待办与清理规则)
+- [5. 经验条目](#5-经验条目)
+- [6. 待办与清理规则](#6-待办与清理规则)
 
 ---
 
@@ -91,7 +92,35 @@ owner: zhiz
 
 ---
 
-## 5. 待办与清理规则
+## 5. 经验条目
+
+### 条目：公开发布前置检查必须“数据面 + 控制面 + workflow 面”分层
+- 标签（失败模式）：`入口不一致`、`契约漂移`、`不可观测`
+- 适用场景：将私有项目改为 public、首次开源、对外发布“可复制运行”的仓库快照
+- 触发/现象：
+  - 公开后才发现误包含数据/产物/截图或绝对路径指纹；
+  - CI/workflow 因语法错误 `Invalid workflow file` 直接失效；
+  - 发布快照携带 worktree `.git` 指针导致新仓库与原仓库耦合（分支/历史异常）。
+- 根因机制（简述）：
+  - 发布物输入集未定义为“独立可移植快照”，导致 `.git`/产物/数据混入；
+  - 门禁缺少语法预检与 secrets 扫描，控制面不可用时无法保证发布质量。
+- 缺失控制点：
+  - 发布快照独立性门禁（`.git` 目录 vs 指针文件）；
+  - workflow 语法预检（至少规约含 `:` 的字符串必须加引号，最好加 lint）；
+  - secrets 扫描门禁（CI + 平台防回归）。
+- 可执行动作：
+  - A1（数据面）：`python tools/check_public_release_hygiene.py --repo . --history 0`
+  - A2（快照独立性）：`dir /a .git`（必须是 `<DIR>`）
+  - A3（控制面）：在仓库启用 `secrets-scan` 工作流并确保至少跑过 1 次 PASS
+  - A4（workflow 面）：push 后 Actions 不得出现 `Invalid workflow file`
+- 验收方式（PASS 条件）：
+  - hygiene 报告 HIGH/MED=0；`.git` 为目录；CI 与 secrets-scan 均能进入 job/step 且最终 PASS。
+- 回链证据（至少 1 篇 postmortem）：
+  - `docs/postmortems/2026-01-08_postmortem_public_release_preflight.md`
+
+---
+
+## 6. 待办与清理规则
 
 - 待办：为现有 postmortems 逐步补齐“标签（失败模式）”与“对应经验条目”。建议每次复盘写完只补 1–2 条，不做大扫除式重构。
 - 清理规则：若同一问题在 3 篇以上 postmortem 中重复出现，必须：

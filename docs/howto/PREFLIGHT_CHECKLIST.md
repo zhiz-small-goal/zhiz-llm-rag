@@ -1,23 +1,24 @@
 ---
 title: Preflight Checklist（重构/换机/换环境后必跑）
-version: 0.2
+version: 0.3
 last_updated: 2026-01-08
-scope: "本地门禁序列：在变更入口/依赖/环境后，快速确认系统仍可用"
+scope: "本地门禁序列：在变更入口/依赖/环境后，快速确认系统仍可用；并覆盖公开发布前的最小检查"
 owner: zhiz
 ---
 
 # Preflight Checklist（重构/换机/换环境后必跑）
 
 > 目的：把“容易因环境/入口/契约漂移导致返工”的检查固化为**最小可执行序列**。  
-> 适用：重构后、换机器/换盘符后、重建 venv 后、升级关键依赖后、合并大 PR 前。  
+> 适用：重构后、换机器/换盘符后、重建 venv 后、升级关键依赖后、合并大 PR 前、**准备公开发布前**。  
 > 原则：只收录高频且人工不可靠的检查；每条必须有**命令 + PASS 条件**。
 
 ## 目录
 - [0. 使用方式](#0-使用方式)
 - [1. Quick Path：最小必跑（推荐）](#1-quick-path最小必跑推荐)
 - [2. Extended：需要时再跑（可选）](#2-extended需要时再跑可选)
-- [3. 常见失败与处理](#3-常见失败与处理)
-- [4. 更新规则](#4-更新规则)
+- [3. Public Release Preflight：公开发布前最小检查（推荐）](#3-public-release-preflight公开发布前最小检查推荐)
+- [4. 常见失败与处理](#4-常见失败与处理)
+- [5. 更新规则](#5-更新规则)
 
 ---
 
@@ -142,19 +143,62 @@ python tools\verify_reports_schema.py
 
 ---
 
-## 3. 常见失败与处理
+## 3. Public Release Preflight：公开发布前最小检查（推荐）
+
+> 目标：在“将仓库公开/开源”前，快速确认**发布输入集**干净且门禁可执行（数据面 + 控制面）。
+
+### 3.1 仅针对“将要公开的目录”跑 hygiene 审计（数据面）
+**命令（CMD）**
+```cmd
+python tools\check_public_release_hygiene.py --repo . --history 0
+```
+**PASS 条件**
+- 报告中 HIGH/MED 为 0（以报告为准）
+- 报告写入成功（通常输出 `report_written=...`）
+
+### 3.2 发布快照独立性检查（避免 worktree/.git 指针耦合）
+**命令（CMD）**
+```cmd
+dir /a .git
+```
+**PASS 条件**
+- 输出显示 `.git` 为 `<DIR>`（目录）。  
+  若 `.git` 显示为文件（worktree 指针），则本目录不是独立发布物，需要先删除该 `.git` 文件再 `git init -b main`。
+
+### 3.3 secrets 扫描门禁（控制面）
+**推荐方式（无需本地安装 gitleaks）**
+- Push 后在 GitHub Actions 确认 `secrets-scan` 工作流至少成功跑过 1 次（PASS）。
+
+**可选：本地安装了 gitleaks 时**
+```cmd
+gitleaks detect --source . --no-git
+```
+**PASS 条件**
+- 未报告 secrets 命中（或已按仓库策略完成替换/移出）
+
+### 3.4 CI 工作流可解析性（workflow-plane）
+**命令（最小做法）**
+- 对 `.github/workflows/*.yml` 的任何改动，都必须通过一次远端解析验证：push 后 Actions 不出现 `Invalid workflow file`。
+
+**PASS 条件**
+- Actions 列表中 CI 工作流处于可运行状态（能进入 job/step 视图）。
+
+---
+
+## 4. 常见失败与处理
 
 - 依赖缺失/可选依赖：优先参考 [PR/CI Lite 门禁说明](ci_pr_gates.md) 与 [排障手册](TROUBLESHOOTING.md)。
 - 入口点不一致（console_scripts 缺失/路径漂移）：先修复 editable install 或 PATH/venv 激活，再复跑 1.3。
 - wrapper 门禁失败（`missing SSOT` / `wrappers not up-to-date`）：先运行 `python tools\gen_tools_wrappers.py --write` 收敛；若仍提示 `missing SSOT`，检查 `src/mhy_ai_rag_data/tools/<name>.py` 是否存在或该 tools 脚本是否应标记为 REPO-ONLY TOOL（见 [postmortem](../postmortems/2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md)）。
 - 文档引用检查失败：先修复被引用文件路径/编码，再复跑 1.4。
+- public snapshot 目录 `.git` 为文件：删除该文件并重新初始化独立仓库（见 3.2）。
 
 ---
 
-## 4. 更新规则
+## 5. 更新规则
 
 - 新增条目条件（同时满足至少 2 条）：
-  1) 属于关键不变量（破坏会导致统计/契约失真）
+  1) 属于关键不变量（破坏会导致统计/契约失真或公开风险）
   2) 高频复发或代价高（返工/重建/重跑成本高）
   3) 人工目测不可靠（必须脚本化才能稳定）
 - 任何新增条目必须同时写清：
