@@ -1,0 +1,18 @@
+{
+  "src_module_prefix": "mhy_ai_rag_data.tools",
+  "src_tools_dir": "src/mhy_ai_rag_data/tools",
+  "tools_dir": "tools",
+  "wrapper_marker": "AUTO-GENERATED WRAPPER",
+  "repo_only_marker": "REPO-ONLY TOOL",
+  "ignore_files": [
+    "__init__.py",
+    "__main__.py"
+  ],
+  "exclude_wrappers": [
+    "gen_tools_wrappers.py"
+  ],
+  "exclude_self": true,
+  "managed_wrappers": [
+    "check_tools_layout.py"
+  ]
+}

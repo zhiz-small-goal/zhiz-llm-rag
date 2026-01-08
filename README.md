@@ -23,6 +23,7 @@ python -m venv .venv_ci
 python -m pip install -U pip
 pip install -e ".[ci]"
 
+python tools\check_tools_layout.py --mode fail
 python tools\check_cli_entrypoints.py
 python tools\check_md_refs_contract.py
 pytest -q

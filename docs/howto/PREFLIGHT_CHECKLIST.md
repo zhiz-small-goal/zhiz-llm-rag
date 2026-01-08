@@ -1,7 +1,7 @@
 ---
 title: Preflight Checklist（重构/换机/换环境后必跑）
-version: 0.1
-last_updated: 2026-01-06
+version: 0.2
+last_updated: 2026-01-08
 scope: "本地门禁序列：在变更入口/依赖/环境后，快速确认系统仍可用"
 owner: zhiz
 ---
@@ -59,6 +59,15 @@ python tools\check_cli_entrypoints.py
 ```
 **PASS 条件**
 - 输出列出的 `console_scripts` 与 scripts 目录 wrapper 一致（工具输出无 FAIL）
+
+### 1.3b 工具布局审计（tools↔src 分层 / 同名冲突）
+**命令（CMD）**
+```cmd
+python tools\check_tools_layout.py --mode fail
+```
+**PASS 条件**
+- 输出 `STATUS: PASS` 且退出码为 0
+- 不出现 `unknown_tool_kind` / `name_conflict_tools_vs_src`（以工具输出为准）
 
 ### 1.4 校验 Markdown 引用与文档契约（防文档漂移）
 **命令（CMD）**
