@@ -65,6 +65,7 @@ python -m pip install --upgrade --force-reinstall --no-cache-dir --retries 5 --t
 :: 走代理稳定下载
 $env:HTTP_PROXY="http://127.0.0.1:7890"; $env:HTTPS_PROXY="http://127.0.0.1:7890"
 python -m pip install --upgrade --force-reinstall --no-cache-dir --retries 10 --timeout 180 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130 --extra-index-url https://pypi.org/simple --proxy http://127.0.0.1:7890
+:: 下载完检查
 python tools\verify_torch_cuda.py
 
 python -m pip install -e ".[embed]"
