@@ -28,3 +28,8 @@ last_updated: 2026-01-09
 - 代码结构与接口契约稳定（减少维护者 review 成本）
 
 在此之前，如果你认为某个修复非常关键，请先创建 Bug Issue 讨论复现与验收口径。
+
+## 约定
+- 社区互动受 CODE_OF_CONDUCT.md 约束。
+- 安全漏洞不要公开发 Issue, 请通过 Security Policy 中的私密渠道报告。
+  - url: "https://github.com/zhiz-small-goal/zhiz-llm-rag/security/policy"
