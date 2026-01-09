@@ -8,10 +8,11 @@
 - [Lessons / 经验库（可迁移）](../explanation/LESSONS.md)
 - [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)
 
+<!-- AUTO-GENERATED:BEGIN postmortems-index -->
 ## 2026-01-09
 - **Postmortem：开源项目补齐仓库健康文件（CHANGELOG/CITATION/.editorconfig + CoC 联系方式）**
   - 文件：[`docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`](2026-01-09_postmortem_open_source_repo_health_files.md)
-  - 关键字：repo health / CHANGELOG / CITATION / .editorconfig / CoC / preflight
+  - 关键字：开源项目补齐仓库健康文件 / CHANGELOG / CITATION / editorconfig / CoC / 联系方式 / open / source / repo / health / files
 
 ## 2026-01-08
 - **Postmortem｜公开项目的前置检查（Public Release Preflight）**
