@@ -1,10 +1,11 @@
 ## README.md 目录
 - [zhiz-llm-rag](#zhiz-llm-rag)
-  - [文档导航（从这里开始）](#文档导航从这里开始)
-  - [Golden Path（PR/CI Lite 快速回归）](#golden-pathprci-lite-快速回归)
-  - [安装矩阵（依赖分层）](#安装矩阵依赖分层)
-  - [支持和沟通](#支持与沟通support)
-  - [旧版 README（已归档）](#旧版-readme已归档)
+- [文档导航（从这里开始）](#文档导航从这里开始)
+- [Golden Path（PR/CI Lite 快速回归）](#golden-pathprci-lite-快速回归)
+- [安装矩阵（依赖分层）](#安装矩阵依赖分层)
+- [支持和沟通](#支持与沟通support)
+- [项目治理与开源文件](#项目治理与开源文件)
+- [旧版 README（已归档）](#旧版-readme已归档)
 
 
 # zhiz-llm-rag
@@ -53,6 +54,17 @@ pytest -q
 ### 关于 Pull Request（暂不接收）
 目前仓库以维护者独立开发为主，暂不接收外部 PR/代码提交。  
 如果你已经准备了补丁或实现思路，建议先在 Discussions 发起讨论（附：动机、方案、影响面、验证方式），我会在合适的阶段再决定是否开放贡献入口并更新本段说明。
+
+## 项目治理与开源文件
+
+- `LICENSE`：开源授权条款
+- `CHANGELOG.md`：对外可感知的重要变更记录
+- `CITATION.cff`：引用信息（GitHub Cite this repository）
+- `CODE_OF_CONDUCT.md`：行为准则与举报渠道
+- `CONTRIBUTING.md`：贡献说明与准入条件
+- `SECURITY.md`：安全漏洞报告与支持范围
+- `SUPPORT.md`：支持与沟通渠道
+- `.editorconfig`：基础格式约定（减少无意义 diff）
 
 
 ## 旧版 README（已归档）

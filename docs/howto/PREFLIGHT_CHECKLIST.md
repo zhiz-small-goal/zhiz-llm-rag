@@ -198,6 +198,12 @@ python tools\check_repo_health_files.py --repo . --mode public-release --out dat
 
 > 说明：该检查用于拦截“CHANGELOG/CITATION/.editorconfig/CoC 联系方式占位符”等容易遗漏的公开发布治理文件。
 
+**相关文件（仓库根目录）**
+- [`../../CHANGELOG.md`](../../CHANGELOG.md)
+- [`../../CITATION.cff`](../../CITATION.cff)
+- [`../../.editorconfig`](../../.editorconfig)
+- [`../../CODE_OF_CONDUCT.md`](../../CODE_OF_CONDUCT.md)
+
 ---
 
 ## 4. 常见失败与处理

@@ -27,6 +27,17 @@
 - [检索系统演进摘要（Stage-2 retrieval evolution）](explanation/2026-01-04_retrieval_evolution_summary.md)
 
 - [Lessons / 经验库（可迁移）](explanation/LESSONS.md)
+
+## Project Meta（开源与治理）
+- [LICENSE（授权条款）](../LICENSE)
+- [CHANGELOG（变更记录）](../CHANGELOG.md)
+- [CITATION（引用信息）](../CITATION.cff)
+- [Code of Conduct（行为准则）](../CODE_OF_CONDUCT.md)
+- [Contributing（贡献说明）](../CONTRIBUTING.md)
+- [Security Policy（安全策略）](../SECURITY.md)
+- [Support Policy（支持与沟通）](../SUPPORT.md)
+- [.editorconfig（格式约定）](../.editorconfig)
+
 ## Postmortems（复盘：事故记录与证据链）
 - [INDEX](postmortems/INDEX.md)
 
