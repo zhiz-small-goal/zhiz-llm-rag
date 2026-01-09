@@ -1,7 +1,7 @@
 ---
 title: Preflight Checklist（重构/换机/换环境后必跑）
-version: 0.3
-last_updated: 2026-01-08
+version: 0.4
+last_updated: 2026-01-09
 scope: "本地门禁序列：在变更入口/依赖/环境后，快速确认系统仍可用；并覆盖公开发布前的最小检查"
 owner: zhiz
 ---
@@ -182,6 +182,21 @@ gitleaks detect --source . --no-git
 
 **PASS 条件**
 - Actions 列表中 CI 工作流处于可运行状态（能进入 job/step 视图）。
+
+### 3.5 Repo health / community files（开源补齐）
+**命令（CMD）**
+```cmd
+python tools\check_repo_health_files.py --repo . --mode public-release --out data_processed\build_reports\repo_health_report.json
+```
+**PASS 条件**
+- 输出 `result=PASS`
+- `required_missing=0` 且 `placeholders=0`（脚本会在控制台列出缺口）
+- 控制台出现 `report_written=...` 且对应 JSON 文件可解析
+
+**WARN 处理**
+- 若输出 `result=WARN`（通常是可选项如 `CITATION.cff` 或 `CODE_OF_CONDUCT.md` 缺失），表示"可公开但信息不完整"；建议在发布前补齐或在 README 里解释为何不提供。
+
+> 说明：该检查用于拦截“CHANGELOG/CITATION/.editorconfig/CoC 联系方式占位符”等容易遗漏的公开发布治理文件。
 
 ---
 

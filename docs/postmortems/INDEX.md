@@ -8,6 +8,11 @@
 - [Lessons / 经验库（可迁移）](../explanation/LESSONS.md)
 - [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)
 
+## 2026-01-09
+- **Postmortem：开源项目补齐仓库健康文件（CHANGELOG/CITATION/.editorconfig + CoC 联系方式）**
+  - 文件：[`docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`](2026-01-09_postmortem_open_source_repo_health_files.md)
+  - 关键字：repo health / CHANGELOG / CITATION / .editorconfig / CoC / preflight
+
 ## 2026-01-08
 - **Postmortem: tools/分层与全量wrapper生成门禁自举失败 + 退出码契约对齐**
   - 文件：[`docs/postmortems/2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md`](2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md)

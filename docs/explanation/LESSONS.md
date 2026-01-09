@@ -1,7 +1,7 @@
 ---
 title: Lessons / 经验库（可迁移）
-version: 0.2
-last_updated: 2026-01-08
+version: 0.3
+last_updated: 2026-01-09
 scope: "跨 postmortem 的失败模式、控制点、门禁与清单"
 owner: zhiz
 ---
@@ -107,16 +107,19 @@ owner: zhiz
 - 缺失控制点：
   - 发布快照独立性门禁（`.git` 目录 vs 指针文件）；
   - workflow 语法预检（至少规约含 `:` 的字符串必须加引号，最好加 lint）；
-  - secrets 扫描门禁（CI + 平台防回归）。
+  - secrets 扫描门禁（CI + 平台防回归）；
+  - repo health/community files 门禁（CHANGELOG/CITATION/.editorconfig/CoC 联系方式占位符）。
 - 可执行动作：
   - A1（数据面）：`python tools/check_public_release_hygiene.py --repo . --history 0`
   - A2（快照独立性）：`dir /a .git`（必须是 `<DIR>`）
   - A3（控制面）：在仓库启用 `secrets-scan` 工作流并确保至少跑过 1 次 PASS
   - A4（workflow 面）：push 后 Actions 不得出现 `Invalid workflow file`
+  - A5（repo health）：`python tools/check_repo_health_files.py --repo . --mode public-release --out data_processed\build_reports\repo_health_report.json`
 - 验收方式（PASS 条件）：
   - hygiene 报告 HIGH/MED=0；`.git` 为目录；CI 与 secrets-scan 均能进入 job/step 且最终 PASS。
 - 回链证据（至少 1 篇 postmortem）：
   - `docs/postmortems/2026-01-08_postmortem_public_release_preflight.md`
+  - `docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`
 
 ---
 

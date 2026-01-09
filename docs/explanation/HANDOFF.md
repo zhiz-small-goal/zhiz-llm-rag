@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - Mhy_AI_RAG_data
-version: 1
-last_updated: 2026-01-06
+version: 2
+last_updated: 2026-01-09
 timezone: America/Los_Angeles
 ssot: true
 ---
@@ -216,3 +216,8 @@ next（最小改动优先）：
   - 引入 workstreams 分栏：检索回归 + 报告实时观测
   - 约定归档位置：`docs/explanation/handoffs/`（历史快照仅归档，不作为当前口径）
   - report 实时观测：新增 stream 旁路输出（jsonl/json-seq）与进度摘要参数，保持 final JSON 兼容
+
+- 2026-01-09
+  - Public Release Preflight：新增 repo health/community files 检查项（CHANGELOG/CITATION/.editorconfig/CoC 联系方式占位符）
+  - 新增脚本：`tools/check_repo_health_files.py`（stdlib-only；0/1/2 退出码契约）
+  - 新增 postmortem：`docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`
