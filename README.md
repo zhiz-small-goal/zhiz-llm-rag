@@ -3,6 +3,7 @@
   - [文档导航（从这里开始）](#文档导航从这里开始)
   - [Golden Path（PR/CI Lite 快速回归）](#golden-pathprci-lite-快速回归)
   - [安装矩阵（依赖分层）](#安装矩阵依赖分层)
+  - [支持和沟通](#支持与沟通support)
   - [旧版 README（已归档）](#旧版-readme已归档)
 
 
@@ -36,6 +37,23 @@ pytest -q
 - 合并：`pip install -e ".[ci,embed]"`
 
 **默认的安装器安装到是 torch-only cpu, 想使用 GPU 需要先安装支持的 torch, 详见[OPERATION_GUIDE.md-环境与安装依赖-如需GPU](docs/howto/OPERATION_GUIDE.md#step-0环境与依赖安装core-vs-embed避免在-python-313-及以上误装-stage-2)
+
+## 支持与沟通（Support）
+
+> 当前阶段：欢迎 **Bug 报告** 与 **问题讨论**；为保证独立迭代节奏与回归质量，暂不接受代码贡献（Pull Request 可能会被直接关闭或不做处理）。
+
+- 🐛 Bug 报告：请使用 Issue 表单提交（推荐）  
+  https://github.com/zhiz-small-goal/zhiz-llm-rag/issues/new/choose
+
+- 💬 问答 / 讨论 / 使用交流：请使用 Discussions（Q&A / Discussion）  
+  https://github.com/zhiz-small-goal/zhiz-llm-rag/discussions
+
+- ✨ 建议与改进方向：请优先发到 Discussions，并尽量补充你的使用场景、期望行为与复现信息（有助于我评估优先级与可行性）。
+
+### 关于 Pull Request（暂不接收）
+目前仓库以维护者独立开发为主，暂不接收外部 PR/代码提交。  
+如果你已经准备了补丁或实现思路，建议先在 Discussions 发起讨论（附：动机、方案、影响面、验证方式），我会在合适的阶段再决定是否开放贡献入口并更新本段说明。
+
 
 ## 旧版 README（已归档）
 - 归档位置：[`docs/archive/README_LEGACY_FULL.md`](docs/archive/README_LEGACY_FULL.md)
