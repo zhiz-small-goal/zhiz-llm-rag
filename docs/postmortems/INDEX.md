@@ -14,70 +14,70 @@
   - 关键字：repo health / CHANGELOG / CITATION / .editorconfig / CoC / preflight
 
 ## 2026-01-08
-- **Postmortem: tools/分层与全量wrapper生成门禁自举失败 + 退出码契约对齐**
+- **Postmortem｜公开项目的前置检查（Public Release Preflight）**
+  - 文件：[`docs/postmortems/2026-01-08_postmortem_public_release_preflight.md`](2026-01-08_postmortem_public_release_preflight.md)
+  - 关键字：公开项目的前置检查 / Public / Release / Preflight / public / release / preflight
+- **Postmortem: tools/分层与全量 wrapper 生成门禁自举失败 + 退出码契约对齐**
   - 文件：[`docs/postmortems/2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md`](2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md)
-  - 关键字：tools / wrapper / gen_tools_wrappers / SSOT / exit code / gate
+  - 关键字：分层与全量 / wrapper / 生成门禁自举失败 / 退出码契约对齐 / layout / gen / exitcode / contract
 
 ## 2026-01-07
-- **docs↔code 对齐 + 缺失脚本补齐 + 文档门禁增强 + 输出可读性优化**
+- **2026-01-07｜docs↔code 对齐 + 缺失脚本补齐 + 文档门禁增强 + 输出可读性优化｜Postmortem**
   - 文件：[`docs/postmortems/2026-01-07_postmortem_docs_code_alignment_and_doc_gates.md`](2026-01-07_postmortem_docs_code_alignment_and_doc_gates.md)
-  - 关键字：docs / code alignment / doc-gate / placeholder / runtime artifacts / readability
-
+  - 关键字：2026 / 01 / 07 / code / 对齐 / 缺失脚本补齐 / 文档门禁增强 / 输出可读性优化 / alignment / gates
 
 ## 2026-01-05
-- **E2E 回归中 LLM HTTP POST 错误取证缺失与模型身份不准确**
+- **事故复盘：E2E 回归中 LLM HTTP POST 错误取证缺失与模型身份不准确 — 2026-01-05**
   - 文件：[`docs/postmortems/2026-01-05_postmortem_llm_http_observability_and_model_identity.md`](2026-01-05_postmortem_llm_http_observability_and_model_identity.md)
-  - 关键字：llm / http / observability / model identity / error_detail / /v1/models
-
+  - 关键字：事故复盘 / E2E / 回归中 / LLM / HTTP / POST / 错误取证缺失与模型身份不准确 / 2026 / 01 / 05 / llm / http
 
 ## 2026-01-03
-- **rag-accept 命令缺失与文档编码乱码复盘**
+- **21h rag accept cli missing and doc encoding mismatch**
   - 文件：[`docs/postmortems/2026-01-03-21h_rag_accept_cli_missing_and_doc_encoding_mismatch.md`](2026-01-03-21h_rag_accept_cli_missing_and_doc_encoding_mismatch.md)
-  - 关键字：rag-accept / console_scripts / entrypoints / UTF-8 / docs
-- **pyproject 门禁与环境安装异常复盘（Issue1）**
+  - 关键字：21h / rag / accept / cli / missing / encoding / mismatch
+- **2026-01-03 pyproject 门禁与环境安装异常复盘（Issue1）**
   - 文件：[`docs/postmortems/2026-01-03_issue1_postmortem.md`](2026-01-03_issue1_postmortem.md)
-  - 关键字：pyproject / ascii-only / preflight / run_ci_gates / pip install
-
+  - 关键字：2026 / 01 / 03 / pyproject / 门禁与环境安装异常复盘 / Issue1 / issue1
 
 ## 2026-01-02
-- **rag-status 对 chroma_db/ 的 mtime 进行判定导致对 check.json 判定过期**
+- **18h status step6 check json stale false positive**
   - 文件：[`docs/postmortems/2026-01-02-18h_status_step6_check_json_stale_false_positive.md`](2026-01-02-18h_status_step6_check_json_stale_false_positive.md)
-  - 关键词: status / chroma_db / mtime / check.json / STALE
+  - 关键字：18h / status / step6 / check / json / stale / false / positive
 
 ## 2025-12-30
-- **本次问题排查总结（导入漂移 + 重构契约漂移 + 工具链 PATH 分叉）**
-  - 文件: [`2025-12-30_units_pipeline_postmortem_import_contract_cli_entrypoints_rg.md`](2025-12-30_units_pipeline_postmortem_import_contract_cli_entrypoints_rg.md)
-  - 关键词: src-layout / editable install / import drift / console_scripts / entrypoints / TypeError / signature drift / md refs / ripgrep / winget / PATH
-- **CI 轻量环境 plan 阶段因 chromadb 缺失失败（可选依赖分层）**
-  - 文件: [`2025-12-30_postmortem_ci_optional_dependency_chromadb.md`](2025-12-30_postmortem_ci_optional_dependency_chromadb.md)
-  - 关键词: chromadb / .venv_ci / plan_chunks_from_units.py / ModuleNotFoundError / 可选依赖 / lazy import
-- **pip embed 在 py3.14 下触发 NumPy Meson 构建失败**
-  - 文件: [`2025-12-30_postmortem_pip_embed_py314_numpy_meson_fail.md`](2025-12-30_postmortem_pip_embed_py314_numpy_meson_fail.md)
-  - 关键词: pip / embed / py3.14 / numpy / meson / metadata-generation-failed / ccache gcc / wheel
+- **postmortem ci optional dependency chromadb**
+  - 文件：[`docs/postmortems/2025-12-30_postmortem_ci_optional_dependency_chromadb.md`](2025-12-30_postmortem_ci_optional_dependency_chromadb.md)
+  - 关键字：ci / optional / dependency / chromadb
+- **postmortem pip embed py314 numpy meson fail**
+  - 文件：[`docs/postmortems/2025-12-30_postmortem_pip_embed_py314_numpy_meson_fail.md`](2025-12-30_postmortem_pip_embed_py314_numpy_meson_fail.md)
+  - 关键字：pip / embed / py314 / numpy / meson / fail
+- **units pipeline postmortem import contract cli entrypoints rg**
+  - 文件：[`docs/postmortems/2025-12-30_units_pipeline_postmortem_import_contract_cli_entrypoints_rg.md`](2025-12-30_units_pipeline_postmortem_import_contract_cli_entrypoints_rg.md)
+  - 关键字：src-layout, editable install, import drift, console_scripts, entrypoints, TypeError, signature drift, md refs, ripgrep, winget, PATH
 
 ## 2025-12-29
-- **Chroma 构建数量异常排查总结（expected=3728 vs got=4433）**
-  - 文件: [`2025-12-29_chroma_build_postmortem_count_mismatch_3728_vs_4433.md`](2025-12-29_chroma_build_postmortem_count_mismatch_3728_vs_4433.md)
-  - 关键词: chunks / chroma / plan
-- **本次 Units 阶段失败排查总结（inventory→units 对账失败 + extract_units TypeError）**
-  - 文件: [`2025-12-29_units_pipeline_postmortem_inventory_units_mismatch_and_extract_units_typeerror.md`](2025-12-29_units_pipeline_postmortem_inventory_units_mismatch_and_extract_units_typeerror.md)
-  - 关键词: inventory.csv / text_units.jsonl / validate_rag_units / extract_units / __pycache__ / pyc / schemeB / profile runner / md refs
+- **chroma build postmortem count mismatch 3728 vs 4433**
+  - 文件：[`docs/postmortems/2025-12-29_chroma_build_postmortem_count_mismatch_3728_vs_4433.md`](2025-12-29_chroma_build_postmortem_count_mismatch_3728_vs_4433.md)
+  - 关键字：chroma build, expected_chunks, count mismatch, residual data, plan-driven, include_media_stub, schemeB
+- **units pipeline postmortem inventory units mismatch and extract units typeerror**
+  - 文件：[`docs/postmortems/2025-12-29_units_pipeline_postmortem_inventory_units_mismatch_and_extract_units_typeerror.md`](2025-12-29_units_pipeline_postmortem_inventory_units_mismatch_and_extract_units_typeerror.md)
+  - 关键字：inventory.csv, text_units.jsonl, validate_rag_units, extract_units, __pycache__, pyc, schemeB, profile runner, md refs
 
 ## 2025-12-28
-- **LLM 请求被环境代理劫持到 127.0.0.1:7890 导致 ReadTimeout**
-  - 文件: [`2025-12-28_postmortem_llm_proxy_timeout_7890.md`](2025-12-28_postmortem_llm_proxy_timeout_7890.md)
-  - 关键词: ReadTimeout / read timeout=XX / llm_http_client.py
+- **Postmortem: LLM 请求被环境代理劫持到 127.0.0.1:7890 导致 ReadTimeout（LM Studio）— 2025-12-28**
+  - 文件：[`docs/postmortems/2025-12-28_postmortem_llm_proxy_timeout_7890.md`](2025-12-28_postmortem_llm_proxy_timeout_7890.md)
+  - 关键字：LM Studio, proxy hijack, 127.0.0.1:7890, ReadTimeout, requests trust_env, NO_PROXY, OpenAI-compatible, /v1/chat/completions
 
 ## 2025-12-27
-- **LLM Read Timeout（LM Studio / OpenAI-compatible）**
-  - 文件：[`2025-12-27_postmortem_llm_timeout_lmstudio.md`](2025-12-27_postmortem_llm_timeout_lmstudio.md)
-  - 关键词：read timeout=120 / requests timeout / LM Studio / /v1/chat/completions
+- **Postmortem: RAG 闭环问答阶段 LLM Read Timeout（LM Studio）— 2025-12-27**
+  - 文件：[`docs/postmortems/2025-12-27_postmortem_llm_timeout_lmstudio.md`](2025-12-27_postmortem_llm_timeout_lmstudio.md)
+  - 关键字：LM Studio, read timeout=120, requests timeout, OpenAI-compatible, /v1/chat/completions, long generation
 - **Postmortem: Torch not compiled with CUDA enabled, chroma_db 不一致 - 2025.12.27**
-  - 文件：[`25-12-27_CPU-only_chroma-build_postmoretm.md`](25-12-27_CPU-only_chroma-build_postmoretm.md)
-  - 关键词：CPU-only 构建 / PyTorch / cuda:0 / CUDA wheel / chroma_db / check 计数漂移
-chat/completions
+  - 文件：[`docs/postmortems/25-12-27_CPU-only_chroma-build_postmoretm.md`](25-12-27_CPU-only_chroma-build_postmoretm.md)
+  - 关键字：CPU-only构建， PyTorch,  cuda:0, CUDA wheel, chroma_db, check计数漂移
 
 ## 2025-12-26
-- **Chroma 构建数量异常（expected_chunks 口径不一致：705 vs 694）**
-  - 文件：[`2025-12-26_chroma_build_postmortem.md`](2025-12-26_chroma_build_postmortem.md)
-  - 关键词：expected_chunks / include-media-stub / plan_chunks / media skip / source diff
+- **本次 Chroma 构建数量异常排查总结（705 vs 694）**
+  - 文件：[`docs/postmortems/2025-12-26_chroma_build_postmortem.md`](2025-12-26_chroma_build_postmortem.md)
+  - 关键字：chroma build, expected_chunks, count mismatch, media skip, include-media-stub, chunk_plan
+<!-- AUTO-GENERATED:END postmortems-index -->
