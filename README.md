@@ -5,6 +5,8 @@
   - [安装矩阵（依赖分层）](#安装矩阵依赖分层)
   - [旧版 README（已归档）](#旧版-readme已归档)
 
+  <!-- pr template smoke test -->
+
 
 # Mhy_AI_RAG_data
 
