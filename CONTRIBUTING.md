@@ -1,13 +1,30 @@
+---
+title: Contributing
+version: 0.1
+last_updated: 2026-01-09
+---
+
 # Contributing
 
-## Development Setup
+当前阶段：维护者以独立开发为主，目标是保持项目节奏与一致性，因此 **通常不接收外部代码贡献（PR）**。
 
-- TODO: Describe how to create venv, install deps, run tests.
+## 我们欢迎的输入（低打扰、高信噪比）
 
-## Gates
+- **可复现 Bug 报告**：请使用 Issues 的 Bug 表单提交（必须包含版本/commit、MRE、日志）
+- **问答**：请使用 Discussions → Q&A（社区可自助解答）
+- **想法**：请使用 Discussions → Ideas（不承诺采纳）
 
-- Public release hygiene: `python tools/check_public_release_hygiene.py --repo . --history 0`
+## 不在范围内
 
-## Pull Requests
+- 仅“无法运行/怎么用”的泛问（请先看 README/文档，并到 Discussions 提问）
+- 需要维护者提供定制化支持或远程协助的请求
+- 未提供复现信息的缺陷报告
 
-- TODO: Add coding style, review policy, and CI expectations.
+## 未来开放贡献的方向（占位）
+
+当以下条件满足时，可能开放外部 PR：
+- CI/Gates 稳定并文档化
+- 贡献者可以一键跑通最小回归
+- 代码结构与接口契约稳定（减少维护者 review 成本）
+
+在此之前，如果你认为某个修复非常关键，请先创建 Bug Issue 讨论复现与验收口径。

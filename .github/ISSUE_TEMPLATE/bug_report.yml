@@ -1,0 +1,81 @@
+name: Bug report（缺陷报告）
+description: 仅用于可复现 Bug（使用咨询/功能请求请去 Discussions）
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ✅ 仅接收 **可复现 Bug**。  
+        ❓ 使用/配置/概念问题请到 **Discussions → Q&A**。  
+        💡 功能想法请到 **Discussions → Ideas**。
+  - type: checkboxes
+    id: gate
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issues 与 Discussions，确认未重复
+          required: true
+        - label: 这是缺陷（bug），不是使用咨询/功能请求
+          required: true
+        - label: 我愿意提供最小可复现（MRE）与必要日志
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本/提交（必填）
+      description: "例如：tag / commit SHA / pip 版本号"
+      placeholder: "e.g. main @ abcdef1"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python 版本
+      placeholder: "e.g. 3.11.7"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤（MRE）
+      description: "请给出最小步骤：命令、输入文件（可用示例/脱敏）、配置。"
+      placeholder: |
+        1) ...
+        2) ...
+        3) ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      placeholder: "我期望看到..."
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为/错误信息
+      placeholder: "实际看到..."
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志/截图（可选，但强烈建议）
+      description: "请粘贴关键日志片段（避免泄露密钥/个人信息）。"
+      render: shell
+    validations:
+      required: false

@@ -1,0 +1,16 @@
+# GitHub Issue template chooser configuration
+# Place this file at: .github/ISSUE_TEMPLATE/config.yml
+blank_issues_enabled: false
+contact_links:
+  - name: "Q&A / 使用问题（去 Discussions）"
+    url: "https://github.com/zhiz-small-goal/zhiz-llm-rag/discussions/categories/q-a"
+    about: "用于使用/配置/概念澄清。请先搜索现有讨论。"
+  - name: "想法/建议（去 Discussions）"
+    url: "https://github.com/zhiz-small-goal/zhiz-llm-rag/discussions/categories/ideas"
+    about: "用于功能想法与路线讨论（当前不保证采纳与回复时效）。"
+  - name: "安全漏洞（不要开公开 Issue）"
+    url: "https://github.com/zhiz-small-goal/zhiz-llm-rag/security/policy"
+    about: "请通过 Security Policy 中的私密渠道报告。"
+  - name: "文档与运行指南"
+    url: "https://github.com/zhiz-small-goal/zhiz-llm-rag#readme"
+    about: "先阅读 README 与文档导航。"
