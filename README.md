@@ -7,7 +7,7 @@
   - [旧版 README（已归档）](#旧版-readme已归档)
 
 
-# zhiz-llm-rag
+# Mhy_AI_RAG_data
 
 > 目标：构建可审计、可回归的 RAG 数据管线（inventory → units → validate → plan → embedding/chroma），并以门禁化方式降低重构回归成本。
 
