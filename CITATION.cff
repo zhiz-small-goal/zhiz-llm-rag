@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "zhiz-llm-rag"
+type: software
+authors:
+  - family-names: "zhiz"
+    given-names: "枝枝"
+repository-code: "https://github.com/zhiz-small-goal/zhiz-llm-rag"
+url: "https://github.com/zhiz-small-goal/zhiz-llm-rag"
+license: "AGPL-3.0-or-later"
+version: "0.1.0"
+date-released: "2026-01-09"
