@@ -29,7 +29,9 @@ tools\run_ci_gates.cmd --with-embed
 ```cmd
 python tools\check_pyproject_preflight.py --ascii-only ^
   && pip install -e ".[ci]" ^
+  && python tools\gen_tools_wrappers.py --check ^
   && python tools\check_tools_layout.py --mode fail ^
+  && python tools\check_exit_code_contract.py --root . ^
   && python tools\check_cli_entrypoints.py ^
   && python tools\check_md_refs_contract.py ^
   && pytest -q
@@ -37,6 +39,8 @@ python tools\check_pyproject_preflight.py --ascii-only ^
 
 ## 3) 每个门禁到底在检查什么
 - `check_tools_layout.py`：tools/ 入口层是否按 contract 分层（wrapper vs repo-only），并检测 tools↔src 同名冲突
+- `gen_tools_wrappers.py --check`：受管 wrapper 是否与模板一致（避免手工编辑导致的“SSOT 漂移”）
+- `check_exit_code_contract.py`：静态扫描 `sys.exit(1)` / `SystemExit("...")` / `exit /b 1` 等高频漂移点，保证退出码口径收敛到 {0,2,3}
 - `check_cli_entrypoints.py`：console_scripts 元数据 → venv Scripts wrapper → PATH 可见性的证据链
 - `check_md_refs_contract.py`：`extract_refs_from_md` 的签名绑定与调用点规范（强制关键字参数）
 - `pytest -q`：最小轻集成（tmp_path 生成最小目录树，验证 inventory/units/validate 的关键不变量）
