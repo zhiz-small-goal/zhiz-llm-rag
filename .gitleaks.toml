@@ -1,0 +1,14 @@
+title = "zhiz-llm-rag gitleaks config"
+# last_updated: 2026-01-10
+#
+# This file intentionally starts minimal:
+# - Extend the built-in default rule set
+# - Add allowlists/excludes only with concrete evidence (false positives) and review
+
+[extend]
+useDefault = true
+
+# Example allowlist (commented out by default):
+# [[rules.allowlists]]
+# description = "Ignore test fixtures directory"
+# paths = [ '''^tests/fixtures/''' ]
