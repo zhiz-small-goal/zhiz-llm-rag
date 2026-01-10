@@ -11,7 +11,7 @@ gen_tools_wrappers.py
 关键概念：
   - SSOT 在 src：`src/mhy_ai_rag_data/tools/<name>.py`
   - tools 仅承载“入口 shim”：`tools/<name>.py`
-  - 受管 wrapper 清单由 `tools/wrapper_gen_config.json` 的 `managed_wrappers` 控制（避免一次性改动全仓库 wrapper 模板）
+  - 受管 wrapper 清单由 `tools/wrapper_gen_config.json` 的 `managed_wrappers` 控制
 
 用法（在仓库根目录）：
   - 校验（不改文件，适合 CI）：
@@ -21,10 +21,17 @@ gen_tools_wrappers.py
   - 允许创建缺失的受管 wrapper（谨慎使用）：
       python tools/gen_tools_wrappers.py --write --bootstrap-missing
 
+对比策略（重要）：
+  - 默认（canonical compare）：忽略 CRLF/LF、UTF-8 BOM、行尾空白；只要“内容语义”一致即 PASS。
+  - 严格模式（--strict）：保留磁盘真实换行，并要求与生成模板（按当前 OS 的换行约定）逐字一致。
+
+诊断输出（门禁友好）：
+  - mismatch 时输出 `file:line:col` 行首定位，并附带截断 unified diff（可用 --diff-max-lines 调整）。
+
 退出码：
-  - 0：PASS（全部一致）
-  - 2：FAIL（存在不一致/缺失/配置错误）
-  - 3：ERROR（脚本异常/未捕获异常）
+  - 0：PASS
+  - 2：FAIL（不一致/缺失/配置错误）
+  - 3：ERROR（脚本异常）
 """
 
 from __future__ import annotations
@@ -208,12 +215,83 @@ def _validate_src_exists(cfg: Config, stem: str) -> Tuple[bool, str]:
     return True, ""
 
 
+def _canonical_text(s: str, *, strip_trailing_ws: bool = True, ensure_final_nl: bool = True) -> str:
+    """Normalize text for robust comparisons.
+
+    - Normalize newlines to \n
+    - Drop UTF-8 BOM if present
+    - Optionally strip trailing whitespace per line
+    - Optionally ensure exactly one final newline
+    """
+    if s.startswith("\ufeff"):
+        s = s.lstrip("\ufeff")
+    s = s.replace("\r\n", "\n").replace("\r", "\n")
+    if strip_trailing_ws:
+        s = "\n".join(line.rstrip() for line in s.split("\n"))
+    if ensure_final_nl:
+        s = s.rstrip("\n") + "\n"
+    return s
+
+
+def _read_text(path: Path, *, strict_newlines: bool) -> str:
+    """Read UTF-8 text.
+
+    strict_newlines=False uses universal newline translation (CRLF/LF -> \n).
+    strict_newlines=True preserves disk newlines (newline="").
+    """
+    if strict_newlines:
+        with path.open("r", encoding="utf-8", errors="strict", newline="") as f:
+            return f.read()
+    return path.read_text(encoding="utf-8", errors="strict")
+
+
+def _first_diff_loc(a: str, b: str) -> tuple[int, int]:
+    """Return (line, col) 1-based of first textual difference; best-effort."""
+    a_lines = a.split("\n")
+    b_lines = b.split("\n")
+    n = min(len(a_lines), len(b_lines))
+    for i in range(n):
+        if a_lines[i] != b_lines[i]:
+            col = 1
+            m = min(len(a_lines[i]), len(b_lines[i]))
+            for j in range(m):
+                if a_lines[i][j] != b_lines[i][j]:
+                    col = j + 1
+                    break
+            return (i + 1, col)
+    return (n + 1, 1)
+
+
+def _short_udiff(path_label: str, actual: str, expected: str, *, max_lines: int) -> str:
+    import difflib
+
+    diff = difflib.unified_diff(
+        actual.splitlines(True),
+        expected.splitlines(True),
+        fromfile=f"{path_label} (actual)",
+        tofile=f"{path_label} (expected)",
+        n=3,
+    )
+    out: list[str] = []
+    for i, line in enumerate(diff):
+        out.append(line.rstrip("\n"))
+        if i + 1 >= max_lines:
+            out.append("... (diff truncated)")
+            break
+    return "\n".join(out)
+
+
+
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=None, help="path to wrapper_gen_config.json (default: tools/wrapper_gen_config.json)")
     ap.add_argument("--check", action="store_true", help="check managed wrappers match expected template; do not modify files")
     ap.add_argument("--write", action="store_true", help="rewrite managed wrappers to expected template")
     ap.add_argument("--bootstrap-missing", action="store_true", help="in --write mode, create missing managed wrappers if SSOT exists")
+    ap.add_argument("--strict", action="store_true", help="strict compare: preserve disk newlines and require exact match (including CRLF/LF); recommended only after migration")
+    ap.add_argument("--diff-max-lines", type=int, default=80, help="max unified-diff lines to print per mismatched wrapper (default: 80)")
+    ap.add_argument("--no-diff", action="store_true", help="do not print unified diff on mismatch (still prints file:line:col)")
+    ap.add_argument("--keep-trailing-ws", action="store_true", help="do not strip trailing whitespace in canonical compare (default strips)")
     args = ap.parse_args(argv)
 
     if args.check and args.write:
@@ -231,6 +309,7 @@ def main(argv: List[str] | None = None) -> int:
         return 0
 
     mismatched: List[Path] = []
+    mismatch_details: dict[Path, tuple[int, int, str]] = {}
     missing_ssot: List[Tuple[Path, str]] = []
     missing_wrapper: List[Path] = []
     rewritten: List[Path] = []
@@ -244,7 +323,7 @@ def main(argv: List[str] | None = None) -> int:
             missing_ssot.append((tool_py, msg))
             continue
 
-        expected = _expected_wrapper_text(cfg, name).replace("\n", os.linesep)
+        expected = _expected_wrapper_text(cfg, name)
 
         if not tool_py.exists():
             if mode == "write" and args.bootstrap_missing:
@@ -254,13 +333,37 @@ def main(argv: List[str] | None = None) -> int:
                 missing_wrapper.append(tool_py)
             continue
 
-        actual = tool_py.read_text(encoding="utf-8", errors="ignore")
-        if actual != expected:
+        try:
+            actual_raw = _read_text(tool_py, strict_newlines=bool(args.strict))
+        except UnicodeDecodeError as e:
+            mismatched.append(tool_py)
+            mismatch_details[tool_py] = (1, 1, f"[ERROR] UTF-8 decode failed: {e}")
+            continue
+
+        if args.strict:
+            expected_cmp = expected.replace("\n", os.linesep)
+            expected_cmp = expected_cmp.rstrip("\r\n") + os.linesep
+            actual_cmp = actual_raw
+        else:
+            strip_ws = not bool(args.keep_trailing_ws)
+            expected_cmp = _canonical_text(expected, strip_trailing_ws=strip_ws, ensure_final_nl=True)
+            actual_cmp = _canonical_text(actual_raw, strip_trailing_ws=strip_ws, ensure_final_nl=True)
+
+        if actual_cmp != expected_cmp:
             if mode == "write":
                 tool_py.write_text(expected, encoding="utf-8", newline=os.linesep)
                 rewritten.append(tool_py)
             else:
                 mismatched.append(tool_py)
+                line, col = _first_diff_loc(actual_cmp, expected_cmp)
+                diff_txt = ""
+                if not args.no_diff:
+                    try:
+                        label = str(tool_py.relative_to(repo))
+                    except Exception:
+                        label = str(tool_py)
+                    diff_txt = _short_udiff(label, actual_cmp, expected_cmp, max_lines=int(args.diff_max_lines))
+                mismatch_details[tool_py] = (line, col, diff_txt)
 
     print(f"[gen_tools_wrappers] mode={mode}")
     print(f"[gen_tools_wrappers] config={cfg_path}")
@@ -277,10 +380,20 @@ def main(argv: List[str] | None = None) -> int:
         for p in missing_wrapper:
             print(f" - {p}")
 
+
     if mismatched:
         print("[FAIL] wrappers not up-to-date (run --write to refresh):")
         for p in mismatched:
             print(f" - {p}")
+        for p in mismatched:
+            line, col, diff_txt = mismatch_details.get(p, (1, 1, ""))
+            try:
+                rel = str(p.relative_to(repo))
+            except Exception:
+                rel = str(p)
+            print(f"{rel}:{line}:{col} [FAIL] wrapper drift detected")
+            if diff_txt:
+                print(diff_txt)
 
     if rewritten:
         print("[OK] rewritten wrappers:")
