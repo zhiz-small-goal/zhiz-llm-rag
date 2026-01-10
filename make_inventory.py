@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import uuid
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Any
@@ -154,7 +155,8 @@ def main() -> None:
     out_csv = project_root / "inventory.csv"
 
     if not raw_dir.exists():
-        raise SystemExit(f"Missing directory: {raw_dir}")
+        print(f"[FAIL] missing directory: {raw_dir}", file=sys.stderr)
+        raise SystemExit(2)
 
     existing = load_existing_doc_ids(out_csv)
     note_value = build_note(NOTE_CONFIG)

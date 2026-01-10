@@ -155,7 +155,8 @@ if __name__ == "__main__":
 
 
     if len(sys.argv) < 2:
-        raise SystemExit("Usage: python md_refs.py <path-to-md> [project-root]")
+        print("Usage: python md_refs.py <path-to-md> [project-root]", file=sys.stderr)
+        raise SystemExit(2)
 
     md_path = Path(sys.argv[1]).resolve()
     project_root = Path(sys.argv[2]).resolve() if len(sys.argv) >= 3 else find_project_root(None)

@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -86,7 +87,8 @@ def main() -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
 
     if not inv.exists():
-        raise SystemExit(f"Missing {inv}")
+        print(f"[FAIL] missing inventory: {inv}", file=sys.stderr)
+        raise SystemExit(2)
 
     n = 0
     with inv.open("r", encoding="utf-8", newline="") as f_in, out.open("w", encoding="utf-8") as f_out:
