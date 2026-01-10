@@ -1,5 +1,7 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv_embed\\Scripts\\python.exe",
+    "python.terminal.activateEnvironment": true,
     "python-envs.pythonProjects": [],
     // 新增：本工作区默认终端用 CMD
     "terminal.integrated.defaultProfile.windows": "Command Prompt",
