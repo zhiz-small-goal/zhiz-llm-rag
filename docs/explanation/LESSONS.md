@@ -1,7 +1,7 @@
 ---
 title: Lessons / 经验库（可迁移）
-version: 0.3
-last_updated: 2026-01-09
+version: 0.4
+last_updated: 2026-01-11
 scope: "跨 postmortem 的失败模式、控制点、门禁与清单"
 owner: zhiz
 ---
@@ -120,6 +120,28 @@ owner: zhiz
 - 回链证据（至少 1 篇 postmortem）：
   - `docs/postmortems/2026-01-08_postmortem_public_release_preflight.md`
   - `docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`
+
+
+
+### 条目：门禁结果以退出码/结构化状态为准，避免被“report_written”误导
+- 标签（失败模式）：`不可观测`、`契约漂移`
+- 适用场景：本地跑 gate/单步脚本时，控制台同时出现“写盘成功/OK”与“门禁 FAIL”，导致判断摇摆
+- 触发/现象：
+  - gate 报 `rc=2 / FAIL`，但日志出现 `[OK] report_written=...`；
+  - 报告可能落到 Desktop（含用户名绝对路径），影响分享与可复现。
+- 根因机制（简述）：
+  - hygiene 脚本把“写盘成功”（I/O）与“检查是否通过”（HIGH/MED 统计 + 退出码）输出拆开，且缺少单一权威汇总行。
+- 缺失控制点：
+  - Preflight 未显式要求检查退出码（例如 `echo %ERRORLEVEL%`）；
+  - 未将“fallback 到 Desktop”视作可观测的 warning（容易被当成正常路径）。
+- 可执行动作：
+  - A1：跑完 hygiene 立刻检查退出码：`echo %ERRORLEVEL%`（非 0 直接当 FAIL）
+  - A2：在报告中搜索 `[HIGH]` 并清零；直到 `HIGH=0 && MED=0`
+  - A3：若 report 落 Desktop，优先修复写入 repo 目录的权限/路径或显式 `--out data_processed/build_reports/...`
+- 验收方式（PASS 条件）：
+  - `check_public_release_hygiene` 退出码为 0；报告 `HIGH/MED=0`；report 路径为 repo 内相对路径
+- 回链证据（至少 1 篇 postmortem）：
+  - `docs/postmortems/2026-01-11_postmortem_public_release_hygiene_rc2_and_report_written_signal.md`
 
 ---
 

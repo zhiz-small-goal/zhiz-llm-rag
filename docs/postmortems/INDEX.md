@@ -9,6 +9,11 @@
 - [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)
 
 <!-- AUTO-GENERATED:BEGIN postmortems-index -->
+## 2026-01-11
+- **Postmortem｜check_public_release_hygiene：rc=2（FAIL）与 report_written 信号误读**
+  - 文件：[`docs/postmortems/2026-01-11_postmortem_public_release_hygiene_rc2_and_report_written_signal.md`](2026-01-11_postmortem_public_release_hygiene_rc2_and_report_written_signal.md)
+  - 关键字：check_public_release_hygiene / rc=2 / FAIL / report_written / exitcode / Desktop / fallback / file-scope / respect-gitignore / public release hygiene
+
 ## 2026-01-09
 - **Postmortem：开源项目补齐仓库健康文件（CHANGELOG/CITATION/.editorconfig + CoC 联系方式）**
   - 文件：[`docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`](2026-01-09_postmortem_open_source_repo_health_files.md)

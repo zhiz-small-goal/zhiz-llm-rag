@@ -1,7 +1,7 @@
 ---
 title: Preflight Checklist（重构/换机/换环境后必跑）
-version: 0.4
-last_updated: 2026-01-09
+version: 0.5
+last_updated: 2026-01-11
 scope: "本地门禁序列：在变更入口/依赖/环境后，快速确认系统仍可用；并覆盖公开发布前的最小检查"
 owner: zhiz
 ---
@@ -162,11 +162,16 @@ python tools\verify_reports_schema.py
 **命令（CMD）**
 ```cmd
 python tools\check_public_release_hygiene.py --repo . --history 0 --file-scope tracked_and_untracked_unignored --respect-gitignore
+echo %ERRORLEVEL%
 ```
 **PASS 条件**
-- 报告中 HIGH/MED 为 0（以报告为准）
-- 报告写入成功（通常输出 `report_written=...`）
-- 说明：该命令默认按 Git 语义扫描（tracked + 未跟踪但未被 gitignore 忽略），不会因本地已忽略的数据目录误报。
+- `%ERRORLEVEL%` 输出 `0`
+- 报告 Summary 中 `HIGH=0` 且 `MED=0`
+- `report_written=...` 指向 repo 内 `data_processed/build_reports/`（若落到 Desktop，通常表示写入 repo 目录失败触发 fallback；先修权限/路径或显式 `--out`）
+
+**说明**
+- 该命令默认按 Git 语义扫描（tracked + 未跟踪但未被 gitignore 忽略），不会因本地已忽略的数据目录误报。
+- `report_written` 只代表“写盘成功”，不等价于“检查通过”；最终以退出码与 HIGH/MED 统计为准。
 
 ### 3.2 发布快照独立性检查（避免 worktree/.git 指针耦合）
 **命令（CMD）**
