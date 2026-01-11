@@ -1,0 +1,44 @@
+# reference.yaml
+# Machine-readable contract for repo-level gates.
+# Consumed by: tools/gate.py
+
+version: 1
+last_updated: "2026-01-11"
+
+exit_codes:
+  pass: 0
+  fail: 2
+  error: 3
+
+reports:
+  default_dir: "data_processed/build_reports"
+  gate_report: "data_processed/build_reports/gate_report.json"
+  report_schema_version: 1
+
+# Gate profiles. A profile is a deterministic ordered list of steps.
+gate_profiles:
+  fast:
+    - wrappers_check
+    - tools_layout
+    - exit_code_contract
+    - cli_entrypoints
+    - md_refs_contract
+    - pytest
+  ci:
+    - pyproject_preflight
+    - wrappers_check
+    - tools_layout
+    - exit_code_contract
+    - public_release_hygiene
+    - cli_entrypoints
+    - md_refs_contract
+    - pytest
+  full:
+    - pyproject_preflight
+    - wrappers_check
+    - tools_layout
+    - exit_code_contract
+    - public_release_hygiene
+    - cli_entrypoints
+    - md_refs_contract
+    - pytest

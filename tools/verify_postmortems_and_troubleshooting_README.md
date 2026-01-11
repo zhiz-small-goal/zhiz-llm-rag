@@ -86,7 +86,7 @@ python tools/verify_postmortems_and_troubleshooting.py --fix-missing-tools-to-pl
   - `STATUS: PASS` / `WARN` / `FAIL` 都可能返回 `0`，便于“先报告后修复”的交互式工作流。
 - **严格模式（`--strict`）**：
   - `STATUS: PASS` → 退出码 `0`
-  - `STATUS: WARN` → 退出码 `1`
+  - `STATUS: WARN` → 退出码 `2`
   - `STATUS: FAIL` → 退出码 `2`
 
 ### 推荐做法

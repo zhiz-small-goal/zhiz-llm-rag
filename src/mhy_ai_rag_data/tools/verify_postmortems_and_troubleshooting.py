@@ -640,7 +640,7 @@ def main() -> int:
         if fixed:
             print(f"auto_fixed={len(fixed)}")
         print(f"suggested={len(suggested)}")
-        return 1 if args.strict else 0
+        return 2 if args.strict else 0
 
     if printed_any_section:
         print()
