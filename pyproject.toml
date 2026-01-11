@@ -42,6 +42,7 @@ embed = [
 # CI extras: minimal deps only. See docs/reference/deps_policy.md#ci-extras
 ci = [
   "pytest>=7",
+  "jsonschema>=4.26.0",
 ]
 
 # Dev extras: optional local tooling. See docs/reference/deps_policy.md#dev-extras
@@ -59,6 +60,8 @@ rag-check = "mhy_ai_rag_data.cli:check_chroma"
 rag-probe-llm = "mhy_ai_rag_data.cli:probe_llm"
 rag-check-pipeline = "mhy_ai_rag_data.cli:check_rag_pipeline"
 rag-check-all = "mhy_ai_rag_data.cli:check_all"
+rag-gate = "mhy_ai_rag_data.cli:gate"
+rag-schema-validate = "mhy_ai_rag_data.cli:schema_validate"
 rag-status = "mhy_ai_rag_data.cli:status"
 rag-stamp = "mhy_ai_rag_data.cli:stamp"
 rag-accept = "mhy_ai_rag_data.cli:accept"
