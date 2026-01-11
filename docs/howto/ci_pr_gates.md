@@ -25,18 +25,7 @@ tools\run_ci_gates.cmd
 tools\run_ci_gates.cmd --with-embed
 ```
 
-### 2.2 跨平台（推荐）：Python 单一入口
-```bash
-python tools/gate.py --profile fast --root .
-# CI 口径（包含 public_release_hygiene 等）
-python tools/gate.py --profile ci --root .
-```
-
-说明：
-- 默认 fail-fast；想收集全量失败点可加 `--keep-going`。
-- 默认会写 `data_processed/build_reports/gate_report.json`（也可用 `--json-out` 覆盖）。
-
-### 2.3 如果你坚持手动逐条跑（务必用 && 串联实现 fail-fast）
+### 2.2 如果你坚持手动逐条跑（务必用 && 串联实现 fail-fast）
 ```cmd
 python tools\check_pyproject_preflight.py --ascii-only ^
   && pip install -e ".[ci]" ^
