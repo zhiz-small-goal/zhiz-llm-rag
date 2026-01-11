@@ -1,6 +1,6 @@
 ---
 title: Lessons / 经验库（可迁移）
-version: 0.4
+version: 0.5
 last_updated: 2026-01-11
 scope: "跨 postmortem 的失败模式、控制点、门禁与清单"
 owner: zhiz
@@ -123,6 +123,28 @@ owner: zhiz
 
 
 
+
+
+
+### 条目：SSOT → Gate 单入口是治理入口漂移/契约漂移的最小闭环
+- 标签（失败模式）：`入口不一致`、`契约漂移`、`文档漂移`
+- 适用场景：规则/脚本越来越多，CI 与本地/新人操作容易跑出不同口径；需要把“经验”变成机器必拦截。
+- 触发/现象：
+  - CI 跑了一套流程，本地复跑却走了另一套入口/默认参数；
+  - PASS/FAIL 信号分散在多个 log/脚本输出里，难做汇总与追踪。
+- 根因机制（简述）：
+  - 规则散落（多入口、多默认值、多处文档/常量）导致入口漂移；缺少结构化产物契约导致不可观测。
+- 缺失控制点：
+  - 缺 machine-readable SSOT；缺 gate 单入口；缺 JSON Schema 与（可选）policy 的分层拦截。
+- 可执行动作：
+  - A1：把 rules/paths/steps/version 集中到 `docs/reference/reference.yaml`（SSOT）；所有入口只读取它。
+  - A2：CI 只运行 `python tools/gate.py --profile ci --root .`，并 `if: always()` 上传 `gate_report.json`+logs。
+  - A3：提交前用 `python tools/gate.py --profile fast --root .`（或确保 pre-commit hooks 与 SSOT 同源）。
+- 验收方式（PASS 条件）：
+  - `gate --profile ci` 返回 0；`gate_report.json` 通过 schema 校验；policy 启用时 conftest PASS。
+- 回链证据（至少 1 篇 postmortem）：
+  - `docs/postmortems/2026-01-11_postmortem_ssot_gate_schema_policy_single_entrypoint.md`
+  - `docs/postmortems/2026-01-08_tools_layout_wrapper_gen_exitcode_contract.md`
 ### 条目：门禁结果以退出码/结构化状态为准，避免被“report_written”误导
 - 标签（失败模式）：`不可观测`、`契约漂移`
 - 适用场景：本地跑 gate/单步脚本时，控制台同时出现“写盘成功/OK”与“门禁 FAIL”，导致判断摇摆

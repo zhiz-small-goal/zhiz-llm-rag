@@ -13,6 +13,10 @@
 - **Postmortem｜check_public_release_hygiene：rc=2（FAIL）与 report_written 信号误读**
   - 文件：[`docs/postmortems/2026-01-11_postmortem_public_release_hygiene_rc2_and_report_written_signal.md`](2026-01-11_postmortem_public_release_hygiene_rc2_and_report_written_signal.md)
   - 关键字：check_public_release_hygiene / rc=2 / FAIL / report_written / exitcode / Desktop / fallback / file-scope / respect-gitignore / public release hygiene
+- **Postmortem｜门禁治理架构：SSOT → Gate 单入口 → JSON Schema →（可选）Conftest Policy**
+  - 文件：[`docs/postmortems/2026-01-11_postmortem_ssot_gate_schema_policy_single_entrypoint.md`](2026-01-11_postmortem_ssot_gate_schema_policy_single_entrypoint.md)
+  - 关键字：SSOT / gate / single entry / JSON Schema / conftest / rego / policy / CI only gate / drift guardrails
+
 
 ## 2026-01-09
 - **Postmortem：开源项目补齐仓库健康文件（CHANGELOG/CITATION/.editorconfig + CoC 联系方式）**

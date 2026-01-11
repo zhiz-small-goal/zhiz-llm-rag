@@ -53,8 +53,11 @@ python tools/gate.py --profile ci --root .
 **PASS 条件**
 - 进程退出码为 0
 - 产物落盘：`data_processed/build_reports/gate_report.json`（并可查看 `gate_logs/`）
+- `gate_report.json` 中本步 `rc/status` 为 PASS（rc=0；FAIL=2；ERROR=3）
 
 > 说明：policy 依赖 conftest；本地缺 conftest 时会 SKIP（CI/Linux 会安装并强制执行）。
+>
+> 注意：任何 `report_written=...` 仅表示“报告已写出”，不代表门禁通过；以退出码与 `gate_report.json` 为准。
 
 ### 1.2 预检 pyproject / TOML 与环境基础一致性
 **命令（CMD）**
@@ -124,6 +127,28 @@ pytest -q
 
 ---
 
+### 1.6 入口治理一致性检查（pre-commit + CI 只认 gate）
+
+> 目标：避免“本地跑 A、CI 跑 B、发布前又跑 C”导致口径漂移。入口应收敛为：**SSOT → gate →（schema/policy）→ 统一退出码**。
+
+**命令（CMD）**
+```cmd
+rem pre-commit 是否通过 gate 收敛入口（如未使用 pre-commit，可跳过）
+if exist .pre-commit-config.yaml findstr /I "tools/gate.py" .pre-commit-config.yaml
+
+rem GitHub Actions/CI 是否只调用 gate（如未使用 Actions，可跳过）
+if exist .github\workflows findstr /S /I "tools/gate.py" .github\workflows\*.yml .github\workflows\*.yaml
+
+rem 防止 CI 绕过 gate 直接调用底层检查脚本（示例：hygiene）
+if exist .github\workflows findstr /S /I "check_public_release_hygiene.py" .github\workflows\*.yml .github\workflows\*.yaml
+```
+
+**PASS 条件**
+- 若存在 `.pre-commit-config.yaml`：能匹配到 `tools/gate.py`
+- 若存在 `.github/workflows`：能匹配到 `tools/gate.py`
+- CI 工作流中不应直接调用 `check_public_release_hygiene.py`（该条应无输出）；如确需例外，必须在 SSOT/文档中显式说明原因与边界。
+
+
 ## 2. Extended：需要时再跑（可选）
 
 ### 2.1 含 embed 的 CI 门禁（更重）
@@ -162,16 +187,12 @@ python tools\verify_reports_schema.py
 **命令（CMD）**
 ```cmd
 python tools\check_public_release_hygiene.py --repo . --history 0 --file-scope tracked_and_untracked_unignored --respect-gitignore
-echo %ERRORLEVEL%
 ```
 **PASS 条件**
-- `%ERRORLEVEL%` 输出 `0`
-- 报告 Summary 中 `HIGH=0` 且 `MED=0`
-- `report_written=...` 指向 repo 内 `data_processed/build_reports/`（若落到 Desktop，通常表示写入 repo 目录失败触发 fallback；先修权限/路径或显式 `--out`）
-
-**说明**
-- 该命令默认按 Git 语义扫描（tracked + 未跟踪但未被 gitignore 忽略），不会因本地已忽略的数据目录误报。
-- `report_written` 只代表“写盘成功”，不等价于“检查通过”；最终以退出码与 HIGH/MED 统计为准。
+- 进程退出码为 0（若 HIGH>0 通常返回 2=FAIL）
+- 报告中 HIGH/MED 为 0（以报告为准）
+- `report_written=...` 出现仅用于定位输出路径（不作为 PASS 判断）
+- 说明：该命令默认按 Git 语义扫描（tracked + 未跟踪但未被 gitignore 忽略），不会因本地已忽略的数据目录误报。
 
 ### 3.2 发布快照独立性检查（避免 worktree/.git 指针耦合）
 **命令（CMD）**
