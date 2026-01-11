@@ -3,6 +3,6 @@
     hooks:
       - id: rag-gate-fast
         name: rag-gate --profile fast
-        entry: python tools/gate.py --profile fast --root .
-        language: system
+        entry: 'cmd.exe /c "set PATH=%CD%\.venv_embed\Scripts;%PATH% && .venv_embed\Scripts\python.exe tools\gate.py --profile fast --root ."'
+        language: python
         pass_filenames: false

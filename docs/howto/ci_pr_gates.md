@@ -100,13 +100,15 @@ python tools\check_pyproject_preflight.py --ascii-only ^
 repos:
   - repo: local
     hooks:
-      - id: tools-layout-audit
-        name: tools/ layout audit
-        language: system
-        entry: python tools/check_tools_layout.py --mode fail
+      - id: rag-gate-fast
+        name: rag-gate --profile fast
+        entry: .venv\\Scripts\\python.exe tools/gate.py --profile fast --root .
+        language: unsupported
         pass_filenames: false
 ```
 
 要点：
 - pre-commit 要求 hook 在失败时返回非 0 退出码（否则不会阻断提交）。
 - 对这种“不依赖文件列表、而是审计仓库状态”的检查，建议 `pass_filenames: false`。
+ - 后续不同设备需要相同的 `.venv_embed/` 路径
+ - 如果你的虚拟环境不在 `.venv_embed/`，请把 entry 中的解释器路径改成实际路径。
