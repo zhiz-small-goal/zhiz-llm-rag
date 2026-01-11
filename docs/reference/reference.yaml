@@ -1,0 +1,75 @@
+# Machine-readable SSOT for repo gates + schema + policy.
+# Keep this file stable: consumers must treat it as the single source of truth (SSOT).
+version: 1
+last_updated: "2026-01-11"
+timezone: "America/Los_Angeles"
+
+exit_codes:
+  PASS: 0
+  FAIL: 2
+  ERROR: 3
+
+paths:
+  report_dir: "data_processed/build_reports"
+  gate_report: "gate_report.json"
+  gate_logs_dir: "data_processed/build_reports/gate_logs"
+
+schemas:
+  draft: "2020-12"
+  gate_report: "schemas/gate_report_v1.schema.json"
+  build_report_v1: "schemas/build_report_v1.schema.json"
+
+policy:
+  # Policy is executed via conftest when available.
+  enabled: true
+  conftest:
+    version: "0.61.0"
+    policy_dir: "policy"
+    inputs:
+      - "docs/reference/reference.yaml"
+      - ".github/workflows/ci.yml"
+
+gates:
+  profiles:
+    fast:
+      - check_pyproject_preflight
+      - gen_tools_wrappers_check
+      - check_tools_layout
+      - check_cli_entrypoints
+      - check_md_refs_contract
+      - pytest
+    ci:
+      - check_pyproject_preflight
+      - gen_tools_wrappers_check
+      - check_tools_layout
+      - check_public_release_hygiene
+      - check_cli_entrypoints
+      - check_md_refs_contract
+      - pytest
+      - policy_conftest
+
+  steps:
+    check_pyproject_preflight:
+      argv: ["tools/check_pyproject_preflight.py", "--ascii-only"]
+
+    gen_tools_wrappers_check:
+      argv: ["tools/gen_tools_wrappers.py", "--check"]
+
+    check_tools_layout:
+      argv: ["tools/check_tools_layout.py", "--mode", "fail"]
+
+    check_public_release_hygiene:
+      argv: ["tools/check_public_release_hygiene.py", "--repo", ".", "--history", "0"]
+
+    check_cli_entrypoints:
+      argv: ["tools/check_cli_entrypoints.py"]
+
+    check_md_refs_contract:
+      argv: ["tools/check_md_refs_contract.py"]
+
+    pytest:
+      argv: ["-m", "pytest", "-q"]
+
+    # Reserved logical step id. Implemented inside gate runner.
+    policy_conftest:
+      builtin: "conftest"
