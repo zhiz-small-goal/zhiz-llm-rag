@@ -45,6 +45,17 @@ tools\run_ci_gates.cmd
 
 > 说明：该命令是最小集合入口；若你只愿意跑一条命令，跑它。
 
+### 1.1a 跨平台：单入口 Gate runner（可替代 CMD 脚本）
+**命令（bash / PowerShell / CMD 通用）**
+```bash
+python tools/gate.py --profile ci --root .
+```
+**PASS 条件**
+- 进程退出码为 0
+- 产物落盘：`data_processed/build_reports/gate_report.json`（并可查看 `gate_logs/`）
+
+> 说明：policy 依赖 conftest；本地缺 conftest 时会 SKIP（CI/Linux 会安装并强制执行）。
+
 ### 1.2 预检 pyproject / TOML 与环境基础一致性
 **命令（CMD）**
 ```cmd

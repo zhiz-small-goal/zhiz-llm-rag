@@ -25,11 +25,17 @@ python -m venv .venv_ci
 python -m pip install -U pip
 pip install -e ".[ci]"
 
+REM 推荐：单入口 gate runner（产出 gate_report.json + gate_logs/）
+python tools\gate.py --profile ci --root .
+
+REM 你也可以手动逐条跑（不推荐；更易漂移）
 python tools\check_tools_layout.py --mode fail
 python tools\check_cli_entrypoints.py
 python tools\check_md_refs_contract.py
 pytest -q
 ```
+
+更多门禁说明：见 `docs/howto/ci_pr_gates.md`。
 
 ## 安装矩阵（依赖分层）
 - Stage-1（默认轻量）：`pip install -e .`

@@ -11,12 +11,14 @@
 - [rag-accept：一键验收入口](howto/rag_accept.md)
 - [建立“口语 vs 官方术语”检索回归（分桶）](howto/ORAL_OFFICIAL_RETRIEVAL_REGRESSION.md)
 - [PR/CI Lite 门禁（快速回归）](howto/ci_pr_gates.md)
+- [单入口 Gate runner（Schema + Policy + 报告）](../tools/gate_README.md)
 - [Preflight Checklist（重构/换机/换环境后必跑）](howto/PREFLIGHT_CHECKLIST.md)
 - [Postmortem 工作流（写回协议：模板 → LESSONS → PREFLIGHT → HANDOFF）](howto/POSTMORTEM_WORKFLOW.md)
 - [排障手册（Runbook）](howto/TROUBLESHOOTING.md)
 
 ## Reference（参考：契约/参数/格式）
 - [参考与契约（口径、产物、架构）](reference/REFERENCE.md)
+- [Policy（Conftest/Rego）](../policy/README.md)
 - [Stage-2 评测契约：eval_cases.jsonl / eval_retrieval_report.json](reference/EVAL_CASES_SCHEMA.md)
 - [Index State 与 Stamps（db_build_stamp.json 等）](reference/index_state_and_stamps.md)
 - [Postmortem 提示词模板（清晰/准确/必要）](reference/postmortem_prompt_template.md)

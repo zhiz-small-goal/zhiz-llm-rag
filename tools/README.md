@@ -1,3 +1,9 @@
+---
+title: tools/ 目录说明（入口层 / 治理脚本）
+version: v1.1
+last_updated: 2026-01-11
+---
+
 # tools/ 目录说明（入口层 / 治理脚本）
 
 本项目采用 **src-layout**：
@@ -6,6 +12,21 @@
 - **仓库内工具（repo-only）**：`tools/*.py` 中的少数脚本，仅用于仓库门禁/修复/审计（不作为可安装库 API）
 
 为避免重构时出现“同名双实现”“导入影子覆盖”“入口语义漂移”，tools/ 下脚本遵循以下约定，并由 `tools/check_tools_layout.py` 进行审计。
+
+## 目录
+- [关键入口（先看这里）](#关键入口先看这里)
+- [wrapper 自动生成（推荐默认）](#wrapper-自动生成推荐默认)
+- [约定（contract）](#约定contract)
+- [工具布局审计](#工具布局审计)
+- [退出码约定（与门禁一致）](#退出码约定与门禁一致)
+- [新增一个工具脚本时怎么选](#新增一个工具脚本时怎么选)
+
+## 关键入口（先看这里）
+
+- 单入口 Gate（Schema + Policy + report）：`tools/gate.py`  / `rag-gate`
+  - 使用说明：`tools/gate_README.md`
+- JSON Schema 校验：`tools/schema_validate.py` / `rag-schema-validate`
+  - 使用说明：`tools/schema_validate_README.md`
 
 ## wrapper 自动生成（推荐默认）
 为避免 wrapper 模板被手工改坏或复制粘贴导致漂移，本仓库提供统一生成器：

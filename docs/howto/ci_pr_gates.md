@@ -1,3 +1,9 @@
+---
+title: How-to：PR/CI Lite 门禁（快速回归）
+version: v1.1
+last_updated: 2026-01-11
+---
+
 # How-to：PR/CI Lite 门禁（快速回归）
 
 > 目标：在不触发 embedding/chroma 的情况下，对“入口点/契约/最小集成”做快速回归，用于重构后自检与 PR gate。
@@ -14,6 +20,30 @@
 - PR/CI 需要低成本、低噪声的确定性信号
 
 ## 2) 一键命令（推荐）
+
+
+### 新增：单入口 Gate（推荐）
+
+从 2026-01-11 起，CI/本地可以用单入口统一执行 Gate：
+
+```bash
+pip install -e ".[ci]"
+
+# 推荐：安装后用 console script
+rag-gate --profile ci --root .
+
+# 或兼容入口
+python tools/gate.py --profile ci --root .
+# 产物：data_processed/build_reports/gate_report.json (+ gate_logs/)
+```
+
+- profile=fast：不含 public release hygiene / policy（更快）
+- profile=ci：CI 默认（包含 policy_conftest；Linux runner 会安装 conftest）
+
+进一步说明：
+- [Gate runner 使用说明](../../tools/gate_README.md)
+- [pSSOT（门禁顺序/输出/inputs）](../reference/reference.yaml)
+- [Policy（Conftest/Rego）](../../policy/README.md)
 
 ### 2.1 Windows CMD（最不易误用：FAIL 会自动停止后续步骤）
 ```cmd

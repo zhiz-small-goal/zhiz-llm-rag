@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - Mhy_AI_RAG_data
-version: 2
-last_updated: 2026-01-09
+version: 3
+last_updated: 2026-01-11
 timezone: America/Los_Angeles
 ssot: true
 ---
@@ -36,6 +36,7 @@ ssot: true
 - `db` / `collection`
 - `embed_model` / `device`
 - 门禁模式（`warning` 迁移期 / 已收紧为 `fail` 的条目）
+- repo gate（PR/CI Lite）：`profile=ci`，SSOT=`docs/reference/reference.yaml`（产物：`gate_report.json`）
 
 ### Act（最小改动、可回滚、可观测）
 - 优先以“旁路工件 + 明确契约 + 对账门禁”的方式演进，避免一次性破坏现有消费链路。  
@@ -196,6 +197,12 @@ next（最小改动优先）：
 - `pair_id_coverage >= 5`（至少覆盖 5 个高价值概念对照组）
 满足后，将对应 warning 升级为 FAIL。
 
+### 5.3 Repo Gate（PR/CI Lite：Schema + Policy + 可审计报告）
+- SSOT：`docs/reference/reference.yaml`（门禁顺序/产物路径/schema/policy 输入集）
+- 单入口：`python tools/gate.py --profile ci --root .`（或安装后 `rag-gate ...`）
+- 产物：`data_processed/build_reports/gate_report.json` + `gate_logs/`
+- Policy：通过 conftest 执行 `policy/` 下 Rego 规则；CI/Linux 会安装并强制执行，本地缺 conftest 时默认 SKIP。
+
 ---
 
 ## 6. 新对话接手提示词（可复制）
@@ -221,3 +228,8 @@ next（最小改动优先）：
   - Public Release Preflight：新增 repo health/community files 检查项（CHANGELOG/CITATION/.editorconfig/CoC 联系方式占位符）
   - 新增脚本：`tools/check_repo_health_files.py`（stdlib-only；0/1/2 退出码契约）
   - 新增 postmortem：`docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`
+
+- 2026-01-11
+  - 收敛 PR/CI Lite 门禁：新增单入口 gate runner（`rag-gate` / `tools/gate.py`），输出确定性产物 `gate_report.json` + `gate_logs/`
+  - 新增 machine-readable SSOT：`docs/reference/reference.yaml`（paths/schemas/policy/steps）
+  - 新增 schema/policy：`schemas/gate_report_v1.schema.json` + `policy/`（conftest/Rego）
