@@ -66,3 +66,13 @@ def accept() -> None:
 
 def init_eval_cases() -> None:
     runpy.run_module("mhy_ai_rag_data.tools.init_eval_cases", run_name="__main__")
+
+
+def gate() -> None:
+    """Repo gate runner (SSOT-driven)."""
+    runpy.run_module("mhy_ai_rag_data.tools.gate", run_name="__main__")
+
+
+def schema_validate() -> None:
+    """Validate JSON instances against JSON Schema."""
+    runpy.run_module("mhy_ai_rag_data.tools.schema_validate", run_name="__main__")
