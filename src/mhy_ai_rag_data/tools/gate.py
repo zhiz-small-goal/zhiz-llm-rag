@@ -22,8 +22,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import shutil
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -128,6 +130,68 @@ def _run_step(repo: Path, step_id: str, argv_tail: List[str], logs_dir: Path) ->
     )
 
 
+def _canon_system_arch() -> Tuple[str, str]:
+    """Return canonical (system, arch) for vendored binaries.
+
+    system: windows|linux|darwin
+    arch:   amd64|arm64
+    """
+    if os.name == "nt" or sys.platform.startswith("win"):
+        system = "windows"
+    elif sys.platform == "darwin":
+        system = "darwin"
+    else:
+        system = "linux"
+
+    m = (platform.machine() or "").lower()
+    if m in {"x86_64", "amd64", "x64"}:
+        arch = "amd64"
+    elif m in {"aarch64", "arm64"}:
+        arch = "arm64"
+    else:
+        # best-effort fallback; keep stable string for logs
+        arch = m or "unknown"
+    return system, arch
+
+
+def _find_conftest(repo: Path, ssot: Dict[str, Any]) -> Tuple[Optional[str], str]:
+    """Locate conftest binary.
+
+    Search order (privacy/offline friendly):
+    1) $CONFTEST_BIN (absolute/relative path)
+    2) vendored: third_party/conftest/v<version>/<system>_<arch>/conftest(.exe)
+    3) PATH (shutil.which)
+
+    Returns: (path_or_none, note)
+    """
+    env_bin = os.environ.get("CONFTEST_BIN", "").strip()
+    if env_bin:
+        p = (repo / env_bin).resolve() if not Path(env_bin).is_absolute() else Path(env_bin)
+        if p.exists() and p.is_file():
+            return (str(p.as_posix()), "conftest.env")
+
+    conftest_cfg = (ssot.get("policy") or {}).get("conftest") or {}
+    version = str(conftest_cfg.get("version") or "").strip()
+    system, arch = _canon_system_arch()
+    exe = "conftest.exe" if system == "windows" else "conftest"
+    # default vendor location
+    vendor_dir = Path(repo) / "third_party" / "conftest"
+    # allow override for monorepo/enterprise layout
+    override_vendor = str(conftest_cfg.get("vendor_dir") or "").strip()
+    if override_vendor:
+        vendor_dir = (repo / override_vendor).resolve() if not Path(override_vendor).is_absolute() else Path(override_vendor)
+
+    if version:
+        candidate = vendor_dir / f"v{version}" / f"{system}_{arch}" / exe
+        if candidate.exists() and candidate.is_file():
+            return (str(candidate.as_posix()), "conftest.vendored")
+
+    path_bin = shutil.which("conftest")
+    if path_bin:
+        return (path_bin, "conftest.path")
+    return (None, "conftest_missing")
+
+
 def _run_conftest(repo: Path, ssot: Dict[str, Any], logs_dir: Path) -> StepResult:
     start = _iso_now()
     t0 = time.time()
@@ -148,22 +212,29 @@ def _run_conftest(repo: Path, ssot: Dict[str, Any], logs_dir: Path) -> StepResul
             end_ts=_iso_now(),
         )
 
-    conftest_bin = shutil.which("conftest")
+    conftest_cfg = (ssot.get("policy") or {}).get("conftest") or {}
+    conftest_bin, locate_note = _find_conftest(repo=repo, ssot=ssot)
     if not conftest_bin:
-        _write_text(log_path, "[WARN] conftest not found; skipping policy checks.\n")
+        required = bool(conftest_cfg.get("required"))
+        _write_text(
+            log_path,
+            "[WARN] conftest not found; skipping policy checks.\n"
+            "       Tip: vendor conftest under third_party/conftest/ or set CONFTEST_BIN.\n"
+        )
         return StepResult(
             id="policy_conftest",
             argv=["conftest", "test", "..."],
-            rc=0,
-            status="SKIP",
+            rc=3 if required else 0,
+            status="ERROR" if required else "SKIP",
             elapsed_ms=0,
             log_path=str(log_path.as_posix()),
-            note="conftest_missing",
+            note="conftest_missing_required" if required else locate_note,
             start_ts=start,
             end_ts=_iso_now(),
         )
 
-    conftest_cfg = (ssot.get("policy") or {}).get("conftest") or {}
+    _write_text(log_path, f"[INFO] conftest={conftest_bin} source={locate_note}\n")
+
     policy_dir = Path(repo) / str(conftest_cfg.get("policy_dir") or "policy")
     inputs = conftest_cfg.get("inputs") or []
     if not isinstance(inputs, list) or not inputs:

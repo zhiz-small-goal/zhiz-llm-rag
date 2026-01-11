@@ -50,6 +50,8 @@ last_updated: 2026-01-11
 > 
 > 说明：Homebrew / Scoop 通常安装“最新版本”，可能与 SSOT 不一致（不影响使用，但可能导致 CI 与本地行为差异）。
 
+### 本地安装指引: [本地安装](../docs/howto/offline_conftest.md)
+
 ### 方式 A：Release 二进制（推荐：可固定版本）
 
 - **Linux（与 CI 同口径）**

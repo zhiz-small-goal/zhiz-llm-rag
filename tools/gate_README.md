@@ -51,7 +51,9 @@ last_updated: 2026-01-11
 
 - Python 3.11+。
 - 若要启用 schema 校验：安装 `.[ci]`（包含 `jsonschema`）。
-- 若要启用 policy：安装 `conftest`（CI 的 Linux runner 会自动安装；本地可手动装）。
+- 若要启用 policy：安装 `conftest`。
+  - **完全离线**可选：将 conftest 二进制 vendoring 到 `third_party/conftest/`（见 `docs/howto/offline_conftest.md`）。
+  - 或通过 `CONFTEST_BIN` 指定二进制路径（适合内网制品库分发）。
 
 
 ## 快速开始
@@ -97,7 +99,8 @@ python tools/gate.py --profile fast --root .
    - 若 schema 校验失败：判定为 **ERROR**（rc=3）。
 6) Policy（Conftest）：
    - SSOT `policy.enabled=true` 时，尝试运行 `conftest test <inputs...> -p policy/`。
-   - 若本地缺 `conftest`：记录为 **SKIP**（不阻断本地）；CI/Linux 会安装并强制执行。
+   - conftest 搜索顺序：`CONFTEST_BIN` → `third_party/conftest/v<version>/<system>_<arch>/...` → `PATH`。
+   - 若找不到 conftest：默认记录为 **SKIP**（不阻断本地）；可在 SSOT 中设置 `policy.conftest.required=true` 强制缺失时 ERROR。
 
 
 ## 退出码与判定
