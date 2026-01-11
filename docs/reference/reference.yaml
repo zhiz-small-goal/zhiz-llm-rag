@@ -47,6 +47,16 @@ gates:
       - check_md_refs_contract
       - pytest
       - policy_conftest
+    release:
+      - check_pyproject_preflight
+      - gen_tools_wrappers_check
+      - check_tools_layout
+      - check_public_release_hygiene
+      - check_repo_health_files
+      - check_cli_entrypoints
+      - check_md_refs_contract
+      - pytest
+      - policy_conftest
 
   steps:
     check_pyproject_preflight:
@@ -60,6 +70,9 @@ gates:
 
     check_public_release_hygiene:
       argv: ["tools/check_public_release_hygiene.py", "--repo", ".", "--history", "0", "--file-scope", "tracked_and_untracked_unignored", "--respect-gitignore"]
+
+    check_repo_health_files:
+      argv: ["tools/check_repo_health_files.py", "--repo", ".", "--mode", "public-release", "--out", "data_processed/build_reports/repo_health_report.json"]
 
     check_cli_entrypoints:
       argv: ["tools/check_cli_entrypoints.py"]

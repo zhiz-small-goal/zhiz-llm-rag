@@ -44,7 +44,7 @@ last_updated: 2026-01-11
 
 - 重构后快速自检：入口点、文档契约、最小测试是否回归。
 - PR/CI 的确定性门禁（不触发 embedding/chroma）。
-- 对外发布前：确保“工作流/门禁口径”不被悄悄改坏。
+- 对外发布前：确保“工作流/门禁口径”不被悄悄改坏（可用 `profile=release` 增加 repo health 检查）  
 
 
 ## 前置条件
@@ -84,7 +84,7 @@ python tools/gate.py --profile fast --root .
 | 参数 | 默认值 | 说明 |
 |---|---:|---|
 | `--root <path>` | `.` | 仓库根目录（会 `resolve()`）。 |
-| `--profile <fast\|ci>` | `ci` | 门禁组合；定义在 `docs/reference/reference.yaml`。 |
+| `--profile <fast\|ci\|release>` | `ci` | 门禁组合；定义在 `docs/reference/reference.yaml`。 |
 | `--ssot <path>` | `docs/reference/reference.yaml` | SSOT 配置路径（相对 `--root`）。 |
 | `--json-out <path>` | 空 | 覆盖 `gate_report.json` 输出路径（相对/绝对均可）。 |
 
@@ -123,6 +123,7 @@ Gate runner 统一遵循项目退出码契约：
 - 报告：`data_processed/build_reports/gate_report.json`
 - 日志目录：`data_processed/build_reports/gate_logs/`
   - 例如：`pytest.log`、`check_tools_layout.log`、`policy_conftest.log`
+- repo health 报告（release profile）：`data_processed/build_reports/repo_health_report.json`
 - 默认不修改仓库源文件；但会创建/更新上述产物目录。
 
 

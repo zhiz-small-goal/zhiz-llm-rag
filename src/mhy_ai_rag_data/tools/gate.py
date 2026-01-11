@@ -331,7 +331,7 @@ def _validate_self_schema(repo: Path, ssot: Dict[str, Any], gate_report_path: Pa
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repo gate runner (SSOT-driven).")
     ap.add_argument("--root", default=".", help="Repo root")
-    ap.add_argument("--profile", default="ci", choices=["fast", "ci"], help="Gate profile")
+    ap.add_argument("--profile", default="ci", choices=["fast", "ci", "release"], help="Gate profile")
     ap.add_argument("--ssot", default="docs/reference/reference.yaml", help="SSOT yaml path (relative to root)")
     ap.add_argument("--json-out", default="", help="Override gate report output path")
     args = ap.parse_args()
@@ -397,8 +397,8 @@ def main() -> int:
         "root": str(repo),
         "profile": args.profile,
         "ssot_path": str(ssot_path.relative_to(repo)) if ssot_path.is_relative_to(repo) else str(ssot_path),
-        "results": [_step_result_to_dict(r) for r in results],
         "summary": {"overall_status": overall_status, "overall_rc": overall_rc, "counts": counts},
+        "results": [_step_result_to_dict(r) for r in results],
     }
     if warnings:
         report["warnings"] = warnings

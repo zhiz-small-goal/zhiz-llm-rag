@@ -35,6 +35,9 @@ rag-gate --profile ci --root .
 # 或兼容入口
 python tools/gate.py --profile ci --root .
 # 产物：data_processed/build_reports/gate_report.json (+ gate_logs/)
+
+# 可选:发布之前跑:
+python tools/gate.py --profile release --root .
 ```
 
 - profile=fast：不含 public release hygiene / policy（更快）
