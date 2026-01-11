@@ -28,6 +28,8 @@
 ## 2. Step 1 生成/补齐用例（bucket + pair_id）
 
 ### 2.1 用 `suggest_eval_case.py` 生成初稿（推荐）
+
+**详细文档**: [使用说明（半自动生成 eval case：expected_sources + must_include + bucket/pair_id）](../../tools/suggest_eval_case_README.md)
 口语桶（示例）：
 
 ```bash
@@ -59,6 +61,8 @@ python tools/suggest_eval_case.py ^
 
 ## 3. Step 2 先过门禁：validate_eval_cases
 
+**相关文档**: [使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）](../../tools/validate_eval_cases_README.md)
+
 ```bash
 python tools/validate_eval_cases.py ^
   --root . ^
@@ -73,6 +77,8 @@ python tools/validate_eval_cases.py ^
 ---
 
 ## 4. Step 3 跑检索回归：run_eval_retrieval（看 buckets）
+
+**相关文档**: [使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）](../../tools/run_eval_retrieval_README.md)
 
 ```bash
 python tools/run_eval_retrieval.py ^
