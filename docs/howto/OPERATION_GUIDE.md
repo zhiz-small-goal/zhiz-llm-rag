@@ -236,7 +236,7 @@ python retriever_chroma.py --q "存档导入与导出怎么做" --k 5
 - 命令入口已与 build 入口收敛到同一处，避免重复执行：请在 Step 5 选择 **Option A**（计时版）。  
 - 并发运行两套构建作业时，务必隔离 `db/collection/state_root`（否则会写库与状态互踩）。  
 
-（性能计时与成本观测请见 Step 5（build）的“计时版 Option”，闭环步骤只保留正确性路径。）  [性能观测计时 Optino](#step-5build向量化--upsert-入库建议用-profile-固化参数并可调-batch)
+（性能计时与成本观测请见 Step 5（build）的“计时版 Option”，闭环步骤只保留正确性路径。）  [性能观测计时 Option](#step-5build向量化--upsert-入库建议用-profile-固化参数并可调-batch)
 
 **建议读报告时优先看**：  
 - `total_seconds`（总耗时）  
