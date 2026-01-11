@@ -233,3 +233,5 @@ next（最小改动优先）：
   - 收敛 PR/CI Lite 门禁：新增单入口 gate runner（`rag-gate` / `tools/gate.py`），输出确定性产物 `gate_report.json` + `gate_logs/`
   - 新增 machine-readable SSOT：`docs/reference/reference.yaml`（paths/schemas/policy/steps）
   - 新增 schema/policy：`schemas/gate_report_v1.schema.json` + `policy/`（conftest/Rego）
+  - Public Release Hygiene 审计升级：新增 `--file-scope` / `--respect-gitignore`，默认输出落盘到 `data_processed/build_reports/`
+  - 新增 JSON Schema 校验工具：`tools/schema_validate.py` / `rag-schema-validate`，用于校验 `gate_report.json` 与 `schemas/gate_report_v1.schema.json`
