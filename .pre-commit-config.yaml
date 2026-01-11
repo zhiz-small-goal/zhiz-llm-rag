@@ -1,20 +1,8 @@
 ﻿repos:
   - repo: local
     hooks:
-      - id: pyproject-preflight
-        name: pyproject preflight (ASCII-only)
+      - id: rag-gate-fast
+        name: rag-gate --profile fast
+        entry: python tools/gate.py --profile fast --root .
         language: system
-        entry: python tools/check_pyproject_preflight.py --ascii-only
-        pass_filenames: false
-
-      - id: tools-layout-audit
-        name: tools/ layout audit
-        language: system
-        entry: python tools/check_tools_layout.py --mode fail
-        pass_filenames: false
-
-      - id: md-refs-contract
-        name: md_refs contract
-        language: system
-        entry: python tools/check_md_refs_contract.py
         pass_filenames: false
