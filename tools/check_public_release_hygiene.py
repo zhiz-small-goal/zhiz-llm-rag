@@ -55,6 +55,31 @@ def _run(cmd: List[str], cwd: Path, timeout: int = 120) -> Tuple[int, str, str]:
     except subprocess.TimeoutExpired:
         return 124, "", f"timeout: {' '.join(cmd)}"
 
+def _run_in(cmd: List[str], cwd: Path, input_text: str, timeout: int = 120) -> Tuple[int, str, str]:
+    """Run a command with stdin input (text mode).
+
+    Notes:
+    - Supports NUL-delimited protocols when input_text contains '\x00'.
+    - Returns (rc, stdout, stderr). rc may be 0/1 for some git plumbing commands (e.g., check-ignore).
+    """
+    try:
+        p = subprocess.run(
+            cmd,
+            cwd=str(cwd),
+            input=input_text,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+        return p.returncode, p.stdout, p.stderr
+    except FileNotFoundError:
+        return 127, "", f"command not found: {cmd[0]}"
+    except subprocess.TimeoutExpired:
+        return 124, "", f"timeout: {' '.join(cmd)}"
+
 
 def _rel(path: Path, repo: Path) -> str:
     try:
@@ -177,6 +202,47 @@ def git_ls_files(repo: Path) -> List[str]:
     return [i for i in out.split("\x00") if i]
 
 
+def git_status_untracked(repo: Path) -> List[str]:
+    """Return untracked paths from `git status --porcelain=v1 -z --untracked-files=all`."""
+    code, out, err = _run(
+        ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        cwd=repo,
+        timeout=90,
+    )
+    if code != 0:
+        raise RuntimeError(f"git status failed: {err.strip() or out.strip()}")
+
+    items = [x for x in out.split("\x00") if x]
+    untracked: List[str] = []
+    i = 0
+    while i < len(items):
+        rec = items[i]
+        # rec looks like: "XY path" (space after XY). For renames/copies there is an extra NUL record.
+        if len(rec) >= 4 and rec[0:2] == "??" and rec[2] == " ":
+            untracked.append(rec[3:].replace("\\", "/"))
+            i += 1
+            continue
+        # Handle rename/copy extra field: skip the next record.
+        if len(rec) >= 4 and rec[2] == " " and rec[0] in ("R", "C"):
+            i += 2
+            continue
+        i += 1
+    return untracked
+
+
+def git_check_ignore(repo: Path, paths: List[str]) -> set[str]:
+    """Return the subset of paths ignored by gitignore rules.
+
+    Uses `git check-ignore -z --stdin`. rc=0 means at least one ignored, rc=1 means none ignored.
+    """
+    if not paths:
+        return set()
+    payload = "\x00".join([p.replace("\\", "/") for p in paths]) + "\x00"
+    code, out, err = _run_in(["git", "check-ignore", "-z", "--stdin"], cwd=repo, input_text=payload, timeout=90)
+    if code not in (0, 1):
+        raise RuntimeError(f"git check-ignore failed: {err.strip() or out.strip()}")
+    return {x for x in out.split("\x00") if x}
+
 def git_log_names(repo: Path, max_lines: int) -> str:
     code, out, err = _run(["git", "log", "--name-only", "--pretty=format:"], cwd=repo, timeout=180)
     if code != 0:
@@ -201,6 +267,80 @@ def iter_repo_files(repo: Path, cfg: dict) -> Iterable[Path]:
                 continue
             yield p
 
+
+def _under_scan_roots(rel_posix: str, cfg: dict) -> bool:
+    roots = [str(x).replace("\\", "/").rstrip("/") for x in cfg.get("scan_roots", ["."])]
+    if not roots:
+        return True
+    for r in roots:
+        if r in ("", "."):
+            return True
+        if rel_posix == r or rel_posix.startswith(r + "/"):
+            return True
+    return False
+
+
+def select_scan_files(
+    repo_root: Path,
+    cfg: dict,
+    file_scope: str,
+    respect_gitignore: bool,
+    tracked_list: Optional[List[str]],
+) -> Tuple[List[Path], Dict[str, int]]:
+    """Select files to scan based on git scope and gitignore rules.
+
+    file_scope:
+      - tracked: only files in `git ls-files`
+      - tracked_and_untracked_unignored: tracked + untracked but NOT ignored by gitignore
+      - worktree_all: existing behavior (walk the worktree regardless of git)
+
+    Returns (files, meta_counts).
+    """
+    exclude = set(cfg.get("exclude_dirs", []))
+
+    if file_scope == "worktree_all" or tracked_list is None:
+        files = list(iter_repo_files(repo_root, cfg))
+        return files, {
+            "tracked": 0,
+            "untracked_total": 0,
+            "untracked_ignored": 0,
+            "untracked_unignored": 0,
+            "scanned": len(files),
+        }
+
+    tracked_set = {p.replace("\\", "/") for p in tracked_list}
+
+    untracked_all: List[str] = []
+    untracked: List[str] = []
+    ignored: set[str] = set()
+    if file_scope != "tracked":
+        untracked_all = git_status_untracked(repo_root)
+        untracked = list(untracked_all)
+        if respect_gitignore:
+            ignored = git_check_ignore(repo_root, untracked)
+            untracked = [p for p in untracked if p not in ignored]
+
+    # De-dupe and filter by scan_roots/exclude_dirs
+    candidates = set(tracked_set) | set(untracked)
+
+    files: List[Path] = []
+    for rel in sorted(candidates):
+        rel = rel.replace("\\", "/")
+        if not _under_scan_roots(rel, cfg):
+            continue
+        if any(part in exclude for part in Path(rel).parts):
+            continue
+        p = (repo_root / rel)
+        if p.is_file():
+            files.append(p)
+
+    return files, {
+        "tracked": len(tracked_set),
+        "untracked_total": len(untracked_all),
+        "untracked_ignored": len(ignored),
+        "untracked_unignored": len(untracked),
+        "scanned": len(files),
+    }
 
 def match_glob(path_posix: str, pat: str) -> bool:
     if pat.endswith("/"):
@@ -513,7 +653,7 @@ def scan_ci_heuristic(repo: Path, cfg: dict) -> Optional[Finding]:
     )
 
 
-def render_report(repo: Path, findings: List[Finding], cfg_path: Optional[Path], used_git: bool, history: bool, cfg: dict) -> str:
+def render_report(repo: Path, findings: List[Finding], cfg_path: Optional[Path], used_git: bool, history: bool, cfg: dict, file_scope: str, respect_gitignore: bool, file_meta: Dict[str, int]) -> str:
     ts = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     highs = sum(1 for f in findings if f.severity == "HIGH")
     meds = sum(1 for f in findings if f.severity == "MED")
@@ -528,6 +668,9 @@ def render_report(repo: Path, findings: List[Finding], cfg_path: Optional[Path],
               f"config: {str(cfg_path) if cfg_path else 'DEFAULT_CONFIG'}",
               f"git_available: {used_git}",
               f"history_scan: {history}",
+              f"file_scope: {file_scope}",
+              f"respect_gitignore: {respect_gitignore}",
+              f"file_meta: {json.dumps(file_meta, ensure_ascii=False)}",
               "---",
               ""]
     lines += ["# 目录",
@@ -540,6 +683,8 @@ def render_report(repo: Path, findings: List[Finding], cfg_path: Optional[Path],
               f"- HIGH: {highs} / MED: {meds} / LOW: {lows} / INFO: {infos}",
               f"- 生成时间：{ts}",
               f"- 仓库根：{repo}",
+              f"- 扫描范围：file_scope={file_scope}, respect_gitignore={respect_gitignore}",
+              f"- 文件计数：scanned={file_meta.get('scanned', 0)}, tracked={file_meta.get('tracked', 0)}, untracked_unignored={file_meta.get('untracked_unignored', 0)}, untracked_ignored={file_meta.get('untracked_ignored', 0)}",
               "",
               "说明：Facts 为可核验命中；Inference 为启发式/风险提示。",
               ""]
@@ -592,63 +737,113 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--repo", default=".", help="repo path (default=.)")
     ap.add_argument("--config", default=None, help="optional json config path")
     ap.add_argument("--history", type=int, default=0, help="history scan 0/1 (default=0)")
-    ap.add_argument("--max-history-lines", type=int, default=200000, help="max lines for history scan (default=200000; <=0 means no limit)")
-    ap.add_argument("--out", default=None, help="output report path; default desktop")
+    ap.add_argument(
+        "--max-history-lines",
+        type=int,
+        default=200000,
+        help="max lines for history scan (default=200000; <=0 means no limit)",
+    )
+    ap.add_argument(
+        "--file-scope",
+        default="tracked_and_untracked_unignored",
+        choices=["tracked", "tracked_and_untracked_unignored", "worktree_all"],
+        help="file selection scope for content scans (default=tracked_and_untracked_unignored)",
+    )
+    ap.add_argument(
+        "--respect-gitignore",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help="when including untracked files, exclude paths ignored by gitignore (default=True)",
+    )
+    ap.add_argument("--out", default=None, help="output report path (default: repo-local build_reports)")
     args = ap.parse_args(argv)
 
     repo = Path(args.repo).resolve()
     cfg_path = Path(args.config).resolve() if args.config else None
     cfg = load_config(cfg_path)
 
-    files = list(iter_repo_files(repo, cfg))
-    findings: List[Finding] = []
+    # Prefer scanning at repo toplevel for stable relative paths.
+    top = git_toplevel(repo)
+    repo_root = top if top else repo
 
+    findings: List[Finding] = []
     used_git = False
     tracked_set: Optional[set[str]] = None
+    tracked_list: Optional[List[str]] = None
 
-    top = git_toplevel(repo)
     if top:
         used_git = True
         try:
-            tracked_list = git_ls_files(top)
+            tracked_list = git_ls_files(repo_root)
             tracked_set = {p.replace("\\", "/") for p in tracked_list}
-            f = scan_forbidden_tracked(top, cfg, tracked_list)
+            f = scan_forbidden_tracked(repo_root, cfg, tracked_list)
             if f:
                 findings.append(f)
         except Exception as e:
-            findings.append(Finding(
-                severity="INFO",
-                title="Git tracked-file check failed (hint)",
-                facts=[f"error: {e}"],
-                inference=["If you need tracked/history checks, ensure git works and run inside repo root."],
-                locations=[f"{repo}:1:1"],
-                remediation=["Install git or fix PATH; run from git repo root."],
-            ))
+            findings.append(
+                Finding(
+                    severity="INFO",
+                    title="Git tracked-file check failed (hint)",
+                    facts=[f"error: {e}"],
+                    inference=["If you need tracked/history checks, ensure git works and run inside repo root."],
+                    locations=[f"{repo_root}:1:1"],
+                    remediation=["Install git or fix PATH; run from git repo root."],
+                )
+            )
 
         if args.history == 1:
             try:
-                hist = git_log_names(top, args.max_history_lines)
-                f2 = scan_history_for_forbidden(top, cfg, hist)
+                hist = git_log_names(repo_root, args.max_history_lines)
+                f2 = scan_history_for_forbidden(repo_root, cfg, hist)
                 if f2:
                     findings.append(f2)
             except Exception as e:
-                findings.append(Finding(
-                    severity="INFO",
-                    title="Git history scan failed (hint)",
-                    facts=[f"error: {e}"],
-                    inference=["Try --history 0 first, or adjust --max-history-lines."],
-                    locations=[f"{repo}:1:1"],
-                    remediation=["Disable history scan or increase limits if needed."],
-                ))
+                findings.append(
+                    Finding(
+                        severity="INFO",
+                        title="Git history scan failed (hint)",
+                        facts=[f"error: {e}"],
+                        inference=["Try --history 0 first, or adjust --max-history-lines."],
+                        locations=[f"{repo_root}:1:1"],
+                        remediation=["Disable history scan or increase limits if needed."],
+                    )
+                )
+
+    # Select files for content scans.
+    effective_scope = args.file_scope
+    effective_respect_gitignore = bool(args.respect_gitignore)
+
+    if not used_git and args.file_scope != "worktree_all":
+        # Without git, we cannot accurately respect gitignore; fall back.
+        findings.append(
+            Finding(
+                severity="INFO",
+                title="Git not available; file-scope degraded to worktree_all",
+                facts=[f"requested_file_scope={args.file_scope}"],
+                inference=["Content scans will traverse the worktree; results may include ignored local data artifacts."],
+                locations=[f"{repo_root}:1:1"],
+                remediation=["Install git and rerun for tracked/gitignore-aware scan."],
+            )
+        )
+        effective_scope = "worktree_all"
+        effective_respect_gitignore = False
+
+    files, file_meta = select_scan_files(
+        repo_root=repo_root,
+        cfg=cfg,
+        file_scope=effective_scope,
+        respect_gitignore=effective_respect_gitignore,
+        tracked_list=tracked_list,
+    )
 
     # Content scans
     for f in [
-        scan_absolute_paths(repo, cfg, files),
-        scan_secrets(repo, cfg, files),
-        scan_binaries_and_large_files(repo, cfg, files, tracked_set),
-        scan_images_presence(repo, cfg, files),
-        scan_oss_files(repo, cfg),
-        scan_ci_heuristic(repo, cfg),
+        scan_absolute_paths(repo_root, cfg, files),
+        scan_secrets(repo_root, cfg, files),
+        scan_binaries_and_large_files(repo_root, cfg, files, tracked_set),
+        scan_images_presence(repo_root, cfg, files),
+        scan_oss_files(repo_root, cfg),
+        scan_ci_heuristic(repo_root, cfg),
     ]:
         if f:
             findings.append(f)
@@ -656,17 +851,39 @@ def main(argv: Optional[List[str]] = None) -> int:
     order = {"HIGH": 0, "MED": 1, "LOW": 2, "INFO": 3}
     findings.sort(key=lambda x: order.get(x.severity, 9))
 
-    report = render_report(repo, findings, cfg_path, used_git, args.history == 1, cfg)
+    report = render_report(
+        repo_root,
+        findings,
+        cfg_path,
+        used_git,
+        args.history == 1,
+        cfg,
+        effective_scope,
+        effective_respect_gitignore,
+        file_meta,
+    )
 
-    out_path = Path(args.out).expanduser().resolve() if args.out else (_desktop_dir() / f"public_release_hygiene_report_{_now_tag()}.md")
+    if args.out:
+        out_path = Path(args.out).expanduser().resolve()
+    else:
+        out_path = repo_root / "data_processed" / "build_reports" / f"public_release_hygiene_report_{_now_tag()}.md"
+    try:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
     try:
         out_path.write_text(report, encoding="utf-8")
     except Exception:
-        fallback = repo / f"public_release_hygiene_report_{_now_tag()}.md"
+        fallback = _desktop_dir() / f"public_release_hygiene_report_{_now_tag()}.md"
         fallback.write_text(report, encoding="utf-8")
         out_path = fallback
 
-    print(f"[OK] report_written={out_path}")
+    try:
+        shown = _rel(out_path, repo_root)
+    except Exception:
+        shown = str(out_path)
+    print(f"[OK] report_written={shown}")
 
     highs = sum(1 for f in findings if f.severity == "HIGH")
     return 2 if highs > 0 else 0

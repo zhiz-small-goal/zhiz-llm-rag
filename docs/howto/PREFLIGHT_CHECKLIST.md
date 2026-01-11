@@ -161,11 +161,12 @@ python tools\verify_reports_schema.py
 ### 3.1 仅针对“将要公开的目录”跑 hygiene 审计（数据面）
 **命令（CMD）**
 ```cmd
-python tools\check_public_release_hygiene.py --repo . --history 0
+python tools\check_public_release_hygiene.py --repo . --history 0 --file-scope tracked_and_untracked_unignored --respect-gitignore
 ```
 **PASS 条件**
 - 报告中 HIGH/MED 为 0（以报告为准）
 - 报告写入成功（通常输出 `report_written=...`）
+- 说明：该命令默认按 Git 语义扫描（tracked + 未跟踪但未被 gitignore 忽略），不会因本地已忽略的数据目录误报。
 
 ### 3.2 发布快照独立性检查（避免 worktree/.git 指针耦合）
 **命令（CMD）**

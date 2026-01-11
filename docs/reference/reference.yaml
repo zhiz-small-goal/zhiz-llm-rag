@@ -59,7 +59,7 @@ gates:
       argv: ["tools/check_tools_layout.py", "--mode", "fail"]
 
     check_public_release_hygiene:
-      argv: ["tools/check_public_release_hygiene.py", "--repo", ".", "--history", "0"]
+      argv: ["tools/check_public_release_hygiene.py", "--repo", ".", "--history", "0", "--file-scope", "tracked_and_untracked_unignored", "--respect-gitignore"]
 
     check_cli_entrypoints:
       argv: ["tools/check_cli_entrypoints.py"]

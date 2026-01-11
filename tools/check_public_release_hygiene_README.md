@@ -1,37 +1,91 @@
 ---
-title: check_public_release_hygiene.py 使用说明（Public Release Hygiene Audit）
-version: v2.0
+title: check_public_release_hygiene.py 使用说明（Public Release Hygiene Audit v3）
+version: v3.0
 last_updated: 2026-01-11
 ---
 
-# check_public_release_hygiene.py 使用说明（Public Release Hygiene Audit）
+# check_public_release_hygiene.py 使用说明（Public Release Hygiene Audit v3）
+
+> 适用目标：**公开发布/开源前**，对“将进入发布包的内容”做最小安全卫生检查（大文件/二进制/敏感信息/绝对路径指纹等）。
 
 ## 目录
-- [1. 目标与适用场景](#1-目标与适用场景)
-- [2. 扫描项与风险等级](#2-扫描项与风险等级)
-- [3. 使用方式](#3-使用方式)
-- [4. 命令行参数](#4-命令行参数)
-- [5. 输出报告结构](#5-输出报告结构)
-- [6. 退出码](#6-退出码)
-- [7. 配置文件（public_release_check_config.json）](#7-配置文件public_release_check_configjson)
-- [8. 常见问题与限制](#8-常见问题与限制)
-- [9. v2 变更点](#9-v2-变更点)
+- [1. 关键改动（v3）](#1-关键改动v3)
+- [2. 放置位置](#2-放置位置)
+- [3. 运行（推荐）](#3-运行推荐)
+- [4. 文件范围选择（重要）](#4-文件范围选择重要)
+- [5. 需要检查历史时（更慢）](#5-需要检查历史时更慢)
+- [6. 输出](#6-输出)
+- [7. 命令行参数](#7-命令行参数)
+- [8. 扫描项与风险等级](#8-扫描项与风险等级)
+- [9. 输出报告结构](#9-输出报告结构)
+- [10. 退出码](#10-退出码)
+- [11. 配置文件（public_release_check_config.json）](#11-配置文件public_release_check_configjson)
+- [12. 常见问题与限制](#12-常见问题与限制)
 
-## 1. 目标与适用场景
+## 1. 关键改动（v3）
+- ✅ **支持按 Git 语义选择扫描文件**，避免把本地已忽略的数据资产（如 `data_raw/`、`chroma_db/`）误判为发布风险。
+- ✅ 默认输出改为 **repo 内部** `data_processed/build_reports/`，避免在日志中暴露用户桌面路径。
+- ✅ 提供 `--file-scope` / `--respect-gitignore` 以在“发布卫生”与“本地严格全盘扫描”之间做取舍。
 
-该脚本用于公开发布前的**只读审计**，帮助发现：
-- 数据/构建产物误入仓库
-- 绝对路径与环境指纹泄露
-- 密钥/Token 等敏感信息
-- 二进制或大文件
-- 截图类附件
-- OSS 基础治理文件缺失
-- CI 门禁可能缺口（启发式）
+## 2. 放置位置
+- `tools/check_public_release_hygiene.py`
+- `tools/run_public_release_audit.cmd`（可选）
+- `tools/public_release_check_config.json`（可选）
+- `tools/check_public_release_hygiene_README.md`（本说明）
 
-脚本路径：`tools/check_public_release_hygiene.py`
+## 3. 运行（推荐）
+```bat
+cd <REPO_ROOT>
+python tools\check_public_release_hygiene.py --repo . --history 0
+```
 
-## 2. 扫描项与风险等级
+## 4. 文件范围选择（重要）
+> 该工具的“内容扫描”（大文件/图片/绝对路径/可能 secrets）默认按 Git 语义选取文件：**tracked + 未跟踪但未被 gitignore 忽略的文件**。
 
+- **默认（推荐）：发布卫生视角**
+  - `--file-scope tracked_and_untracked_unignored --respect-gitignore`
+  - 含义：扫描“可能会被你一起打包/提交”的内容；**跳过** gitignore 已明确忽略的本地数据资产。
+
+- **只扫 tracked：最小发布输入集**
+  - `--file-scope tracked`
+  - 含义：只关注 `git ls-files` 中的文件；适合“发布包≈仓库 tracked 内容”的团队约定。
+
+- **全盘扫描 worktree：本地最严格**
+  - `--file-scope worktree_all`
+  - 含义：遍历工作区所有文件（不看 gitignore）；适合你想把“工作区里任何大文件/敏感痕迹”都揪出来的场景（会更吵）。
+
+示例：
+```bat
+python tools\check_public_release_hygiene.py --repo . --history 0 --file-scope tracked
+python tools\check_public_release_hygiene.py --repo . --history 0 --file-scope tracked_and_untracked_unignored --respect-gitignore
+python tools\check_public_release_hygiene.py --repo . --history 0 --file-scope worktree_all
+```
+
+## 5. 需要检查历史时（更慢）
+```bat
+python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-lines 200000
+```
+
+## 6. 输出
+- 默认输出到：`data_processed/build_reports/public_release_hygiene_report_YYYYMMDD_HHMMSS.md`
+- 可用 `--out` 覆盖输出路径，例如输出到桌面：
+  ```bat
+  python tools\check_public_release_hygiene.py --repo . --out "%USERPROFILE%\Desktop\public_release_hygiene_report.md"
+  ```
+- 若 repo 内无法写入，脚本会回退到桌面路径。
+
+## 7. 命令行参数
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `--repo` | `.` | 仓库根目录 |
+| `--config` | *(空)* | 配置文件（JSON）；为空则使用内置默认配置 |
+| `--history` | `0` | 是否启用历史扫描：`0/1` |
+| `--max-history-lines` | `200000` | 历史扫描最大行数（<=0 表示不限制） |
+| `--file-scope` | `tracked_and_untracked_unignored` | 内容扫描的文件范围：`tracked`/`tracked_and_untracked_unignored`/`worktree_all` |
+| `--respect-gitignore` / `--no-respect-gitignore` | `--respect-gitignore` | 是否对未跟踪文件应用 gitignore（默认启用） |
+| `--out` | *(空)* | 报告输出路径；为空则输出到 repo 内 build_reports |
+
+## 8. 扫描项与风险等级
 - **HIGH**
   - Git 跟踪的禁用路径（基于 `git ls-files`）
   - Git 历史中出现禁用路径（`--history 1`）
@@ -47,44 +101,7 @@ last_updated: 2026-01-11
 
 定位格式统一为 `file:line:col`（`DIAG_LOC_FILE_LINE_COL`），便于 VS Code 直接跳转。
 
-## 3. 使用方式
-
-推荐（本地快速审计）：
-```bat
-cd <REPO_ROOT>
-python tools\check_public_release_hygiene.py --repo . --history 0
-```
-
-启用历史扫描（更慢）：
-```bat
-python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-lines 200000
-```
-
-使用自定义配置：
-```bat
-python tools\check_public_release_hygiene.py --repo . --config tools\public_release_check_config.json
-```
-
-指定报告输出路径：
-```bat
-python tools\check_public_release_hygiene.py --repo . --out data_processed\build_reports\public_release_hygiene.md
-```
-
-默认输出到桌面：
-`%USERPROFILE%\Desktop\public_release_hygiene_report_YYYYMMDD_HHMMSS.md`
-
-## 4. 命令行参数
-
-| 参数 | 默认值 | 说明 |
-| --- | --- | --- |
-| `--repo` | `.` | 仓库根目录 |
-| `--config` | *(空)* | 配置文件（JSON）；为空则使用内置默认配置 |
-| `--history` | `0` | 是否启用历史扫描：`0/1` |
-| `--max-history-lines` | `200000` | 历史扫描最大行数（<=0 表示不限制） |
-| `--out` | *(空)* | 报告输出路径；为空则输出到桌面 |
-
-## 5. 输出报告结构
-
+## 9. 输出报告结构
 报告为 Markdown，包含：
 - YAML 元信息：`generated_at` / `repo` / `config` / `git_available` / `history_scan`
 - `# 概要`：HIGH/MED/LOW/INFO 统计
@@ -93,13 +110,11 @@ python tools\check_public_release_hygiene.py --repo . --out data_processed\build
 
 报告生成后会打印：`[OK] report_written=<path>`。
 
-## 6. 退出码
-
+## 10. 退出码
 - `0`：未发现 HIGH
-- `2`：发现 HIGH（适合作为 CI 门禁）
+- `2`：发现 HIGH（适合 CI 门禁）
 
-## 7. 配置文件（public_release_check_config.json）
-
+## 11. 配置文件（public_release_check_config.json）
 配置为 JSON，与内置默认配置做**浅合并**（仅顶层键覆盖）。
 列表型字段需提供完整列表。
 
@@ -124,16 +139,10 @@ python tools\check_public_release_hygiene.py --repo . --out data_processed\build
 
 注意：配置文件**不会自动加载**，必须显式传入 `--config`。
 
-## 8. 常见问题与限制
-
+## 12. 常见问题与限制
 - `--history` 基于**路径名**启发式扫描，不解析历史内容。
 - 未安装 Git 或不在仓库根目录时，跟踪/历史扫描会跳过并给 INFO 提示。
+- 若 Git 不可用且 `--file-scope` 不是 `worktree_all`，会降级为 `worktree_all` 并给出 INFO。
 - 正则编译失败会降级为 INFO，并跳过该类扫描。
 - 二进制/大文件判断基于扩展名与大小阈值，不做内容级检测。
 - Locations 会做截断（不同扫描项上限不同），报告中会标注截断数量。
-
-## 9. v2 变更点
-
-- 简化绝对路径正则，避免 `re.error` 崩溃。
-- 正则编译失败降级为 INFO。
-- CMD 包装器改为 ASCII-only，避免 cmd.exe 编码误判。
