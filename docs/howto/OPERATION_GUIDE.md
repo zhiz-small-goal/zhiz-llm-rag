@@ -396,6 +396,8 @@ python tools\run_profile_with_timing.py --profile build_profile_schemeB.json --s
 
 ## LLM 服务探测（probe）
 
+密钥注入：服务要求 key 时，优先通过环境变量 `LLM_API_KEY`（或 `OPENAI_API_KEY`）配置；示例见 `.env.example`。本仓库不自动加载 `.env`。
+
 推荐（模块方式）：
 
 ```cmd

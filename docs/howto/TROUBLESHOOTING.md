@@ -205,6 +205,8 @@ LLM_MAX_TOKENS = 1024
 
 保存后不需改动其他脚本。
 
+也可通过环境变量注入（优先 `LLM_API_KEY`，其次 `OPENAI_API_KEY`）；示例见 `.env.example`。
+
 ### 4.3 验证完整 RAG 闭环
 
 运行：

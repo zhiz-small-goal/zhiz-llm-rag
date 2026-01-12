@@ -14,6 +14,9 @@ tmp_report.json
 .venv*/
 .pytest_cache/
 待办事项/
+.env
+.env.*
+!.env.example
 
 # --- public-release hygiene (auto-added) ---
 data_raw/

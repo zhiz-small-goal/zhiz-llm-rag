@@ -281,6 +281,7 @@ RAG_MAX_CONTEXT_CHARS = 12000
 典型使用方式：
 - 调整 `CHROMA_DB_PATH` / `CHROMA_COLLECTION` 即可切换不同向量库；
 - 将 `LLM_BASE_URL` 指向本地 Qwen 服务 / LM Studio / vLLM 等提供的 OpenAI 兼容端点；
+- `LLM_API_KEY` 可通过环境变量 `LLM_API_KEY` / `OPENAI_API_KEY` 覆盖，示例见 `.env.example`（未设置时回退为 `"EMPTY"`）；
 - 调整 `RAG_TOP_K` 和 `RAG_MAX_CONTEXT_CHARS` 控制证据数量与上下文长度。
 
 ### 6.4 向量层与检索层
