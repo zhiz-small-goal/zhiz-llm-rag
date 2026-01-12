@@ -1,7 +1,7 @@
 ---
 title: gate.py / rag-gate 使用说明（单入口 Gate：Schema + Policy + 可审计报告）
-version: v1.0
-last_updated: 2026-01-11
+version: v1.1
+last_updated: 2026-01-12
 ---
 
 # gate.py / rag-gate 使用说明（单入口 Gate）
@@ -93,6 +93,7 @@ python tools/gate.py --profile fast --root .
 
 1) 读取 SSOT：`docs/reference/reference.yaml`。
 2) 解析 profile → steps：按 SSOT 指定顺序逐条执行。
+   - `profile=ci/release` 默认包含 `check_ruff` / `check_mypy`；`RAG_RUFF_FORMAT=1`、`RAG_MYPY_STRICT=1` 可选收紧。
 3) 每个 step：捕获 stdout+stderr → 写入 `gate_logs/<step_id>.log`。
 4) 生成 `gate_report.json`：包含每步 argv/rc/status/耗时与 summary。
 5) 自校验（Schema）：用 `schemas/gate_report_v1.schema.json` 校验 `gate_report.json`。
@@ -148,11 +149,19 @@ Gate runner 统一遵循项目退出码契约：
 - 现象：gate summary 为 FAIL；对应 step 的 log 里有具体错误。
 - 处理：打开 `data_processed/build_reports/gate_logs/<step>.log` 定位。
 
+5) **Ruff lint/format FAIL**
+- 现象：`check_ruff status=FAIL` 或 `ruff` 输出违规。
+- 处理：运行 `python tools/check_ruff.py --root .`；需要格式校验时加 `--format` 或 `RAG_RUFF_FORMAT=1`。
+
+6) **mypy FAIL**
+- 现象：`check_mypy status=FAIL` 或类型报错。
+- 处理：运行 `python tools/check_mypy.py --root .`；需要严格模式时加 `--strict` 或 `RAG_MYPY_STRICT=1`。
+
 
 ## 关联文档
 
-- PR/CI Lite 门禁主线：`docs/howto/ci_pr_gates.md`
-- 参考与契约（退出码/报告契约/SSOT）：`docs/reference/REFERENCE.md`
-- SSOT（机器可读）：`docs/reference/reference.yaml`
-- Gate report schema：`schemas/gate_report_v1.schema.json`
-- Policy（Conftest/Rego）：`policy/README.md`
+- [PR/CI Lite 门禁主线](../docs/howto/ci_pr_gates.md)
+- [参考与契约（退出码/报告契约/SSOT）](../docs/reference/REFERENCE.md)
+- [SSOT（机器可读）](../docs/reference/reference.yaml)
+- [Gate report schema](../schemas/gate_report_v1.schema.json)
+- [Policy（Conftest/Rego）](../policy/README.md)

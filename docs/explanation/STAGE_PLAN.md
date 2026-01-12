@@ -1,5 +1,58 @@
 ﻿# STAGE_PLAN
 
+### [014] 2026-01-12 新增 Ruff/mypy 门禁（保留可选开关）
+
+日期：2026-01-12  
+状态：已完成  
+
+**变更类型：**  
+- 行为调整
+
+**目标：**  
+- 在 PR/CI Lite 中加入 Ruff lint 与 mypy type check  
+- 保留 ruff format / mypy strict 的可选开关，避免一次性收紧  
+
+**触发原因：**  
+- 需要把静态规范与类型检查纳入统一 gate，且保留收紧开关  
+
+**涉及文件：**  
+- pyproject.toml  
+- tools/check_ruff.py  
+- tools/check_mypy.py  
+- tools/check_ruff_README.md  
+- tools/check_mypy_README.md  
+- docs/reference/reference.yaml  
+- docs/howto/ci_pr_gates.md  
+- tools/gate_README.md  
+- docs/explanation/HANDOFF.md  
+- docs/explanation/STAGE_PLAN.md  
+
+**改动概览：**  
+- pyproject.toml  
+  - 增加 Ruff/mypy 依赖与配置（target-version/line-length/ignore）  
+- tools/check_ruff.py  
+  - 新增 Ruff lint + 可选 format check，遵循退出码契约  
+- tools/check_mypy.py  
+  - 新增 mypy type check + 可选 strict 模式，遵循退出码契约  
+- docs/reference/reference.yaml  
+  - `profile=ci/release` 增加 `check_ruff` / `check_mypy` 步骤  
+- docs/howto/ci_pr_gates.md / tools/gate_README.md / docs/explanation/HANDOFF.md  
+  - 同步门禁说明与可选开关  
+
+**关键点说明：**  
+- Gate 入口仍统一由 `rag-gate` / `tools/gate.py` 驱动，新增步骤只在 `ci/release` 运行  
+- 默认不启用 format/strict，避免一次性收紧；需要时用 `RAG_RUFF_FORMAT=1`、`RAG_MYPY_STRICT=1` 或 CLI 参数  
+
+**测试验证：**  
+- [ ] `pip install -e ".[ci]"` 后运行 `python tools/check_ruff.py --root .`  
+- [ ] `RAG_RUFF_FORMAT=1 python tools/check_ruff.py --root .`（可选）  
+- [ ] `python tools/check_mypy.py --root .`  
+- [ ] `RAG_MYPY_STRICT=1 python tools/check_mypy.py --root .`（可选）  
+- [ ] `rag-gate --profile ci --root .`，确认 gate_report 含 ruff/mypy 结果  
+
+**后续 TODO：**  
+- 无
+
 ### [013] 2026-01-11 pre-commit 使用显式解释器路径
 
 日期：2026-01-11  

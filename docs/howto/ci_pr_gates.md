@@ -1,7 +1,7 @@
 ---
 title: How-to：PR/CI Lite 门禁（快速回归）
-version: v1.1
-last_updated: 2026-01-11
+version: v1.2
+last_updated: 2026-01-12
 ---
 
 # How-to：PR/CI Lite 门禁（快速回归）
@@ -67,6 +67,8 @@ python tools\check_pyproject_preflight.py --ascii-only ^
   && python tools\check_exit_code_contract.py --root . ^
   && python tools\check_cli_entrypoints.py ^
   && python tools\check_md_refs_contract.py ^
+  && python tools\check_ruff.py --root . ^
+  && python tools\check_mypy.py --root . ^
   && pytest -q
 ```
 
@@ -76,7 +78,13 @@ python tools\check_pyproject_preflight.py --ascii-only ^
 - `check_exit_code_contract.py`：静态扫描 `sys.exit(1)` / `SystemExit("...")` / `exit /b 1` 等高频漂移点，保证退出码口径收敛到 {0,2,3}
 - `check_cli_entrypoints.py`：console_scripts 元数据 → venv Scripts wrapper → PATH 可见性的证据链
 - `check_md_refs_contract.py`：`extract_refs_from_md` 的签名绑定与调用点规范（强制关键字参数）
+- `check_ruff.py`：Ruff lint（可选 format --check），用于静态问题与风格一致性
+- `check_mypy.py`：mypy 类型检查（可选 strict）
 - `pytest -q`：最小轻集成（tmp_path 生成最小目录树，验证 inventory/units/validate 的关键不变量）
+
+可选开关（用于本地/CI 灵活收紧）：
+- `RAG_RUFF_FORMAT=1`：启用 `ruff format --check`
+- `RAG_MYPY_STRICT=1`：启用 `mypy --strict`
 
 ## 4) 常见失败与处理
 - `rag-* not found`：优先检查当前解释器与 Scripts 是否在 PATH；必要时重新 `pip install -e ...`

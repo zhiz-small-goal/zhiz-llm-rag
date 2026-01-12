@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - Mhy_AI_RAG_data
-version: 3
-last_updated: 2026-01-11
+version: 4
+last_updated: 2026-01-12
 timezone: America/Los_Angeles
 ssot: true
 ---
@@ -201,6 +201,7 @@ next（最小改动优先）：
 - SSOT：`docs/reference/reference.yaml`（门禁顺序/产物路径/schema/policy 输入集）
 - 单入口：`python tools/gate.py --profile ci --root .`（或安装后 `rag-gate ...`）
 - 产物：`data_processed/build_reports/gate_report.json` + `gate_logs/`
+- `profile=ci/release` 默认包含 `check_ruff` / `check_mypy`（format/strict 默认关闭，可用 `RAG_RUFF_FORMAT=1`、`RAG_MYPY_STRICT=1` 收紧）
 - Policy：通过 conftest 执行 `policy/` 下 Rego 规则；CI/Linux 会安装并强制执行，本地缺 conftest 时默认 SKIP。
 
 ---
@@ -235,3 +236,8 @@ next（最小改动优先）：
   - 新增 schema/policy：`schemas/gate_report_v1.schema.json` + `policy/`（conftest/Rego）
   - Public Release Hygiene 审计升级：新增 `--file-scope` / `--respect-gitignore`，默认输出落盘到 `data_processed/build_reports/`
   - 新增 JSON Schema 校验工具：`tools/schema_validate.py` / `rag-schema-validate`，用于校验 `gate_report.json` 与 `schemas/gate_report_v1.schema.json`
+
+- 2026-01-12
+  - PR/CI Lite 门禁新增 ruff/mypy（`check_ruff` / `check_mypy`）并保留 format/strict 可选开关
+  - 新增 repo-only gate 工具与说明：`tools/check_ruff.py` / `tools/check_mypy.py`（含 README）
+  - SSOT 与门禁文档同步：`docs/reference/reference.yaml` / `docs/howto/ci_pr_gates.md` / `tools/gate_README.md`

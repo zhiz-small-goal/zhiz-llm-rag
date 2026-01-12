@@ -1,7 +1,7 @@
 # Machine-readable SSOT for repo gates + schema + policy.
 # Keep this file stable: consumers must treat it as the single source of truth (SSOT).
 version: 1
-last_updated: "2026-01-11"
+last_updated: "2026-01-12"
 timezone: "America/Los_Angeles"
 
 exit_codes:
@@ -45,6 +45,8 @@ gates:
       - check_public_release_hygiene
       - check_cli_entrypoints
       - check_md_refs_contract
+      - check_ruff
+      - check_mypy
       - pytest
       - policy_conftest
     release:
@@ -55,6 +57,8 @@ gates:
       - check_repo_health_files
       - check_cli_entrypoints
       - check_md_refs_contract
+      - check_ruff
+      - check_mypy
       - pytest
       - policy_conftest
 
@@ -79,6 +83,12 @@ gates:
 
     check_md_refs_contract:
       argv: ["tools/check_md_refs_contract.py"]
+
+    check_ruff:
+      argv: ["tools/check_ruff.py", "--root", "."]
+
+    check_mypy:
+      argv: ["tools/check_mypy.py", "--root", "."]
 
     pytest:
       argv: ["-m", "pytest", "-q"]
