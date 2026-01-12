@@ -1,5 +1,130 @@
 ﻿# STAGE_PLAN
 
+### [021] 2026-01-12 修复 pre-commit rag-ruff 传参错误
+
+日期：2026-01-12  
+状态：已完成  
+
+**变更类型：**  
+- Bug 修复
+
+**目标：**  
+- pre-commit 仅检查暂存 Python 文件，避免 %* 被当作参数
+- 保持 check_ruff 全仓模式不变（无 files 时）
+
+**触发原因：**  
+- pre-commit 报错：check_ruff.py 收到未展开的 %* 参数
+
+**涉及文件：**  
+- .pre-commit-config.yaml  
+- tools/check_ruff.py  
+- tools/check_ruff_README.md  
+- docs/explanation/STAGE_PLAN.md  
+
+**改动概览：**  
+- .pre-commit-config.yaml  
+  - 使用 entry + args 由 pre-commit 追加文件列表  
+- tools/check_ruff.py  
+  - 支持 files 参数按列表执行 ruff  
+- tools/check_ruff_README.md  
+  - 补充 files 参数说明  
+
+**关键点说明：**  
+- 无 files 时仍对全仓执行，CI/门禁行为不变  
+
+**测试验证：**  
+- [ ] 提交少量 .py 文件，确认 rag-ruff 不再报 %* 参数  
+- [ ] `python tools/check_ruff.py --root . --format` 仍可全仓检查  
+
+**后续 TODO：**  
+- 无
+
+### [020] 2026-01-12 补齐 LLM_API_KEY 注入方式说明
+
+日期：2026-01-12  
+状态：已完成  
+
+**变更类型：**  
+- 行为调整
+- 文档补充
+
+**目标：**  
+- LLM_API_KEY 支持环境变量注入（LLM_API_KEY/OPENAI_API_KEY）
+- 提供 .env.example 与文档指引，避免把密钥写进仓库
+
+**触发原因：**  
+- 审查项 S5-2：LLM_API_KEY 使用常量占位，缺少明确注入方式说明
+
+**涉及文件：**  
+- src/mhy_ai_rag_data/rag_config.py  
+- .env.example  
+- .gitignore  
+- docs/howto/TROUBLESHOOTING.md  
+- docs/howto/OPERATION_GUIDE.md  
+- docs/reference/REFERENCE.md  
+- docs/explanation/STAGE_PLAN.md  
+
+**改动概览：**  
+- src/mhy_ai_rag_data/rag_config.py  
+  - 读取环境变量覆盖 LLM_API_KEY  
+- .env.example  
+  - 新增密钥注入示例  
+- .gitignore  
+  - 忽略 .env 本地密钥文件  
+- docs/howto/TROUBLESHOOTING.md / docs/howto/OPERATION_GUIDE.md / docs/reference/REFERENCE.md  
+  - 补充环境变量注入说明与引用  
+
+**关键点说明：**  
+- 默认行为不变：未设置环境变量时回退为 "EMPTY"  
+- 不自动加载 .env，需要由 shell/IDE 注入  
+
+**测试验证：**  
+- [ ] `set LLM_API_KEY=***` 后运行 `python -c "from mhy_ai_rag_data.rag_config import LLM_API_KEY; print(LLM_API_KEY)"`  
+- [ ] 不设置环境变量时仍为 `EMPTY`  
+
+**后续 TODO：**  
+- 无
+
+### [019] 2026-01-12 pre-commit 补齐 ruff/mypy 门禁
+
+日期：2026-01-12  
+状态：已完成  
+
+**变更类型：**  
+- 行为调整
+
+**目标：**  
+- pre-commit 覆盖 lint/format/type（check_ruff --format + check_mypy）
+- 保持 fast gate 作为快速入口
+
+**触发原因：**  
+- 审查项 S3-1：pre-commit 仅 fast profile，未覆盖 lint/format/type
+
+**涉及文件：**  
+- .pre-commit-config.yaml  
+- docs/howto/ci_pr_gates.md  
+- docs/explanation/STAGE_PLAN.md  
+
+**改动概览：**  
+- .pre-commit-config.yaml  
+  - 新增 rag-ruff（--format）与 rag-mypy hooks  
+- docs/howto/ci_pr_gates.md  
+  - pre-commit 示例同步新增 hooks  
+- docs/explanation/STAGE_PLAN.md  
+  - 追加本次变更记录  
+
+**关键点说明：**  
+- ruff format 以 --format 启用，确保 format 也在 pre-commit 覆盖  
+- gate runner 行为不变，仅扩展提交前门禁  
+
+**测试验证：**  
+- [ ] `pre-commit run rag-ruff -a`  
+- [ ] `pre-commit run rag-mypy -a`  
+- [ ] `pre-commit run rag-gate-fast -a`  
+
+**后续 TODO：**  
+- 无
+
 ### [018] 2026-01-12 view_gate_report 文档补齐与语法修复
 
 日期：2026-01-12  

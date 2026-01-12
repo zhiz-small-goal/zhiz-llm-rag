@@ -8,7 +8,8 @@
         pass_filenames: false
       - id: rag-ruff
         name: check_ruff --format
-        entry: 'cmd.exe /c "set PATH=%CD%\.venv_embed\Scripts;%PATH% && .venv_embed\Scripts\python.exe tools\check_ruff.py --root . --format %*"'
+        entry: .venv_embed\Scripts\python.exe
+        args: [tools/check_ruff.py, --root, ., --format]
         language: python
         pass_filenames: true
         types: [python]
