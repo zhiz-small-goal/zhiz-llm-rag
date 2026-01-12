@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "ts": 0,
+  "status": "PASS",
+  "summary": {
+    "conclusion": "",
+    "feasibility": "可行",
+    "priority_order": [
+      "文档清晰度",
+      "代码质量",
+      "可复用性",
+      "安全性",
+      "报告可读性",
+      "其它"
+    ]
+  },
+  "assumptions": [],
+  "changes": {
+    "goal": "",
+    "scope": "",
+    "impact": "",
+    "rollback": ""
+  },
+  "findings": [],
+  "evidence": {
+    "commands": [],
+    "artifacts": [],
+    "diag_loc": []
+  },
+  "risks": [],
+  "alternatives": [],
+  "mre": {
+    "env": "",
+    "inputs": [],
+    "commands": [],
+    "expected": ""
+  },
+  "extensions": {}
+}

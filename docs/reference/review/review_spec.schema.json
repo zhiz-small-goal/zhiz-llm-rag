@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zhiz-small-goal/zhiz-llm-rag/schemas/review_spec_v1.schema.json",
+  "title": "Review Spec SSOT (v1)",
+  "type": "object",
+  "required": [
+    "meta",
+    "scope",
+    "process",
+    "checklists",
+    "evolution"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "version",
+        "last_updated",
+        "timezone",
+        "ssot",
+        "source_file",
+        "generated_artifact"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "last_updated": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "ssot": {
+          "type": "boolean"
+        },
+        "source_file": {
+          "type": "string"
+        },
+        "generated_artifact": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "checklists": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "area",
+          "items"
+        ],
+        "properties": {
+          "area": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "level",
+                "statement"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": [
+                    "MUST",
+                    "SHOULD",
+                    "MAY"
+                  ]
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "automation": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "evolution": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "reporting": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

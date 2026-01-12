@@ -14,7 +14,9 @@
 
 
 ## 文档导航（从这里开始）
-- 📚 [`docs/INDEX.md`](docs/INDEX.md)
+- 📚 [文档导航（Diátaxis）](docs/INDEX.md)
+- [审查规范（Review Spec）](docs/reference/review/README.md)
+- [审查流程（How-to）](docs/howto/review_workflow.md)
 
 ## Golden Path（PR/CI Lite 快速回归）
 > 不下载大模型、不建 Chroma；用于重构后快速确认“入口点/契约/最小集成”均未回归。

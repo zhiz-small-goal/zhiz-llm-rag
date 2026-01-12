@@ -1,7 +1,7 @@
 ---
 title: tools/ 目录说明（入口层 / 治理脚本）
-version: v1.1
-last_updated: 2026-01-11
+version: v1.3
+last_updated: 2026-01-12
 ---
 
 # tools/ 目录说明（入口层 / 治理脚本）

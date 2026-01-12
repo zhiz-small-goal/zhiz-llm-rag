@@ -37,6 +37,7 @@ gates:
       - check_tools_layout
       - check_cli_entrypoints
       - check_md_refs_contract
+      - validate_review_spec
       - pytest
     ci:
       - check_pyproject_preflight
@@ -47,6 +48,7 @@ gates:
       - check_md_refs_contract
       - check_ruff
       - check_mypy
+      - validate_review_spec
       - pytest
       - policy_conftest
     release:
@@ -59,6 +61,7 @@ gates:
       - check_md_refs_contract
       - check_ruff
       - check_mypy
+      - validate_review_spec
       - pytest
       - policy_conftest
 
@@ -89,6 +92,9 @@ gates:
 
     check_mypy:
       argv: ["tools/check_mypy.py", "--root", "."]
+
+    validate_review_spec:
+      argv: ["tools/validate_review_spec.py", "--root", "."]
 
     pytest:
       argv: ["-m", "pytest", "-q"]

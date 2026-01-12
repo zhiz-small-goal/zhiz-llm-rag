@@ -1,7 +1,7 @@
 ﻿---
 title: 参考与契约（REFERENCE）
-version: v1.0
-last_updated: 2026-01-06
+version: v1.1
+last_updated: 2026-01-12
 ---
 
 > SSOT（机器可读）: `docs/reference/reference.yaml`。CI 与 gate runner 以此为准。
@@ -34,6 +34,7 @@ last_updated: 2026-01-06
 - Index State 与 Stamps：[`index_state_and_stamps.md`](index_state_and_stamps.md)
 - Stage-2 评测契约：[`EVAL_CASES_SCHEMA.md`](EVAL_CASES_SCHEMA.md)
 - Postmortem 模板（诊断复盘）：[`postmortem_prompt_template.md`](postmortem_prompt_template.md)
+- 审查规范（Review Spec：SSOT/生成/模板）：[`review/README.md`](review/README.md)
 
 ---
 

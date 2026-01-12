@@ -81,6 +81,9 @@ if errorlevel 1 exit /b !ERRORLEVEL!
 call :gate "%PY%" tools\check_exit_code_contract.py --root .
 if errorlevel 1 exit /b !ERRORLEVEL!
 
+call :gate "%PY%" tools\validate_review_spec.py --root .
+if errorlevel 1 exit /b !ERRORLEVEL!
+
 REM 2) (Optional) install/update deps
 if "%NO_INSTALL%"=="0" (
   "%PY%" -m pip install -U pip

@@ -69,6 +69,7 @@ python tools\check_pyproject_preflight.py --ascii-only ^
   && python tools\check_md_refs_contract.py ^
   && python tools\check_ruff.py --root . ^
   && python tools\check_mypy.py --root . ^
+  && python tools\validate_review_spec.py --root . ^
   && pytest -q
 ```
 
@@ -80,6 +81,7 @@ python tools\check_pyproject_preflight.py --ascii-only ^
 - `check_md_refs_contract.py`：`extract_refs_from_md` 的签名绑定与调用点规范（强制关键字参数）
 - `check_ruff.py`：Ruff lint（可选 format --check），用于静态问题与风格一致性
 - `check_mypy.py`：mypy 类型检查（可选 strict）
+- `validate_review_spec.py`：审查规范 SSOT 与生成文档一致性（防止审查口径漂移）
 - `pytest -q`：最小轻集成（tmp_path 生成最小目录树，验证 inventory/units/validate 的关键不变量）
 
 可选开关（用于本地/CI 灵活收紧）：
@@ -123,3 +125,16 @@ repos:
 - 对这种“不依赖文件列表、而是审计仓库状态”的检查，建议 `pass_filenames: false`。
  - 后续不同设备需要相同的 `.venv_embed/` 路径
  - 如果你的虚拟环境不在 `.venv_embed/`，请把 entry 中的解释器路径改成实际路径。
+
+### 5.3 审查规范（Review Spec）门禁
+
+从 2026-01-12 起，gate profile（fast/ci/release）包含 `validate_review_spec`：
+
+- SSOT：`docs/reference/review/review_spec.v1.json`
+- 生成产物：`docs/reference/review/REVIEW_SPEC.md`
+
+当 SSOT 变更但未同步刷新生成文档时，该门禁会 FAIL。刷新命令：
+
+```bash
+python tools/generate_review_spec_docs.py --root . --write
+```
