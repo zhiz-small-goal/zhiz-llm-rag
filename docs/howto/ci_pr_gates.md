@@ -123,6 +123,16 @@ repos:
         entry: .venv\\Scripts\\python.exe tools/gate.py --profile fast --root .
         language: unsupported
         pass_filenames: false
+      - id: rag-ruff
+        name: check_ruff --format
+        entry: .venv\\Scripts\\python.exe tools/check_ruff.py --root . --format
+        language: unsupported
+        pass_filenames: false
+      - id: rag-mypy
+        name: check_mypy --root .
+        entry: .venv\\Scripts\\python.exe tools/check_mypy.py --root .
+        language: unsupported
+        pass_filenames: false
 ```
 
 要点：
