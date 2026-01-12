@@ -24,13 +24,23 @@ import tomllib
 
 _SUSPECT_CODEPOINTS = {
     # Smart quotes
-    0x2018, 0x2019, 0x201C, 0x201D,
+    0x2018,
+    0x2019,
+    0x201C,
+    0x201D,
     # Dashes/minus variants
-    0x2010, 0x2011, 0x2012, 0x2013, 0x2014, 0x2212, 0xFF0D,
+    0x2010,
+    0x2011,
+    0x2012,
+    0x2013,
+    0x2014,
+    0x2212,
+    0xFF0D,
     # Spaces / invisibles
     0x00A0,  # NBSP
     0x200B,  # ZWSP
-    0x200C, 0x200D,  # ZWNJ/ZWJ
+    0x200C,
+    0x200D,  # ZWNJ/ZWJ
     0x2060,  # Word joiner
     0xFEFF,  # BOM / ZWNBSP
 }
@@ -41,22 +51,26 @@ def _scan_unicode(text: str, ascii_only: bool) -> list[dict]:
     for idx, ch in enumerate(text):
         cp = ord(ch)
         if ascii_only and cp > 0x7F:
-            issues.append({
-                "kind": "non-ascii",
-                "codepoint": f"U+{cp:04X}",
-                "char": ch,
-                "name": unicodedata.name(ch, "UNKNOWN"),
-                "index": idx,
-            })
+            issues.append(
+                {
+                    "kind": "non-ascii",
+                    "codepoint": f"U+{cp:04X}",
+                    "char": ch,
+                    "name": unicodedata.name(ch, "UNKNOWN"),
+                    "index": idx,
+                }
+            )
             continue
         if cp in _SUSPECT_CODEPOINTS:
-            issues.append({
-                "kind": "suspect",
-                "codepoint": f"U+{cp:04X}",
-                "char": ch,
-                "name": unicodedata.name(ch, "UNKNOWN"),
-                "index": idx,
-            })
+            issues.append(
+                {
+                    "kind": "suspect",
+                    "codepoint": f"U+{cp:04X}",
+                    "char": ch,
+                    "name": unicodedata.name(ch, "UNKNOWN"),
+                    "index": idx,
+                }
+            )
     return issues
 
 
@@ -113,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
             # VS Code Ctrl+Click: ABS_PATH:LINE:COL: ...
             print(f"{p}:{line}:{col}: [FAIL] {it['kind']}  {it['codepoint']}  {it['name']}  repr={it['char']!r}")
         if len(issues) > 200:
-            print(f"  ... ({len(issues)-200} more)")
+            print(f"  ... ({len(issues) - 200} more)")
         _print_hint()
         return 2
 

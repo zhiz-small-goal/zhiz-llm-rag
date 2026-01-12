@@ -16,11 +16,7 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProc
     )
     if p.returncode != 0:
         raise AssertionError(
-            "command failed\n"
-            f"cmd={cmd}\n"
-            f"rc={p.returncode}\n"
-            f"stdout:\n{p.stdout}\n"
-            f"stderr:\n{p.stderr}\n"
+            f"command failed\ncmd={cmd}\nrc={p.returncode}\nstdout:\n{p.stdout}\nstderr:\n{p.stderr}\n"
         )
     return p
 

@@ -26,6 +26,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
+
 def main() -> int:
     try:
         ap = argparse.ArgumentParser()
@@ -61,6 +62,7 @@ def main() -> int:
     except Exception as e:
         print(f"[ERROR] {e}")
         return 3
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

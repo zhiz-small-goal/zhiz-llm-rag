@@ -35,10 +35,27 @@ ROOT = find_project_root(None)
 DEFAULT_CONFIG_PATH = ROOT / "tools" / "link_check_config.json"
 DEFAULT_EXTS = {
     ".md",
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp",
-    ".mp4", ".mov", ".mkv", ".avi", ".webm",
-    ".mp3", ".wav", ".ogg", ".flac",
-    ".pdf", ".txt", ".csv", ".json", ".jsonl",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".bmp",
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".avi",
+    ".webm",
+    ".mp3",
+    ".wav",
+    ".ogg",
+    ".flac",
+    ".pdf",
+    ".txt",
+    ".csv",
+    ".json",
+    ".jsonl",
 }
 
 BACKTICK_RE = re.compile(r"`([^`]+)`")
@@ -63,19 +80,20 @@ SKIP_DIRS = {
     "chroma_db",
 }
 
+
 def _mask_fenced_blocks(text: str) -> str:
     def _mask(match: re.Match[str]) -> str:
         s = match.group(0)
         return "".join("\n" if c == "\n" else " " for c in s)
+
     text = FENCE_RE.sub(_mask, text)
     return FENCE_TILDE_RE.sub(_mask, text)
 
+
 def _is_url_like(token: str) -> bool:
     low = token.lower()
-    return (
-        low.startswith(("http://", "https://", "mailto:", "tel:"))
-        or "://" in low
-    )
+    return low.startswith(("http://", "https://", "mailto:", "tel:")) or "://" in low
+
 
 def _is_absolute_path(token: str) -> bool:
     """判断是否为“操作系统绝对路径”。
@@ -96,6 +114,7 @@ def _looks_path_like(path_text: str) -> bool:
     name = Path(path_text).name
     return ("/" in path_text) or ("\\" in path_text) or ("." in name)
 
+
 def _normalize_exts(exts: list[str]) -> set[str]:
     normalized = set()
     for ext in exts:
@@ -106,6 +125,7 @@ def _normalize_exts(exts: list[str]) -> set[str]:
             e = "." + e
         normalized.add(e)
     return normalized
+
 
 def _load_config(path: Path) -> dict:
     """
@@ -125,10 +145,18 @@ def _load_config(path: Path) -> dict:
         "treat_leading_slash_as_repo_root": True,
         "extensions": sorted(DEFAULT_EXTS),
         "ignore_prefixes": [
-            "data_raw/", "data_processed/", "chroma_db/", ".venv_rag/", ".venv/",
+            "data_raw/",
+            "data_processed/",
+            "chroma_db/",
+            ".venv_rag/",
+            ".venv/",
         ],
         "ignore_contains": [
-            "llm_probe_report_", "time_report_", "_report_<", "<ts>", "*_report_",
+            "llm_probe_report_",
+            "time_report_",
+            "_report_<",
+            "<ts>",
+            "*_report_",
         ],
         # 仅忽略“裸文件名”（不含 / 或 \），用于运行时工件/示例工件。
         # 推荐仍在文档中写成 data_processed/...；此处是为了避免 strict 误报。
@@ -186,6 +214,7 @@ def _normalize_for_ignore(path_text: str) -> str:
         s = s[3:]
     return s.lstrip("/")
 
+
 def _is_ignored_ref(path_text: str, config: dict) -> bool:
     if not path_text:
         return True
@@ -226,6 +255,7 @@ def _is_ignored_ref(path_text: str, config: dict) -> bool:
 
     return False
 
+
 def _should_check_path(path_text: str, allowed_exts: set[str], any_local: bool, config: dict) -> bool:
     if _is_ignored_ref(path_text, config):
         return False
@@ -235,6 +265,7 @@ def _should_check_path(path_text: str, allowed_exts: set[str], any_local: bool, 
         return True
     ext = Path(path_text).suffix.lower()
     return ext in allowed_exts
+
 
 @dataclass(frozen=True)
 class RefHit:
@@ -246,7 +277,10 @@ class RefHit:
     start: int
     end: int
 
-def _split_md_ref(raw: str, *, from_backtick: bool, treat_leading_slash_as_repo_root: bool) -> tuple[str, str, str] | None:
+
+def _split_md_ref(
+    raw: str, *, from_backtick: bool, treat_leading_slash_as_repo_root: bool
+) -> tuple[str, str, str] | None:
     if not raw:
         return None
     t = raw.strip()
@@ -254,7 +288,7 @@ def _split_md_ref(raw: str, *, from_backtick: bool, treat_leading_slash_as_repo_
         return None
     t = t.rstrip(").,;")
     if t.startswith("<") and ">" in t:
-        t = t[1:t.find(">")]
+        t = t[1 : t.find(">")]
     if any(ch.isspace() for ch in t):
         t = t.split()[0]
     if not t:
@@ -281,7 +315,14 @@ def _split_md_ref(raw: str, *, from_backtick: bool, treat_leading_slash_as_repo_
         return None
     return t, path, suffix
 
-def _collect_md_refs_with_lines(text: str, *, check_title_backticks: bool = False, check_backticks: bool = False, treat_leading_slash_as_repo_root: bool = True) -> list[RefHit]:
+
+def _collect_md_refs_with_lines(
+    text: str,
+    *,
+    check_title_backticks: bool = False,
+    check_backticks: bool = False,
+    treat_leading_slash_as_repo_root: bool = True,
+) -> list[RefHit]:
     out: list[RefHit] = []
     for lineno, line in enumerate(text.splitlines(), start=1):
         title_spans: list[tuple[int, int]] = []
@@ -289,37 +330,39 @@ def _collect_md_refs_with_lines(text: str, *, check_title_backticks: bool = Fals
             title_start, title_end = m.span(1)
             dest_start, dest_end = m.span(2)
             title_spans.append((title_start, title_end))
-            parts = _split_md_ref(m.group(2), from_backtick=False, treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root)
+            parts = _split_md_ref(
+                m.group(2), from_backtick=False, treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root
+            )
             if parts:
                 token, path, suffix = parts
-                out.append(RefHit(
-                    lineno, token, path, suffix, KIND_LINK, dest_start, dest_end
-                ))
+                out.append(RefHit(lineno, token, path, suffix, KIND_LINK, dest_start, dest_end))
             if check_title_backticks:
                 title_text = m.group(1)
                 for bt in BACKTICK_RE.finditer(title_text):
-                    parts = _split_md_ref(bt.group(1), from_backtick=True, treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root)
+                    parts = _split_md_ref(
+                        bt.group(1),
+                        from_backtick=True,
+                        treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root,
+                    )
                     if parts:
                         token, path, suffix = parts
                         start = title_start + bt.start(1)
                         end = title_start + bt.end(1)
-                        out.append(RefHit(
-                            lineno, token, path, suffix, KIND_BACKTICK_TITLE, start, end
-                        ))
+                        out.append(RefHit(lineno, token, path, suffix, KIND_BACKTICK_TITLE, start, end))
         for m in REF_DEF_LINE_RE.finditer(line):
-            parts = _split_md_ref(m.group(1), from_backtick=False, treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root)
+            parts = _split_md_ref(
+                m.group(1), from_backtick=False, treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root
+            )
             if parts:
                 token, path, suffix = parts
-                out.append(RefHit(
-                    lineno, token, path, suffix, KIND_REFDEF, m.start(1), m.end(1)
-                ))
+                out.append(RefHit(lineno, token, path, suffix, KIND_REFDEF, m.start(1), m.end(1)))
         for m in AUTOLINK_RE.finditer(line):
-            parts = _split_md_ref(m.group(1), from_backtick=False, treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root)
+            parts = _split_md_ref(
+                m.group(1), from_backtick=False, treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root
+            )
             if parts:
                 token, path, suffix = parts
-                out.append(RefHit(
-                    lineno, token, path, suffix, KIND_AUTOLINK, m.start(1), m.end(1)
-                ))
+                out.append(RefHit(lineno, token, path, suffix, KIND_AUTOLINK, m.start(1), m.end(1)))
         if check_backticks:
             for m in BACKTICK_RE.finditer(line):
                 span_start, span_end = m.start(1), m.end(1)
@@ -332,30 +375,24 @@ def _collect_md_refs_with_lines(text: str, *, check_title_backticks: bool = Fals
                 )
                 if parts:
                     token, path, suffix = parts
-                    out.append(RefHit(
-                        lineno, token, path, suffix, KIND_BACKTICK, span_start, span_end
-                    ))
+                    out.append(RefHit(lineno, token, path, suffix, KIND_BACKTICK, span_start, span_end))
     return out
+
 
 def _iter_md_files(root: Path) -> list[Path]:
     results: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [
-            d for d in dirnames
-            if (d not in SKIP_DIRS and not d.startswith("."))
-        ]
+        dirnames[:] = [d for d in dirnames if (d not in SKIP_DIRS and not d.startswith("."))]
         for name in filenames:
             if name.lower().endswith(".md"):
                 results.append(Path(dirpath) / name)
     return results
 
+
 def _iter_index_files(root: Path, allowed_exts: set[str], any_local: bool) -> list[Path]:
     results: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [
-            d for d in dirnames
-            if (d not in SKIP_DIRS and not d.startswith("."))
-        ]
+        dirnames[:] = [d for d in dirnames if (d not in SKIP_DIRS and not d.startswith("."))]
         for name in filenames:
             if any_local:
                 results.append(Path(dirpath) / name)
@@ -365,8 +402,10 @@ def _iter_index_files(root: Path, allowed_exts: set[str], any_local: bool) -> li
                 results.append(Path(dirpath) / name)
     return results
 
+
 def _build_file_index(files: list[Path]) -> list[str]:
     return [p.relative_to(ROOT).as_posix() for p in files]
+
 
 def _normalize_ref_path(ref_path: str) -> str:
     ref_norm = ref_path.replace("\\", "/")
@@ -375,6 +414,7 @@ def _normalize_ref_path(ref_path: str) -> str:
     while ref_norm.startswith("../"):
         ref_norm = ref_norm[3:]
     return ref_norm.lstrip("/")
+
 
 def _find_candidates(ref_path: str, rel_paths: list[str]) -> list[str]:
     ref_norm = _normalize_ref_path(ref_path)
@@ -389,6 +429,7 @@ def _find_candidates(ref_path: str, rel_paths: list[str]) -> list[str]:
         return []
     return [p for p in rel_paths if Path(p).name.lower() == name]
 
+
 def _looks_root_relative(path_text: str) -> bool:
     return not (
         path_text.startswith("./")
@@ -397,9 +438,8 @@ def _looks_root_relative(path_text: str) -> bool:
         or path_text.startswith("..\\")
     )
 
-def _resolve_local_target(
-    *, base_dir: Path, raw_path: str, treat_leading_slash_as_repo_root: bool
-) -> Path:
+
+def _resolve_local_target(*, base_dir: Path, raw_path: str, treat_leading_slash_as_repo_root: bool) -> Path:
     """把 Markdown 里的本地路径解析成磁盘路径（用于 exists 校验）。
 
     解析规则（与 GitHub 渲染语义对齐）：
@@ -417,10 +457,7 @@ def _resolve_local_target(
     return (base_dir / raw_path).resolve(strict=False)
 
 
-def _apply_replacements(
-    lines: list[str],
-    replacements: dict[int, list[tuple[int, int, str]]]
-) -> bool:
+def _apply_replacements(lines: list[str], replacements: dict[int, list[tuple[int, int, str]]]) -> bool:
     changed = False
     for lineno, reps in replacements.items():
         idx = lineno - 1
@@ -436,22 +473,20 @@ def _apply_replacements(
             changed = True
     return changed
 
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-fix", action="store_true", help="仅检测，不自动修复")
     parser.add_argument("--strict", action="store_true", help="存在断链/歧义时返回非 0")
     parser.add_argument("--any-local", action="store_true", help="忽略扩展名列表，校验所有本地路径")
-    parser.add_argument(
-        "--config",
-        default=str(DEFAULT_CONFIG_PATH),
-        help="扩展名与模式配置文件路径（JSON）"
-    )
+    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="扩展名与模式配置文件路径（JSON）")
     parser.add_argument(
         "--fix-missing-tools-to-placeholder",
         action="store_true",
-        help="当引用 tools/*.py 但文件不存在且无唯一候选时，将其自动改为 tools/<name>.py 占位（避免误导与 strict 误报）"
+        help="当引用 tools/*.py 但文件不存在且无唯一候选时，将其自动改为 tools/<name>.py 占位（避免误导与 strict 误报）",
     )
     return parser.parse_args()
+
 
 def main() -> int:
     args = _parse_args()
@@ -492,7 +527,11 @@ def main() -> int:
             if not _should_check_path(hit.path, allowed_exts, any_local, config):
                 continue
             checked_refs += 1
-            target = _resolve_local_target(base_dir=base_dir, raw_path=hit.path, treat_leading_slash_as_repo_root=bool(config.get("treat_leading_slash_as_repo_root", True)))
+            target = _resolve_local_target(
+                base_dir=base_dir,
+                raw_path=hit.path,
+                treat_leading_slash_as_repo_root=bool(config.get("treat_leading_slash_as_repo_root", True)),
+            )
             if not target.exists():
                 src_rel = md_file.relative_to(ROOT).as_posix()
                 if hit.kind in (KIND_BACKTICK, KIND_BACKTICK_TITLE):
@@ -516,9 +555,7 @@ def main() -> int:
                     if hit.kind == KIND_BACKTICK or not auto_fix:
                         suggested.append((src_rel, hit.line, hit.token, fixed_token))
                     else:
-                        replacements.setdefault(hit.line, []).append(
-                            (hit.start, hit.end, fixed_token)
-                        )
+                        replacements.setdefault(hit.line, []).append((hit.start, hit.end, fixed_token))
                         fixed.append((src_rel, hit.line, hit.token, fixed_token))
                 elif len(candidates) > 1:
                     ambiguous.append((src_rel, hit.line, hit.token, candidates))
@@ -537,9 +574,7 @@ def main() -> int:
                         placeholder = f"<{p.stem}>{p.suffix}"
                         fixed_path = f"{parent}/{placeholder}" if parent and parent != "." else placeholder
                         fixed_token = f"{fixed_path}{hit.suffix}"
-                        replacements.setdefault(hit.line, []).append(
-                            (hit.start, hit.end, fixed_token)
-                        )
+                        replacements.setdefault(hit.line, []).append((hit.start, hit.end, fixed_token))
                         fixed.append((src_rel, hit.line, hit.token, fixed_token))
                         continue
 
@@ -597,11 +632,13 @@ def main() -> int:
     if ambiguous:
         if printed_any_section:
             print()
+
         def _render_amb(r: tuple) -> str:
             src, lineno, old, candidates = r
             sample = ", ".join(candidates[:5])
             more = " ..." if len(candidates) > 5 else ""
             return f"- {src}:{lineno}: `{old}` -> {sample}{more}"
+
         _print_grouped_section(
             "[AMBIGUOUS REFS]",
             sorted(ambiguous),
@@ -657,6 +694,7 @@ def main() -> int:
     if fixed:
         print(f"auto_fixed={len(fixed)}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

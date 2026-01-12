@@ -96,8 +96,8 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "## 1. 概览",
         "",
-        f"- 项目类型：{scope.get('project_type','')}",
-        f"- 当前阶段：{scope.get('stage','')}",
+        f"- 项目类型：{scope.get('project_type', '')}",
+        f"- 当前阶段：{scope.get('stage', '')}",
         f"- 审查优先级（高→低）：{' > '.join(scope.get('priority_order', []))}",
         "",
         "## 2. 适用范围与优先级",
@@ -122,14 +122,14 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "### 3.1 角色",
         "",
-        f"- Author：{(process.get('roles') or {}).get('author','')}",
-        f"- Reviewer：{(process.get('roles') or {}).get('reviewer','')}",
+        f"- Author：{(process.get('roles') or {}).get('author', '')}",
+        f"- Reviewer：{(process.get('roles') or {}).get('reviewer', '')}",
         "",
         "### 3.2 流程（MUST）",
         "",
     ]
     for idx, st in enumerate(process.get("workflow", []) or [], start=1):
-        lines.append(f"**Step {idx}：{st.get('step','')}**")
+        lines.append(f"**Step {idx}：{st.get('step', '')}**")
         for m in st.get("must", []) or []:
             lines.append(f"- MUST: {m}")
         lines.append("")
@@ -176,8 +176,8 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "### 5.2 报告模板",
         "",
-        f"- 人类可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('md','')}`",
-        f"- 机器可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('json','')}`",
+        f"- 人类可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('md', '')}`",
+        f"- 机器可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('json', '')}`",
         "",
         "### 5.3 与 Gate/CI 的关系",
         "",
@@ -185,8 +185,8 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "## 6. 演进接口与版本策略",
         "",
-        f"- 版本策略：SemVer（{((spec.get('evolution') or {}).get('compat') or {}).get('semver','')}）",
-        f"- 兼容策略：{((spec.get('evolution') or {}).get('compat') or {}).get('policy','')}",
+        f"- 版本策略：SemVer（{((spec.get('evolution') or {}).get('compat') or {}).get('semver', '')}）",
+        f"- 兼容策略：{((spec.get('evolution') or {}).get('compat') or {}).get('policy', '')}",
         "",
         "### 6.1 扩展点（extensions）",
         "",
@@ -202,7 +202,7 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         if not isinstance(r, dict):
             continue
         lines.append(
-            f"- {r.get('title','')} | {r.get('url','')} | {r.get('version_or_date','')} | {r.get('kind','')} | {r.get('locator','')}"
+            f"- {r.get('title', '')} | {r.get('url', '')} | {r.get('version_or_date', '')} | {r.get('kind', '')} | {r.get('locator', '')}"
         )
     lines.append("")
     return "\n".join(lines) + "\n"
@@ -211,8 +211,15 @@ def _gen_md(spec: Dict[str, Any]) -> str:
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Generate Review Spec docs from SSOT JSON.")
     ap.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
-    ap.add_argument("--in", dest="in_path", default=None, help="SSOT JSON path (default: docs/reference/review/review_spec.v1.json)")
-    ap.add_argument("--out", dest="out_path", default=None, help="Output Markdown path (default: docs/reference/review/REVIEW_SPEC.md)")
+    ap.add_argument(
+        "--in", dest="in_path", default=None, help="SSOT JSON path (default: docs/reference/review/review_spec.v1.json)"
+    )
+    ap.add_argument(
+        "--out",
+        dest="out_path",
+        default=None,
+        help="Output Markdown path (default: docs/reference/review/REVIEW_SPEC.md)",
+    )
     ap.add_argument("--check", action="store_true", help="Check if output is up-to-date (do not write).")
     ap.add_argument("--write", action="store_true", help="Write output file.")
     args = ap.parse_args(argv)

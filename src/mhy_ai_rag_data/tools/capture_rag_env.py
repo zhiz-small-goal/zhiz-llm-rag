@@ -119,7 +119,9 @@ def main() -> int:
             "cuda_version": getattr(torch.version, "cuda", None),
             "cudnn_version": getattr(torch.backends.cudnn, "version", lambda: None)(),
             "gpu_count": int(torch.cuda.device_count()) if torch.cuda.is_available() else 0,
-            "gpu_names": [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())] if torch.cuda.is_available() else [],
+            "gpu_names": [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
+            if torch.cuda.is_available()
+            else [],
         }
     except Exception as e:
         report["torch"] = {"error": str(e)}

@@ -55,8 +55,31 @@ CH_RX = re.compile(r"[\u4e00-\u9fff]+")
 
 # 极简停用词（避免把非常泛的词当锚点；后续可按你项目语料补充）
 STOP_PHRASES = {
-    "如何", "怎么", "什么", "以及", "一个", "我们", "可以", "进行", "这里", "这个", "因为", "如果", "然后",
-    "需要", "建议", "注意", "步骤", "使用", "命令", "方法", "问题", "项目", "目录", "文件", "脚本",
+    "如何",
+    "怎么",
+    "什么",
+    "以及",
+    "一个",
+    "我们",
+    "可以",
+    "进行",
+    "这里",
+    "这个",
+    "因为",
+    "如果",
+    "然后",
+    "需要",
+    "建议",
+    "注意",
+    "步骤",
+    "使用",
+    "命令",
+    "方法",
+    "问题",
+    "项目",
+    "目录",
+    "文件",
+    "脚本",
 }
 
 
@@ -97,7 +120,7 @@ def extract_candidates(text: str, max_terms: int = 8) -> List[str]:
             if len(seg) < n:
                 continue
             for i in range(0, len(seg) - n + 1):
-                g = seg[i:i+n]
+                g = seg[i : i + n]
                 if g in STOP_PHRASES:
                     continue
                 # 避免全是泛词的片段
@@ -140,14 +163,26 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument("--query", required=True, help="user query to build eval case")
-    ap.add_argument("--bucket", default="official", choices=["official", "oral", "ambiguous"], help="case bucket: official/oral/ambiguous")
+    ap.add_argument(
+        "--bucket",
+        default="official",
+        choices=["official", "oral", "ambiguous"],
+        help="case bucket: official/oral/ambiguous",
+    )
     ap.add_argument("--pair-id", default="", help="bind oral vs official variants (optional, recommended)")
     ap.add_argument("--concept-id", default="", help="concept grouping id (optional)")
     ap.add_argument("--db", default="chroma_db", help="chroma db directory relative to root")
     ap.add_argument("--collection", default="rag_chunks", help="chroma collection name")
     ap.add_argument("--k", type=int, default=5, help="topK for retrieval")
-    ap.add_argument("--meta-field", default="source_uri|source|path|file", help="metadata source field priority, separated by |")
-    ap.add_argument("--embed-backend", default="auto", choices=["auto", "flagembedding", "sentence-transformers"], help="embedding backend")
+    ap.add_argument(
+        "--meta-field", default="source_uri|source|path|file", help="metadata source field priority, separated by |"
+    )
+    ap.add_argument(
+        "--embed-backend",
+        default="auto",
+        choices=["auto", "flagembedding", "sentence-transformers"],
+        help="embedding backend",
+    )
     ap.add_argument("--embed-model", default="BAAI/bge-m3", help="embedding model name (should match index)")
     ap.add_argument("--device", default="cpu", help="embedding device: cpu/cuda (backend dependent)")
     ap.add_argument("--max-terms", type=int, default=8, help="max must_include candidates")
@@ -181,7 +216,9 @@ def main() -> int:
         except Exception as e:
             print(f"[suggest] FAIL: FlagEmbedding not available: {type(e).__name__}: {e}")
             return 2
-        model = FlagModel(args.embed_model, query_instruction_for_retrieval=None, use_fp16=("cuda" in args.device.lower()))
+        model = FlagModel(
+            args.embed_model, query_instruction_for_retrieval=None, use_fp16=("cuda" in args.device.lower())
+        )
         emb = model.encode([args.query])
         query_vec = emb[0].tolist() if hasattr(emb[0], "tolist") else list(emb[0])
     else:
@@ -275,7 +312,11 @@ def main() -> int:
         print(f"[suggest] wrote case json: {out_path}")
 
     if args.append_to:
-        apath = (root / args.append_to).resolve() if not Path(args.append_to).is_absolute() else Path(args.append_to).resolve()
+        apath = (
+            (root / args.append_to).resolve()
+            if not Path(args.append_to).is_absolute()
+            else Path(args.append_to).resolve()
+        )
         append_case(apath, case)
         print(f"[suggest] appended to: {apath}")
 

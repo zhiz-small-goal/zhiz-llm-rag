@@ -86,7 +86,11 @@ def main() -> int:
         print(f"[FAIL] invalid status: {obj.get('status')} (allowed={sorted(ALLOWED_STATUS)})")
         return 2
 
-    if not isinstance(obj.get("inputs"), dict) or not isinstance(obj.get("metrics"), dict) or not isinstance(obj.get("errors"), list):
+    if (
+        not isinstance(obj.get("inputs"), dict)
+        or not isinstance(obj.get("metrics"), dict)
+        or not isinstance(obj.get("errors"), list)
+    ):
         print("[FAIL] inputs/metrics/errors types invalid")
         return 2
 

@@ -140,7 +140,9 @@ def main() -> int:
 
     if not any_inventory_present:
         # It might be named rag-inventory (new) or rag-make-inventory (old). If neither exists, that's a problem.
-        return _fail("no inventory CLI found (expected rag-inventory or rag-make-inventory). Check your installed package version/pyproject entry points.")
+        return _fail(
+            "no inventory CLI found (expected rag-inventory or rag-make-inventory). Check your installed package version/pyproject entry points."
+        )
 
     if not in_path:
         return _fail("venv scripts_dir is not on PATH for this shell. Re-activate venv or open a new shell.")
@@ -148,6 +150,7 @@ def main() -> int:
     # Optional consistency check: metadata entrypoints should usually have wrappers
     # (best-effort, not strict because wrappers may be generated differently).
     return _pass("rag-* entrypoints appear installed and reachable")
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -109,7 +109,7 @@ def main():
         text_preview = text.replace("\n", " ")
         if len(text_preview) > 200:
             text_preview = text_preview[:200] + "..."
-        print(f"[{i+1}] id={ids[i]}")
+        print(f"[{i + 1}] id={ids[i]}")
         print(f"    distance={dists[i]}")
         print(f"    doc_id={meta.get('doc_id')}")
         print(f"    source_uri={meta.get('source_uri')}")

@@ -1,4 +1,3 @@
-
 """基于 BAAI/bge-m3 的查询向量计算封装。
 
 注意：本模块假定已经通过 FlagEmbedding 安装了 BGEM3FlagModel。

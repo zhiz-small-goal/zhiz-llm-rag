@@ -42,6 +42,7 @@ REPORT_SCHEMA_VERSION = "2"
 DEFAULT_BUCKET = "official"
 ALLOWED_BUCKETS = {"official", "oral", "ambiguous"}
 
+
 def normalize_bucket(v: Any, warnings: List[Dict[str, Any]], *, case_id: str, line_hint: Optional[int] = None) -> str:
     """
     Normalize bucket for eval cases.
@@ -49,15 +50,27 @@ def normalize_bucket(v: Any, warnings: List[Dict[str, Any]], *, case_id: str, li
     - invalid -> "unknown" and emit warning (validator should catch in CI)
     """
     if v is None:
-        warnings.append({"code": "missing_bucket_default", "case_id": case_id, "bucket": DEFAULT_BUCKET, "line": line_hint})
+        warnings.append(
+            {"code": "missing_bucket_default", "case_id": case_id, "bucket": DEFAULT_BUCKET, "line": line_hint}
+        )
         return DEFAULT_BUCKET
     s = str(v).strip().lower()
     if not s:
-        warnings.append({"code": "missing_bucket_default", "case_id": case_id, "bucket": DEFAULT_BUCKET, "line": line_hint})
+        warnings.append(
+            {"code": "missing_bucket_default", "case_id": case_id, "bucket": DEFAULT_BUCKET, "line": line_hint}
+        )
         return DEFAULT_BUCKET
     if s in ALLOWED_BUCKETS:
         return s
-    warnings.append({"code": "invalid_bucket_unknown", "case_id": case_id, "bucket": s, "allowed": sorted(list(ALLOWED_BUCKETS)), "line": line_hint})
+    warnings.append(
+        {
+            "code": "invalid_bucket_unknown",
+            "case_id": case_id,
+            "bucket": s,
+            "allowed": sorted(list(ALLOWED_BUCKETS)),
+            "line": line_hint,
+        }
+    )
     return "unknown"
 
 
@@ -85,6 +98,7 @@ def load_embedder(backend: str, model_name: str, device: str) -> Any:
     if backend in ("auto", "flagembedding"):
         try:
             from FlagEmbedding import FlagModel
+
             return ("flagembedding", FlagModel(model_name, device=device))
         except Exception:
             if backend == "flagembedding":
@@ -92,6 +106,7 @@ def load_embedder(backend: str, model_name: str, device: str) -> Any:
     if backend in ("auto", "sentence-transformers", "sentence_transformers"):
         try:
             from sentence_transformers import SentenceTransformer
+
             return ("sentence-transformers", SentenceTransformer(model_name, device=device))
         except Exception:
             raise
@@ -124,17 +139,41 @@ def main() -> int:
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument("--db", default="chroma_db", help="chroma db dir (relative to root)")
     ap.add_argument("--collection", default="rag_chunks", help="collection name")
-    ap.add_argument("--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)")
+    ap.add_argument(
+        "--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)"
+    )
     ap.add_argument("--k", type=int, default=5, help="topK for retrieval")
-    ap.add_argument("--meta-field", default="source_uri|source|path|file", help="metadata field(s) for source path (use | to separate)")
+    ap.add_argument(
+        "--meta-field",
+        default="source_uri|source|path|file",
+        help="metadata field(s) for source path (use | to separate)",
+    )
     ap.add_argument("--embed-backend", default="auto", help="auto|flagembedding|sentence-transformers")
     ap.add_argument("--embed-model", default="BAAI/bge-m3", help="embed model name")
     ap.add_argument("--device", default="cpu", help="cpu|cuda")
-    ap.add_argument("--out", default="data_processed/build_reports/eval_retrieval_report.json", help="output json (relative to root)")
+    ap.add_argument(
+        "--out",
+        default="data_processed/build_reports/eval_retrieval_report.json",
+        help="output json (relative to root)",
+    )
     # stream events (optional, for real-time observability)
-    ap.add_argument("--stream-out", default="", help="optional stream events output (relative to root), e.g. data_processed/build_reports/eval_retrieval_report.events.jsonl")
-    ap.add_argument("--stream-format", default="jsonl", choices=["jsonl", "json-seq"], help="stream format: jsonl (default) or json-seq (RFC 7464)")
-    ap.add_argument("--progress-every-seconds", type=float, default=10.0, help="print progress summary every N seconds; 0 to disable")
+    ap.add_argument(
+        "--stream-out",
+        default="",
+        help="optional stream events output (relative to root), e.g. data_processed/build_reports/eval_retrieval_report.events.jsonl",
+    )
+    ap.add_argument(
+        "--stream-format",
+        default="jsonl",
+        choices=["jsonl", "json-seq"],
+        help="stream format: jsonl (default) or json-seq (RFC 7464)",
+    )
+    ap.add_argument(
+        "--progress-every-seconds",
+        type=float,
+        default=10.0,
+        help="print progress summary every N seconds; 0 to disable",
+    )
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
@@ -149,18 +188,20 @@ def main() -> int:
     if stream_path:
         ensure_dir(stream_path.parent)
         stream_writer = StreamWriter(stream_path, fmt=args.stream_format).open()
-        stream_writer.emit({
-            "record_type": "meta",
-            "run_id": run_id,
-            "tool": "run_eval_retrieval",
-            "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_retrieval.py",
-            "argv": sys.argv,
-            "root": str(root),
-            "db_path": str(db_path),
-            "collection": args.collection,
-            "k": args.k,
-            "embed": {"backend": args.embed_backend, "model": args.embed_model, "device": args.device},
-        })
+        stream_writer.emit(
+            {
+                "record_type": "meta",
+                "run_id": run_id,
+                "tool": "run_eval_retrieval",
+                "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_retrieval.py",
+                "argv": sys.argv,
+                "root": str(root),
+                "db_path": str(db_path),
+                "collection": args.collection,
+                "k": args.k,
+                "embed": {"backend": args.embed_backend, "model": args.embed_model, "device": args.device},
+            }
+        )
 
     if not cases_path.exists():
         print(f"[eval_retrieval] FAIL: cases not found: {cases_path}")
@@ -242,47 +283,53 @@ def main() -> int:
         if hit is True:
             bs["hit_cases"] += 1
 
-        per_case.append({
-            "id": cid,
-            "bucket": bucket,
-            "pair_id": pair_id,
-            "concept_id": concept_id,
-            "query": q,
-            "expected_sources": expected,
-            "must_include": must_include,
-            "hit_at_k": hit,
-            "topk": got_sources,
-            "debug": {
-                "retrieval_mode": "dense_only",
-                "dense_topk": got_sources,
-                "keyword_topk": [],
-                "fusion_topk": [],
-                "expansion_trace": None,
-            },
-        })
-
-        if stream_writer is not None:
-            stream_writer.emit({
-                "record_type": "case",
-                "run_id": run_id,
-                "case_index": idx,
-                "cases_total": total_cases,
-                "case_id": cid,
+        per_case.append(
+            {
+                "id": cid,
                 "bucket": bucket,
                 "pair_id": pair_id,
                 "concept_id": concept_id,
                 "query": q,
                 "expected_sources": expected,
+                "must_include": must_include,
                 "hit_at_k": hit,
                 "topk": got_sources,
-                "elapsed_ms": int((time.time() - case_t0) * 1000),
-            })
+                "debug": {
+                    "retrieval_mode": "dense_only",
+                    "dense_topk": got_sources,
+                    "keyword_topk": [],
+                    "fusion_topk": [],
+                    "expansion_trace": None,
+                },
+            }
+        )
+
+        if stream_writer is not None:
+            stream_writer.emit(
+                {
+                    "record_type": "case",
+                    "run_id": run_id,
+                    "case_index": idx,
+                    "cases_total": total_cases,
+                    "case_id": cid,
+                    "bucket": bucket,
+                    "pair_id": pair_id,
+                    "concept_id": concept_id,
+                    "query": q,
+                    "expected_sources": expected,
+                    "hit_at_k": hit,
+                    "topk": got_sources,
+                    "elapsed_ms": int((time.time() - case_t0) * 1000),
+                }
+            )
 
         if args.progress_every_seconds > 0 and (time.time() - last_progress) >= args.progress_every_seconds:
             elapsed = time.time() - t0
             hr = (hit_count / idx) if idx else 0.0
             stream_tag = str(stream_path) if stream_path else "-"
-            print(f"[eval_retrieval] PROGRESS cases_done={idx}/{total_cases} hit_cases={hit_count} hit_rate={hr:.3f} elapsed_s={elapsed:.1f} stream={stream_tag}")
+            print(
+                f"[eval_retrieval] PROGRESS cases_done={idx}/{total_cases} hit_cases={hit_count} hit_rate={hr:.3f} elapsed_s={elapsed:.1f} stream={stream_tag}"
+            )
             last_progress = time.time()
 
     total = len(per_case)
@@ -324,13 +371,15 @@ def main() -> int:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     if stream_writer is not None:
-        stream_writer.emit({
-            "record_type": "summary",
-            "run_id": run_id,
-            "metrics": {"cases": total, "hit_cases": hit_count, "hit_rate": hit_rate},
-            "elapsed_ms": int((time.time() - t0) * 1000),
-            "final_report": str(out_path),
-        })
+        stream_writer.emit(
+            {
+                "record_type": "summary",
+                "run_id": run_id,
+                "metrics": {"cases": total, "hit_cases": hit_count, "hit_rate": hit_rate},
+                "elapsed_ms": int((time.time() - t0) * 1000),
+                "final_report": str(out_path),
+            }
+        )
         stream_writer.close()
 
     print(f"[eval_retrieval] OK  hit_rate={hit_rate:.3f}  out={out_path}  hit_rate={hit_rate:.3f}  out={out_path}")

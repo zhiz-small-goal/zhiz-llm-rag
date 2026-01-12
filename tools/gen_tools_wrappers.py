@@ -161,13 +161,13 @@ def _expected_wrapper_text(cfg: Config, name: str) -> str:
     return (
         "#!/usr/bin/env python3\n"
         "# -*- coding: utf-8 -*-\n"
-        f"\"\"\"{cfg.wrapper_marker}\n\n"
+        f'"""{cfg.wrapper_marker}\n\n'
         f"Generated-By: {rel_gen}\n"
         f"Target-Module: {target_mod}\n"
         f"SSOT: {rel_src}\n\n"
         "兼容入口：允许运行 `python tools/<name>.py ...`，但真实实现固定在 src（SSOT）。\n"
         "不要手工修改本文件；请运行：python tools/gen_tools_wrappers.py --write\n"
-        "\"\"\"\n\n"
+        '"""\n\n'
         "from __future__ import annotations\n\n"
         "import runpy\n"
         "import sys\n"
@@ -281,17 +281,39 @@ def _short_udiff(path_label: str, actual: str, expected: str, *, max_lines: int)
     return "\n".join(out)
 
 
-
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default=None, help="path to wrapper_gen_config.json (default: tools/wrapper_gen_config.json)")
-    ap.add_argument("--check", action="store_true", help="check managed wrappers match expected template; do not modify files")
+    ap.add_argument(
+        "--config", default=None, help="path to wrapper_gen_config.json (default: tools/wrapper_gen_config.json)"
+    )
+    ap.add_argument(
+        "--check", action="store_true", help="check managed wrappers match expected template; do not modify files"
+    )
     ap.add_argument("--write", action="store_true", help="rewrite managed wrappers to expected template")
-    ap.add_argument("--bootstrap-missing", action="store_true", help="in --write mode, create missing managed wrappers if SSOT exists")
-    ap.add_argument("--strict", action="store_true", help="strict compare: preserve disk newlines and require exact match (including CRLF/LF); recommended only after migration")
-    ap.add_argument("--diff-max-lines", type=int, default=80, help="max unified-diff lines to print per mismatched wrapper (default: 80)")
-    ap.add_argument("--no-diff", action="store_true", help="do not print unified diff on mismatch (still prints file:line:col)")
-    ap.add_argument("--keep-trailing-ws", action="store_true", help="do not strip trailing whitespace in canonical compare (default strips)")
+    ap.add_argument(
+        "--bootstrap-missing",
+        action="store_true",
+        help="in --write mode, create missing managed wrappers if SSOT exists",
+    )
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="strict compare: preserve disk newlines and require exact match (including CRLF/LF); recommended only after migration",
+    )
+    ap.add_argument(
+        "--diff-max-lines",
+        type=int,
+        default=80,
+        help="max unified-diff lines to print per mismatched wrapper (default: 80)",
+    )
+    ap.add_argument(
+        "--no-diff", action="store_true", help="do not print unified diff on mismatch (still prints file:line:col)"
+    )
+    ap.add_argument(
+        "--keep-trailing-ws",
+        action="store_true",
+        help="do not strip trailing whitespace in canonical compare (default strips)",
+    )
     args = ap.parse_args(argv)
 
     if args.check and args.write:
@@ -380,7 +402,6 @@ def main(argv: List[str] | None = None) -> int:
         for p in missing_wrapper:
             print(f" - {p}")
 
-
     if mismatched:
         print("[FAIL] wrappers not up-to-date (run --write to refresh):")
         for p in mismatched:
@@ -409,12 +430,12 @@ def _entry() -> int:
     try:
         return main()
     except KeyboardInterrupt:
-        print('[ERROR] KeyboardInterrupt', file=sys.stderr)
+        print("[ERROR] KeyboardInterrupt", file=sys.stderr)
         return 3
     except SystemExit:
         raise
     except Exception:
-        print('[ERROR] unhandled exception', file=sys.stderr)
+        print("[ERROR] unhandled exception", file=sys.stderr)
         traceback.print_exc()
         return 3
 

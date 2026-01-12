@@ -179,7 +179,9 @@ def _find_conftest(repo: Path, ssot: Dict[str, Any]) -> Tuple[Optional[str], str
     # allow override for monorepo/enterprise layout
     override_vendor = str(conftest_cfg.get("vendor_dir") or "").strip()
     if override_vendor:
-        vendor_dir = (repo / override_vendor).resolve() if not Path(override_vendor).is_absolute() else Path(override_vendor)
+        vendor_dir = (
+            (repo / override_vendor).resolve() if not Path(override_vendor).is_absolute() else Path(override_vendor)
+        )
 
     if version:
         candidate = vendor_dir / f"v{version}" / f"{system}_{arch}" / exe
@@ -219,7 +221,7 @@ def _run_conftest(repo: Path, ssot: Dict[str, Any], logs_dir: Path) -> StepResul
         _write_text(
             log_path,
             "[WARN] conftest not found; skipping policy checks.\n"
-            "       Tip: vendor conftest under third_party/conftest/ or set CONFTEST_BIN.\n"
+            "       Tip: vendor conftest under third_party/conftest/ or set CONFTEST_BIN.\n",
         )
         return StepResult(
             id="policy_conftest",
@@ -253,7 +255,7 @@ def _run_conftest(repo: Path, ssot: Dict[str, Any], logs_dir: Path) -> StepResul
             end_ts=_iso_now(),
         )
 
-    argv = [conftest_bin, "test"] + [str(Path(repo)/p) for p in inputs] + ["-p", str(policy_dir)]
+    argv = [conftest_bin, "test"] + [str(Path(repo) / p) for p in inputs] + ["-p", str(policy_dir)]
     try:
         proc = subprocess.run(
             argv,
@@ -285,8 +287,6 @@ def _run_conftest(repo: Path, ssot: Dict[str, Any], logs_dir: Path) -> StepResul
     )
 
 
-
-
 def _step_result_to_dict(r: StepResult) -> Dict[str, Any]:
     """Serialize StepResult to JSON-friendly dict.
 
@@ -312,7 +312,11 @@ def _validate_self_schema(repo: Path, ssot: Dict[str, Any], gate_report_path: Pa
     try:
         import jsonschema
     except Exception as e:
-        return {"code": "schema_validator_missing", "message": "jsonschema not installed; skip gate_report schema validation", "detail": repr(e)}
+        return {
+            "code": "schema_validator_missing",
+            "message": "jsonschema not installed; skip gate_report schema validation",
+            "detail": repr(e),
+        }
 
     schema_rel = ((ssot.get("schemas") or {}).get("gate_report")) or "schemas/gate_report_v1.schema.json"
     schema_path = repo / str(schema_rel)
@@ -325,7 +329,11 @@ def _validate_self_schema(repo: Path, ssot: Dict[str, Any], gate_report_path: Pa
         jsonschema.validate(instance=inst, schema=schema)
         return None
     except Exception as e:
-        return {"code": "gate_report_schema_invalid", "message": "gate_report does not match JSON Schema", "detail": repr(e)}
+        return {
+            "code": "gate_report_schema_invalid",
+            "message": "gate_report does not match JSON Schema",
+            "detail": repr(e),
+        }
 
 
 def main() -> int:
@@ -346,7 +354,9 @@ def main() -> int:
         return 3
 
     report_dir = Path(repo) / str(((ssot.get("paths") or {}).get("report_dir")) or "data_processed/build_reports")
-    gate_logs_dir = Path(repo) / str(((ssot.get("paths") or {}).get("gate_logs_dir")) or "data_processed/build_reports/gate_logs")
+    gate_logs_dir = Path(repo) / str(
+        ((ssot.get("paths") or {}).get("gate_logs_dir")) or "data_processed/build_reports/gate_logs"
+    )
     gate_report_name = str(((ssot.get("paths") or {}).get("gate_report")) or "gate_report.json")
 
     out_path = Path(args.json_out) if args.json_out else (report_dir / gate_report_name)
@@ -357,7 +367,7 @@ def main() -> int:
     _ensure_dir(gate_logs_dir)
 
     profile_steps = (((ssot.get("gates") or {}).get("profiles") or {}).get(args.profile)) or []
-    steps_cfg = ((ssot.get("gates") or {}).get("steps") or {})
+    steps_cfg = (ssot.get("gates") or {}).get("steps") or {}
 
     results: List[StepResult] = []
     warnings: List[Dict[str, Any]] = []

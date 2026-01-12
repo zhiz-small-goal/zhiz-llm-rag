@@ -268,7 +268,7 @@ def main() -> int:
     root = find_project_root(args.root)
     inv_path = Path(args.inventory)
     if not inv_path.is_absolute():
-        inv_path = (root / inv_path)
+        inv_path = root / inv_path
     inv_path = inv_path.resolve(strict=False)
 
     try:
@@ -281,7 +281,7 @@ def main() -> int:
     if args.snapshot_out:
         outp = Path(args.snapshot_out)
         if not outp.is_absolute():
-            outp = (root / outp)
+            outp = root / outp
         outp = outp.resolve(strict=False)
         write_snapshot(outp, inv_path.relative_to(root), rows)
         print(f"[check_inventory] snapshot_out={outp} rows={len(rows)}")
@@ -291,7 +291,7 @@ def main() -> int:
     if args.compare_snapshot:
         snap_path = Path(args.compare_snapshot)
         if not snap_path.is_absolute():
-            snap_path = (root / snap_path)
+            snap_path = root / snap_path
         snap_path = snap_path.resolve(strict=False)
         try:
             snap = load_snapshot(snap_path)
@@ -310,6 +310,7 @@ def main() -> int:
 
         # trim
         md = max(0, int(args.max_details))
+
         def _trim_list(x: list[Any]) -> tuple[list[Any], int]:
             if len(x) <= md:
                 return x, 0
@@ -325,8 +326,12 @@ def main() -> int:
             "schema": DIFF_SCHEMA,
             "ts": now_iso(),
             "root": root.as_posix(),
-            "inventory_path": inv_path.relative_to(root).as_posix() if root in inv_path.parents else inv_path.as_posix(),
-            "snapshot_path": snap_path.relative_to(root).as_posix() if root in snap_path.parents else snap_path.as_posix(),
+            "inventory_path": inv_path.relative_to(root).as_posix()
+            if root in inv_path.parents
+            else inv_path.as_posix(),
+            "snapshot_path": snap_path.relative_to(root).as_posix()
+            if root in snap_path.parents
+            else snap_path.as_posix(),
             "summary": {
                 "current": build_summary(rows),
                 "snapshot_rows": int((snap.get("summary") or {}).get("rows") or 0),
@@ -358,7 +363,7 @@ def main() -> int:
         if args.diff_out:
             diff_out = Path(args.diff_out)
             if not diff_out.is_absolute():
-                diff_out = (root / diff_out)
+                diff_out = root / diff_out
             diff_out = diff_out.resolve(strict=False)
         else:
             diff_out = inv_path.parent / f"inventory_diff_{int(time.time())}.json"

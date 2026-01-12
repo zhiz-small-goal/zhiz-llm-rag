@@ -185,8 +185,14 @@ def _default_commands(*, profile_path: Optional[Path]) -> Dict[str, List[str]]:
             "rag-validate-units --json-out data_processed/build_reports/units.json",
             "python validate_rag_units.py --json-out data_processed/build_reports/units.json",
         ],
-        "plan": ["rag-plan", "python tools/plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl --out data_processed/chunk_plan.json"],
-        "build_profile": [f"python tools/run_build_profile.py --profile {prof}", "rag-build  # (不推荐默认：更适合无 profile 的简单构建)"],
+        "plan": [
+            "rag-plan",
+            "python tools/plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl --out data_processed/chunk_plan.json",
+        ],
+        "build_profile": [
+            f"python tools/run_build_profile.py --profile {prof}",
+            "rag-build  # (不推荐默认：更适合无 profile 的简单构建)",
+        ],
         "build_with_timing": [f"python tools/run_profile_with_timing.py --profile {prof} --smoke"],
         "stamp": [
             "rag-stamp --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json",
@@ -239,10 +245,19 @@ def _make_checks(
     items: List[CheckItem] = [
         CheckItem("inventory", "inventory.csv（资料清单）", "file", inv, optional=True),
         CheckItem("units", "text_units.jsonl（抽取产物）", "file", units, inputs=(inv,)),
-        CheckItem("units_report", "units.json（validate 报告）", "report_v1", units_report, inputs=(units,), optional=True),
+        CheckItem(
+            "units_report", "units.json（validate 报告）", "report_v1", units_report, inputs=(units,), optional=True
+        ),
         CheckItem("plan", "chunk_plan.json（chunk 计划）", "json", plan, inputs=(units,)),
         # NOTE: DB mtime is unstable on Windows/SQLite in some read flows; prefer stamp_path when available.
-        CheckItem("db", f"Chroma DB（{collection}）", "dir", chroma_dir, inputs=(plan,), freshness=stamp_path if stamp_exists else None),
+        CheckItem(
+            "db",
+            f"Chroma DB（{collection}）",
+            "dir",
+            chroma_dir,
+            inputs=(plan,),
+            freshness=stamp_path if stamp_exists else None,
+        ),
         CheckItem("db_stamp", "db_build_stamp.json（DB 构建戳）", "json", stamp_path, optional=True),
         CheckItem(
             "check_report",
@@ -253,8 +268,16 @@ def _make_checks(
             optional=True,
         ),
         CheckItem("llm_probe", "llm_probe.json（LLM 探测报告）", "report_v1", llm_report, optional=True),
-        CheckItem("stage1_verify", "stage1_verify.json（Stage-1 一键验收）", "stage1_verify", stage1_verify, optional=True),
-        CheckItem("stage1_snapshot", "stage1_baseline_snapshot.json（Stage-1 基线快照）", "stage1_snapshot", stage1_snapshot, optional=True),
+        CheckItem(
+            "stage1_verify", "stage1_verify.json（Stage-1 一键验收）", "stage1_verify", stage1_verify, optional=True
+        ),
+        CheckItem(
+            "stage1_snapshot",
+            "stage1_baseline_snapshot.json（Stage-1 基线快照）",
+            "stage1_snapshot",
+            stage1_snapshot,
+            optional=True,
+        ),
     ]
 
     # Index-state (incremental sync) is profile-driven; report as optional info.
@@ -439,7 +462,15 @@ def _pick_next(evals: Dict[str, Dict[str, Any]], cmds: Dict[str, List[str]]) -> 
     for key, step_label, cmd_key in order:
         st = evals.get(key, {}).get("status")
         opt = bool(evals.get(key, {}).get("optional"))
-        if opt and key in ("inventory", "units_report", "db_stamp", "check_report", "llm_probe", "stage1_verify", "stage1_snapshot"):
+        if opt and key in (
+            "inventory",
+            "units_report",
+            "db_stamp",
+            "check_report",
+            "llm_probe",
+            "stage1_verify",
+            "stage1_snapshot",
+        ):
             # optional items don't block unless FAIL/STALE and downstream depends
             if key == "units_report":
                 # recommend validate even if optional when units exists
@@ -633,7 +664,9 @@ def main() -> int:
         except Exception:  # noqa: BLE001
             pass
 
-    stamp_path = (state_root if state_root is not None else (root / "data_processed" / "index_state")) / "db_build_stamp.json"
+    stamp_path = (
+        state_root if state_root is not None else (root / "data_processed" / "index_state")
+    ) / "db_build_stamp.json"
 
     cfg = {
         "profile": str(profile_path) if profile_path else None,

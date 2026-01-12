@@ -44,7 +44,9 @@ def stable_id_from_query(query: str) -> str:
     return f"case_{h}"
 
 
-def suggest_must_include(query: str, recommended_sources: List[str], hits: List[Dict[str, Any]], pick: int = 2) -> List[str]:
+def suggest_must_include(
+    query: str, recommended_sources: List[str], hits: List[Dict[str, Any]], pick: int = 2
+) -> List[str]:
     """
     基于 query + 推荐来源文件名 + topK snippet，给出 must_include 的候选关键词（用于 gate/回归断言）。
 
@@ -61,13 +63,48 @@ def suggest_must_include(query: str, recommended_sources: List[str], hits: List[
         return []
 
     stop = {
-        "如何", "怎么", "怎样", "为什么", "是否", "可以", "能否", "能不能", "请问",
-        "的", "了", "呢", "吗", "么", "啊", "呀", "吧", "一下", "一个", "一些", "不同",
+        "如何",
+        "怎么",
+        "怎样",
+        "为什么",
+        "是否",
+        "可以",
+        "能否",
+        "能不能",
+        "请问",
+        "的",
+        "了",
+        "呢",
+        "吗",
+        "么",
+        "啊",
+        "呀",
+        "吧",
+        "一下",
+        "一个",
+        "一些",
+        "不同",
     }
 
     domain_terms = [
-        "关卡", "存档", "元件", "角色", "动作", "武器", "装备", "地图", "边界", "地形", "小地图",
-        "导入", "导出", "技能", "组件", "脚本", "节点图", "属性",
+        "关卡",
+        "存档",
+        "元件",
+        "角色",
+        "动作",
+        "武器",
+        "装备",
+        "地图",
+        "边界",
+        "地形",
+        "小地图",
+        "导入",
+        "导出",
+        "技能",
+        "组件",
+        "脚本",
+        "节点图",
+        "属性",
     ]
 
     synonym_map = {
@@ -115,7 +152,7 @@ def suggest_must_include(query: str, recommended_sources: List[str], hits: List[
         joined = "".join(cjk)
         freq: Dict[str, int] = {}
         for i in range(len(joined) - 1):
-            bg = joined[i:i+2]
+            bg = joined[i : i + 2]
             if bg in stop:
                 continue
             freq[bg] = freq.get(bg, 0) + 1
@@ -214,14 +251,23 @@ def main() -> int:
     ap.add_argument("--collection", default="rag_chunks", help="chroma collection name")
     ap.add_argument("--k", type=int, default=8, help="topK retrieval")
     ap.add_argument("--pick", type=int, default=2, help="how many unique sources to recommend as expected_sources")
-    ap.add_argument("--meta-field", default="source_uri|source|path|file", help="metadata source field priority, separated by |")
-    ap.add_argument("--embed-backend", default="auto", choices=["auto", "flagembedding", "sentence-transformers"], help="embedding backend")
+    ap.add_argument(
+        "--meta-field", default="source_uri|source|path|file", help="metadata source field priority, separated by |"
+    )
+    ap.add_argument(
+        "--embed-backend",
+        default="auto",
+        choices=["auto", "flagembedding", "sentence-transformers"],
+        help="embedding backend",
+    )
     ap.add_argument("--embed-model", default="BAAI/bge-m3", help="embedding model name")
     ap.add_argument("--device", default="cpu", help="embedding device: cpu/cuda")
     ap.add_argument("--out", default="", help="write a JSON with candidates and recommendation")
     ap.add_argument("--append-to", default="", help="append a full eval case to jsonl (with suggested must_include)")
     ap.add_argument("--must-pick", type=int, default=2, help="how many must_include terms to suggest when appending")
-    ap.add_argument("--auto-must-include", action="store_true", help="write suggested must_include even if empty (no TODO)")
+    ap.add_argument(
+        "--auto-must-include", action="store_true", help="write suggested must_include even if empty (no TODO)"
+    )
     ap.add_argument("--tags", default="suggested", help="comma separated tags (only for --append-to)")
     ap.add_argument("--show-snippet-chars", type=int, default=260, help="print snippet chars per hit")
     args = ap.parse_args()
@@ -274,13 +320,15 @@ def main() -> int:
         sources_raw.append(raw)
         src = rel_to_root_if_possible(root, raw) if raw else ""
         snippet = (str(doc or "").strip().replace("\r", " ").replace("\n", " "))[: int(args.show_snippet_chars)]
-        hits.append({
-            "rank": i,
-            "distance": dist,
-            "source_raw": raw,
-            "source": src,
-            "snippet": snippet,
-        })
+        hits.append(
+            {
+                "rank": i,
+                "distance": dist,
+                "source_raw": raw,
+                "source": src,
+                "snippet": snippet,
+            }
+        )
 
     # recommend expected_sources: unique sources, keep first N non-empty
     rec: List[str] = []

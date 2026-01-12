@@ -59,7 +59,10 @@ SAMPLE_CASES: List[Dict[str, Any]] = [
     {
         "id": "designing_game_weapons",
         "query": "想设计新武器弓箭该怎么做？",
-        "expected_sources": ["data_raw/综合指南/143_结构体.md", "data_raw/教程/35_3.15装备——可用于角色穿戴的特殊道具.md"],
+        "expected_sources": [
+            "data_raw/综合指南/143_结构体.md",
+            "data_raw/教程/35_3.15装备——可用于角色穿戴的特殊道具.md",
+        ],
         "must_include": ["自定义", "装备"],
         "tags": ["gameweapons"],
     },

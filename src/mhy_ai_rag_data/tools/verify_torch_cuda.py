@@ -22,6 +22,7 @@ from __future__ import annotations
 def main() -> int:
     try:
         import torch
+
         info = {
             "torch_version": getattr(torch, "__version__", None),
             "torch_cuda_build": getattr(torch.version, "cuda", None),
@@ -44,7 +45,9 @@ def main() -> int:
         print("[RESULT] FAIL")
         if not info["torch_cuda_build"]:
             print("reason=CPU-only torch (torch.version.cuda is None)")
-            print("hint=Install CUDA-enabled PyTorch wheels (see PyTorch official 'previous versions' page for --index-url cuXXX).")
+            print(
+                "hint=Install CUDA-enabled PyTorch wheels (see PyTorch official 'previous versions' page for --index-url cuXXX)."
+            )
         else:
             print("reason=CUDA runtime not available (torch.cuda.is_available() is False)")
             print("hint=Check NVIDIA driver, then reinstall matching CUDA-enabled PyTorch build.")
@@ -53,6 +56,7 @@ def main() -> int:
         print("[RESULT] ERROR")
         print(f"error={e}")
         return 3
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

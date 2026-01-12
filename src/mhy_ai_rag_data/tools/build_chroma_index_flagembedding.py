@@ -65,7 +65,9 @@ def _safe_bool(s: str) -> bool:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Build/Upsert Chroma index using FlagEmbedding (BGE-M3) with optional sync.")
+    ap = argparse.ArgumentParser(
+        description="Build/Upsert Chroma index using FlagEmbedding (BGE-M3) with optional sync."
+    )
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     b = sub.add_parser("build", help="build/upsert collection")
@@ -73,7 +75,9 @@ def main() -> int:
     b.add_argument("--units", default="data_processed/text_units.jsonl")
     b.add_argument("--db", default="chroma_db")
     b.add_argument("--collection", default="rag_chunks")
-    b.add_argument("--plan", default=None, help="Optional: chunk_plan.json path used only for db_build_stamp traceability.")
+    b.add_argument(
+        "--plan", default=None, help="Optional: chunk_plan.json path used only for db_build_stamp traceability."
+    )
 
     b.add_argument("--embed-model", default="BAAI/bge-m3")
     b.add_argument("--device", default="cpu")
@@ -111,7 +115,9 @@ def main() -> int:
         help="If schema_hash differs from LATEST pointer: reset collection (recommended) or fail.",
     )
     b.add_argument("--delete-batch", type=int, default=5000, help="Batch size for collection.delete(ids=...).")
-    b.add_argument("--strict-sync", default="true", help="true/false: fail if collection.count != expected_chunks after build.")
+    b.add_argument(
+        "--strict-sync", default="true", help="true/false: fail if collection.count != expected_chunks after build."
+    )
     b.add_argument("--write-state", default="true", help="true/false: write index_state.json after successful build.")
 
     args = ap.parse_args()
@@ -138,7 +144,9 @@ def main() -> int:
     try:
         from FlagEmbedding import BGEM3FlagModel
     except Exception as e:
-        print("[FATAL] FlagEmbedding not installed. Install: pip install -e .[embed]  (or pip install \".[embed]\" on bash)")
+        print(
+            '[FATAL] FlagEmbedding not installed. Install: pip install -e .[embed]  (or pip install ".[embed]" on bash)'
+        )
         print(str(e))
         return 2
 
@@ -148,14 +156,16 @@ def main() -> int:
         model = BGEM3FlagModel(args.embed_model, use_fp16=True, device=str(args.device))
     except TypeError:
         model = BGEM3FlagModel(args.embed_model, use_fp16=True)
-        print(f"[WARN] BGEM3FlagModel() 不支持 device=，已回退为默认 device；你指定的 --device={args.device} 可能未生效。")
+        print(
+            f"[WARN] BGEM3FlagModel() 不支持 device=，已回退为默认 device；你指定的 --device={args.device} 可能未生效。"
+        )
 
     # 3) init chroma
     try:
         import chromadb
         from chromadb.config import Settings
     except Exception as e:
-        print("[FATAL] chromadb not installed. Install: pip install -e .[embed]  (or pip install \".[embed]\" on bash)")
+        print('[FATAL] chromadb not installed. Install: pip install -e .[embed]  (or pip install ".[embed]" on bash)')
         print(str(e))
         return 2
 
@@ -356,6 +366,7 @@ def main() -> int:
 
     def l2_normalize(dense):
         import math
+
         out = []
         for v in dense:
             n = math.sqrt(sum((x * x for x in v))) or 1.0
@@ -524,7 +535,9 @@ def main() -> int:
         print(f"latest_schema={latest}")
     print(f"state_file={state_file}")
     print(f"units_total={total_units} units_indexed={indexed_units} units_skipped={skipped_units}")
-    print(f"docs_current={len(cur_docs)} added={len(added_uris)} changed={len(changed_uris)} deleted={len(deleted_uris)} unchanged={len(unchanged_uris)}")
+    print(
+        f"docs_current={len(cur_docs)} added={len(added_uris)} changed={len(changed_uris)} deleted={len(deleted_uris)} unchanged={len(unchanged_uris)}"
+    )
     print(f"docs_processed={docs_processed} chunks_upserted={chunks_upserted} chunks_deleted={chunks_deleted}")
     print(f"expected_chunks={expected_chunks} collection_count={final_count}")
     print(f"include_media_stub={include_media_stub}")
@@ -543,7 +556,9 @@ def main() -> int:
         plan_for_stamp = None
         if args.plan:
             plan_arg = str(args.plan)
-            plan_for_stamp = (root / plan_arg).resolve() if not Path(plan_arg).is_absolute() else Path(plan_arg).resolve()
+            plan_for_stamp = (
+                (root / plan_arg).resolve() if not Path(plan_arg).is_absolute() else Path(plan_arg).resolve()
+            )
 
         stamp_out = write_db_build_stamp(
             root=root,

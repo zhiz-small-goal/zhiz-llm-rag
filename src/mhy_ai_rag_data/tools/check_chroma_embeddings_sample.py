@@ -33,7 +33,7 @@ def _norm2(v):
     for x in v:
         fx = float(x)
         if math.isnan(fx) or math.isinf(fx):
-            return float('nan')
+            return float("nan")
         s += fx * fx
     return math.sqrt(s)
 
@@ -80,7 +80,7 @@ def main() -> int:
     if norms_clean:
         print(f"norm2_min={min(norms_clean):.6f}")
         print(f"norm2_max={max(norms_clean):.6f}")
-        print(f"norm2_mean={(sum(norms_clean)/len(norms_clean)):.6f}")
+        print(f"norm2_mean={(sum(norms_clean) / len(norms_clean)):.6f}")
 
     if len(dim_set) != 1:
         print("STATUS: WARN (embedding dimension not consistent)")

@@ -40,7 +40,6 @@ import argparse
 from pathlib import Path
 
 
-
 def _bool(s: str) -> bool:
     return str(s).strip().lower() in {"1", "true", "yes", "y", "on"}
 
@@ -66,6 +65,7 @@ def main() -> int:
 
     try:
         from mhy_ai_rag_data import build_chroma_index as mod
+
         ChunkConf = mod.ChunkConf
         iter_units = mod.iter_units
         should_index_unit = mod.should_index_unit
@@ -92,10 +92,13 @@ def main() -> int:
     expected = len(expected_ids)
     print(f"expected_chunks={expected}")
     print(f"include_media_stub={include_media_stub}")
-    print(f"chunk_conf=chunk_chars:{args.chunk_chars} overlap_chars:{args.overlap_chars} min_chunk_chars:{args.min_chunk_chars}")
+    print(
+        f"chunk_conf=chunk_chars:{args.chunk_chars} overlap_chars:{args.overlap_chars} min_chunk_chars:{args.min_chunk_chars}"
+    )
 
     # 2) query chroma for presence
     from chromadb import PersistentClient
+
     client = PersistentClient(path=str((root / args.db).resolve()))
     try:
         coll = client.get_collection(args.collection)
@@ -111,11 +114,11 @@ def main() -> int:
         try:
             got = coll.get(ids=ids, include=[])
         except Exception as e:
-            print(f"[FATAL] collection.get failed at batch {i//batch}: {e}")
+            print(f"[FATAL] collection.get failed at batch {i // batch}: {e}")
             return 2
         got_ids = set(got.get("ids") or [])
         present += len(got_ids)
-        missing += (len(ids) - len(got_ids))
+        missing += len(ids) - len(got_ids)
 
     cov = (present / expected * 100.0) if expected > 0 else 100.0
     print(f"present={present}")

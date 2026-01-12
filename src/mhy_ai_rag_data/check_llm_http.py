@@ -17,6 +17,7 @@ check_llm_http.py
 - 如果你使用了代理/中转（Nginx/one-api等），base-url 就填代理地址。
 - 若你的后端需要 API Key，可用 --api-key 设置（OpenAI-compatible 常见）。
 """
+
 from __future__ import annotations
 
 import argparse
@@ -65,8 +66,12 @@ def main():
     ap.add_argument("--api-key", default="", help="OpenAI-compatible 的 key（如需要）")
     ap.add_argument("--connect-timeout", type=float, default=5.0)
     ap.add_argument("--timeout", type=float, default=30.0)
-    ap.add_argument("--trust-env", default="auto", choices=["auto","true","false"], help="auto(loopback->false) / true / false")
-    ap.add_argument("--endpoint", choices=["chat", "generate"], default="chat", help="ollama 使用 /api/chat 或 /api/generate")
+    ap.add_argument(
+        "--trust-env", default="auto", choices=["auto", "true", "false"], help="auto(loopback->false) / true / false"
+    )
+    ap.add_argument(
+        "--endpoint", choices=["chat", "generate"], default="chat", help="ollama 使用 /api/chat 或 /api/generate"
+    )
     args = ap.parse_args()
 
     base = args.base_url.rstrip("/") + "/"
@@ -93,12 +98,16 @@ def main():
             "max_tokens": 16,
         }
         _print_kv("OpenAI-compatible: POST /v1/chat/completions", {"url": url_chat, "model": model})
-        res2 = _try_post(sess, url_chat, payload, headers=headers, connect_timeout=args.connect_timeout, read_timeout=args.timeout)
+        res2 = _try_post(
+            sess, url_chat, payload, headers=headers, connect_timeout=args.connect_timeout, read_timeout=args.timeout
+        )
         _print_kv("result", res2)
 
         if res2.get("ok") and res2.get("status") == 200:
             try:
-                data = sess.post(url_chat, json=payload, headers=headers, timeout=(args.connect_timeout, args.timeout)).json()
+                data = sess.post(
+                    url_chat, json=payload, headers=headers, timeout=(args.connect_timeout, args.timeout)
+                ).json()
                 _print_kv("parsed.choice0", {"content": data["choices"][0]["message"]["content"]})
             except Exception as e:
                 _print_kv("parse_warning", {"error": repr(e)})
@@ -136,7 +145,14 @@ def main():
                 "options": {"temperature": 0.0, "num_predict": 16},
             }
             _print_kv("Ollama: POST /api/generate", {"url": url_gen, "model": model})
-            res2 = _try_post(sess, url_gen, payload, headers={"Content-Type": "application/json"}, connect_timeout=args.connect_timeout, read_timeout=args.timeout)
+            res2 = _try_post(
+                sess,
+                url_gen,
+                payload,
+                headers={"Content-Type": "application/json"},
+                connect_timeout=args.connect_timeout,
+                read_timeout=args.timeout,
+            )
             _print_kv("result", res2)
 
     print("\nDONE")

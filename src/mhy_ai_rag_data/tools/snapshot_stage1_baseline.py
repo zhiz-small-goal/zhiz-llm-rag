@@ -59,7 +59,11 @@ def manifest_dir(root: Path) -> Dict[str, Any]:
     - 对所有文件记录：相对路径、大小、mtime
     - 对 <= 50MB 的文件额外记录 sha256（避免对巨大文件做全量哈希）
     """
-    out: Dict[str, Any] = {"path": str(root), "files": [], "note": f"sha256 for files <= {SMALL_FILE_SHA256_LIMIT} bytes"}
+    out: Dict[str, Any] = {
+        "path": str(root),
+        "files": [],
+        "note": f"sha256 for files <= {SMALL_FILE_SHA256_LIMIT} bytes",
+    }
     if not root.exists():
         out["error"] = "path not found"
         return out

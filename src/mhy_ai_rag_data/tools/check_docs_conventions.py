@@ -107,7 +107,11 @@ def main() -> int:
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument("--docs-dir", default="docs", help="docs directory (relative to root)")
     ap.add_argument("--glob", default="**/*.md", help="glob pattern under docs-dir")
-    ap.add_argument("--out", default="data_processed/build_reports/docs_conventions_report.json", help="output json (relative to root)")
+    ap.add_argument(
+        "--out",
+        default="data_processed/build_reports/docs_conventions_report.json",
+        help="output json (relative to root)",
+    )
     args = ap.parse_args()
 
     root = Path(args.root).resolve()

@@ -54,6 +54,7 @@ def _run(cmd: List[str], cwd: Path, timeout: int = 120) -> Tuple[int, str, str]:
     except subprocess.TimeoutExpired:
         return 124, "", f"timeout: {' '.join(cmd)}"
 
+
 def _run_in(cmd: List[str], cwd: Path, input_text: str, timeout: int = 120) -> Tuple[int, str, str]:
     """Run a command with stdin input (text mode).
 
@@ -121,8 +122,19 @@ DEFAULT_CONFIG = {
         "*.db",
     ],
     "text_extensions": [
-        ".md", ".txt", ".toml", ".yaml", ".yml", ".json", ".jsonl",
-        ".py", ".ps1", ".cmd", ".bat", ".ini", ".cfg"
+        ".md",
+        ".txt",
+        ".toml",
+        ".yaml",
+        ".yml",
+        ".json",
+        ".jsonl",
+        ".py",
+        ".ps1",
+        ".cmd",
+        ".bat",
+        ".ini",
+        ".cfg",
     ],
     "image_extensions": [".png", ".jpg", ".jpeg", ".webp", ".gif"],
     "binary_extensions": [".exe", ".dll", ".so", ".dylib"],
@@ -130,17 +142,22 @@ DEFAULT_CONFIG = {
     "max_file_size_mb_high": 20,
     "scan_roots": ["."],
     "exclude_dirs": [
-        ".git", ".venv", ".venv_ci", ".venv_rag", ".venv_embed",
-        "__pycache__", "node_modules", ".mypy_cache", ".pytest_cache",
+        ".git",
+        ".venv",
+        ".venv_ci",
+        ".venv_rag",
+        ".venv_embed",
+        "__pycache__",
+        "node_modules",
+        ".mypy_cache",
+        ".pytest_cache",
         ".ruff_cache",
     ],
-
     # v2: simplified to avoid fragile grouping/escaping
     "absolute_path_regexes": [
-        r"(?i)\b[A-Z]:\\[^\r\n\t\"'<>]+",          # <REPO_ROOT>
-        r"(?i)\bC:\\Users\\[^\r\n\t\"'<>]+",       # <REPO_ROOT>
+        r"(?i)\b[A-Z]:\\[^\r\n\t\"'<>]+",  # <REPO_ROOT>
+        r"(?i)\bC:\\Users\\[^\r\n\t\"'<>]+",  # <REPO_ROOT>
     ],
-
     "secret_regexes": [
         r"(ghp_[A-Za-z0-9]{20,})",
         r"(github_pat_[A-Za-z0-9_]{20,})",
@@ -160,8 +177,14 @@ DEFAULT_CONFIG = {
     ],
     "ci_workflow_glob": ".github/workflows/*.yml",
     "ci_heuristic_patterns": [
-        "gitleaks", "trufflehog", "secret", "secrets", "sensitive",
-        "check_public_release_hygiene", "public_release", "git ls-files",
+        "gitleaks",
+        "trufflehog",
+        "secret",
+        "secrets",
+        "sensitive",
+        "check_public_release_hygiene",
+        "public_release",
+        "git ls-files",
     ],
 }
 
@@ -241,6 +264,7 @@ def git_check_ignore(repo: Path, paths: List[str]) -> set[str]:
     if code not in (0, 1):
         raise RuntimeError(f"git check-ignore failed: {err.strip() or out.strip()}")
     return {x for x in out.split("\x00") if x}
+
 
 def git_log_names(repo: Path, max_lines: int) -> str:
     code, out, err = _run(["git", "log", "--name-only", "--pretty=format:"], cwd=repo, timeout=180)
@@ -329,7 +353,7 @@ def select_scan_files(
             continue
         if any(part in exclude for part in Path(rel).parts):
             continue
-        p = (repo_root / rel)
+        p = repo_root / rel
         if p.is_file():
             files.append(p)
 
@@ -340,6 +364,7 @@ def select_scan_files(
         "untracked_unignored": len(untracked),
         "scanned": len(files),
     }
+
 
 def match_glob(path_posix: str, pat: str) -> bool:
     if pat.endswith("/"):
@@ -428,7 +453,9 @@ def scan_absolute_paths(repo: Path, cfg: dict, files: Iterable[Path]) -> Optiona
             severity="INFO",
             title="Absolute-path regex compilation failed (scan skipped)",
             facts=bad,
-            inference=["Your local file might have been edited or regex patterns are incompatible; v2 uses simpler defaults."],
+            inference=[
+                "Your local file might have been edited or regex patterns are incompatible; v2 uses simpler defaults."
+            ],
             locations=["tools/check_public_release_hygiene.py:1:1"],
             remediation=["Replace absolute_path_regexes with simpler patterns, or use v2 script as provided."],
         )
@@ -519,7 +546,9 @@ def scan_secrets(repo: Path, cfg: dict, files: Iterable[Path]) -> Optional[Findi
     )
 
 
-def scan_binaries_and_large_files(repo: Path, cfg: dict, files: Iterable[Path], tracked_set: Optional[set[str]]) -> Optional[Finding]:
+def scan_binaries_and_large_files(
+    repo: Path, cfg: dict, files: Iterable[Path], tracked_set: Optional[set[str]]
+) -> Optional[Finding]:
     bin_exts = set(cfg["binary_extensions"])
     warn_mb = float(cfg["max_file_size_mb_warn"])
     high_mb = float(cfg["max_file_size_mb_high"])
@@ -534,7 +563,7 @@ def scan_binaries_and_large_files(repo: Path, cfg: dict, files: Iterable[Path], 
             continue
 
         relp = _rel(p, repo).replace("\\", "/")
-        tracked = (tracked_set is not None and relp in tracked_set)
+        tracked = tracked_set is not None and relp in tracked_set
         tags = []
         if is_bin:
             tags.append("binary")
@@ -581,7 +610,9 @@ def scan_images_presence(repo: Path, cfg: dict, files: Iterable[Path]) -> Option
         severity="MED",
         title="Image attachments present (manual review recommended)",
         facts=[f"hits(truncated)={len(imgs)}"],
-        inference=["Screenshots often include paths/usernames/stacks; prefer deleting or redacting before public release."],
+        inference=[
+            "Screenshots often include paths/usernames/stacks; prefer deleting or redacting before public release."
+        ],
         locations=[f"{p}:1:1" for p in imgs],
         remediation=[
             "Delete non-essential screenshots; if needed, redact/crop and label as sanitized example.",
@@ -623,7 +654,9 @@ def scan_ci_heuristic(repo: Path, cfg: dict) -> Optional[Finding]:
             facts=["No .github/workflows/*.yml detected."],
             inference=["If you plan to accept PRs, add CI and run this script as a gate."],
             locations=[f"{cfg['ci_workflow_glob']}:1:1"],
-            remediation=["Create CI workflow and add `python tools/check_public_release_hygiene.py --repo . --history 0`."],
+            remediation=[
+                "Create CI workflow and add `python tools/check_public_release_hygiene.py --repo . --history 0`."
+            ],
         )
 
     text = ""
@@ -652,7 +685,17 @@ def scan_ci_heuristic(repo: Path, cfg: dict) -> Optional[Finding]:
     )
 
 
-def render_report(repo: Path, findings: List[Finding], cfg_path: Optional[Path], used_git: bool, history: bool, cfg: dict, file_scope: str, respect_gitignore: bool, file_meta: Dict[str, int]) -> str:
+def render_report(
+    repo: Path,
+    findings: List[Finding],
+    cfg_path: Optional[Path],
+    used_git: bool,
+    history: bool,
+    cfg: dict,
+    file_scope: str,
+    respect_gitignore: bool,
+    file_meta: Dict[str, int],
+) -> str:
     ts = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     highs = sum(1 for f in findings if f.severity == "HIGH")
     meds = sum(1 for f in findings if f.severity == "MED")
@@ -660,33 +703,33 @@ def render_report(repo: Path, findings: List[Finding], cfg_path: Optional[Path],
     infos = sum(1 for f in findings if f.severity == "INFO")
 
     lines = []
-    lines += ["---",
-              "title: Public Release Hygiene Report",
-              f"generated_at: {ts}",
-              f"repo: {repo}",
-              f"config: {str(cfg_path) if cfg_path else 'DEFAULT_CONFIG'}",
-              f"git_available: {used_git}",
-              f"history_scan: {history}",
-              f"file_scope: {file_scope}",
-              f"respect_gitignore: {respect_gitignore}",
-              f"file_meta: {json.dumps(file_meta, ensure_ascii=False)}",
-              "---",
-              ""]
-    lines += ["# 目录",
-              "- [概要](#概要)",
-              "- [发现清单](#发现清单)",
-              "- [附录：配置摘要](#附录配置摘要)",
-              ""]
-    lines += ["# 概要",
-              "",
-              f"- HIGH: {highs} / MED: {meds} / LOW: {lows} / INFO: {infos}",
-              f"- 生成时间：{ts}",
-              f"- 仓库根：{repo}",
-              f"- 扫描范围：file_scope={file_scope}, respect_gitignore={respect_gitignore}",
-              f"- 文件计数：scanned={file_meta.get('scanned', 0)}, tracked={file_meta.get('tracked', 0)}, untracked_unignored={file_meta.get('untracked_unignored', 0)}, untracked_ignored={file_meta.get('untracked_ignored', 0)}",
-              "",
-              "说明：Facts 为可核验命中；Inference 为启发式/风险提示。",
-              ""]
+    lines += [
+        "---",
+        "title: Public Release Hygiene Report",
+        f"generated_at: {ts}",
+        f"repo: {repo}",
+        f"config: {str(cfg_path) if cfg_path else 'DEFAULT_CONFIG'}",
+        f"git_available: {used_git}",
+        f"history_scan: {history}",
+        f"file_scope: {file_scope}",
+        f"respect_gitignore: {respect_gitignore}",
+        f"file_meta: {json.dumps(file_meta, ensure_ascii=False)}",
+        "---",
+        "",
+    ]
+    lines += ["# 目录", "- [概要](#概要)", "- [发现清单](#发现清单)", "- [附录：配置摘要](#附录配置摘要)", ""]
+    lines += [
+        "# 概要",
+        "",
+        f"- HIGH: {highs} / MED: {meds} / LOW: {lows} / INFO: {infos}",
+        f"- 生成时间：{ts}",
+        f"- 仓库根：{repo}",
+        f"- 扫描范围：file_scope={file_scope}, respect_gitignore={respect_gitignore}",
+        f"- 文件计数：scanned={file_meta.get('scanned', 0)}, tracked={file_meta.get('tracked', 0)}, untracked_unignored={file_meta.get('untracked_unignored', 0)}, untracked_ignored={file_meta.get('untracked_ignored', 0)}",
+        "",
+        "说明：Facts 为可核验命中；Inference 为启发式/风险提示。",
+        "",
+    ]
     lines += ["# 发现清单", ""]
     if not findings:
         lines.append("未发现任何问题（在当前配置与扫描范围内）。")
@@ -714,20 +757,27 @@ def render_report(repo: Path, findings: List[Finding], cfg_path: Optional[Path],
                 lines += [f"- {x}" for x in f.remediation]
                 lines.append("")
 
-    lines += ["# 附录：配置摘要", "",
-              "```json",
-              json.dumps({
-                  "forbidden_tracked_paths": cfg["forbidden_tracked_paths"],
-                  "exclude_dirs": cfg["exclude_dirs"],
-                  "text_extensions": cfg["text_extensions"],
-                  "image_extensions": cfg["image_extensions"],
-                  "binary_extensions": cfg["binary_extensions"],
-                  "max_file_size_mb_warn": cfg["max_file_size_mb_warn"],
-                  "max_file_size_mb_high": cfg["max_file_size_mb_high"],
-                  "absolute_path_regexes": cfg["absolute_path_regexes"],
-              }, ensure_ascii=False, indent=2),
-              "```",
-              ""]
+    lines += [
+        "# 附录：配置摘要",
+        "",
+        "```json",
+        json.dumps(
+            {
+                "forbidden_tracked_paths": cfg["forbidden_tracked_paths"],
+                "exclude_dirs": cfg["exclude_dirs"],
+                "text_extensions": cfg["text_extensions"],
+                "image_extensions": cfg["image_extensions"],
+                "binary_extensions": cfg["binary_extensions"],
+                "max_file_size_mb_warn": cfg["max_file_size_mb_warn"],
+                "max_file_size_mb_high": cfg["max_file_size_mb_high"],
+                "absolute_path_regexes": cfg["absolute_path_regexes"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        "```",
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -819,7 +869,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                 severity="INFO",
                 title="Git not available; file-scope degraded to worktree_all",
                 facts=[f"requested_file_scope={args.file_scope}"],
-                inference=["Content scans will traverse the worktree; results may include ignored local data artifacts."],
+                inference=[
+                    "Content scans will traverse the worktree; results may include ignored local data artifacts."
+                ],
                 locations=[f"{repo_root}:1:1"],
                 remediation=["Install git and rerun for tracked/gitignore-aware scan."],
             )

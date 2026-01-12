@@ -68,9 +68,7 @@ def main() -> int:
     lines.append(f"- root: `{report.get('root', '')}`\n")
     lines.append(f"- profile: `{report.get('profile', '')}`\n")
     lines.append(f"- report_path: `{report_path}`\n")
-    lines.append(
-        f"- status: `{summary.get('overall_status', '')}` (rc={summary.get('overall_rc', '')})\n"
-    )
+    lines.append(f"- status: `{summary.get('overall_status', '')}` (rc={summary.get('overall_rc', '')})\n")
     lines.append(
         f"- counts: pass={counts.get('pass')} fail={counts.get('fail')} "
         f"error={counts.get('error')} skip={counts.get('skip')} total={counts.get('total')}\n\n"
@@ -126,9 +124,9 @@ def main() -> int:
                     loc = ",".join(as_list(f.get("loc")))
                     fix = ",".join(as_list(f.get("fix")))
                     line = (
-                        f"  - id={f.get('id','')} severity={f.get('severity','')} "
-                        f"category={f.get('category','')} status={f.get('status','')} "
-                        f"loc={clip(loc, 80)} fix={clip(fix, 80)} owner={f.get('owner','')}\n"
+                        f"  - id={f.get('id', '')} severity={f.get('severity', '')} "
+                        f"category={f.get('category', '')} status={f.get('status', '')} "
+                        f"loc={clip(loc, 80)} fix={clip(fix, 80)} owner={f.get('owner', '')}\n"
                     )
                     lines.append(line)
                 if len(findings) > args.max_findings:

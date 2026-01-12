@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="BAAI/bge-m3")
@@ -31,8 +32,8 @@ def main() -> int:
         from sentence_transformers import SentenceTransformer
 
         print("=== SENTENCE_TRANSFORMERS CUDA CHECK ===")
-        print(f"torch_version={getattr(torch,'__version__',None)}")
-        print(f"torch_cuda_build={getattr(torch.version,'cuda',None)}")
+        print(f"torch_version={getattr(torch, '__version__', None)}")
+        print(f"torch_cuda_build={getattr(torch.version, 'cuda', None)}")
         print(f"cuda_available={bool(torch.cuda.is_available())}")
         if not torch.cuda.is_available():
             print("[RESULT] FAIL")
@@ -48,13 +49,14 @@ def main() -> int:
             pass
 
         vec = model.encode([args.text], normalize_embeddings=False)
-        print(f"embed_shape={getattr(vec,'shape',None)}")
+        print(f"embed_shape={getattr(vec, 'shape', None)}")
         print("[RESULT] PASS")
         return 0
     except Exception as e:
         print("[RESULT] FAIL")
         print(f"error={e}")
         return 2
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

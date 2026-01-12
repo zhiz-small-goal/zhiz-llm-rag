@@ -86,7 +86,9 @@ def ensure_dir(p: Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".", help="project root")
-    ap.add_argument("--out", default="data_processed/build_reports/audit_baseline_tools.json", help="output json relative to root")
+    ap.add_argument(
+        "--out", default="data_processed/build_reports/audit_baseline_tools.json", help="output json relative to root"
+    )
     ap.add_argument("--pattern", action="append", default=[], help="additional regex patterns (can repeat)")
     args = ap.parse_args()
 
@@ -117,7 +119,9 @@ def main() -> int:
     out_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # stdout (human)
-    print(f"[audit] scanned={results['counts']['files_scanned']}  matched={results['counts']['files_matched']}  hit_lines={results['counts']['hit_lines']}")
+    print(
+        f"[audit] scanned={results['counts']['files_scanned']}  matched={results['counts']['files_matched']}  hit_lines={results['counts']['hit_lines']}"
+    )
     for m in results["matches"]:
         file = m["file"]
         for h in m["hits"]:

@@ -53,13 +53,26 @@ def normalize_rel(s: str) -> str:
 DEFAULT_BUCKET = "official"
 ALLOWED_BUCKETS = {"official", "oral", "ambiguous"}
 
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".", help="project root")
-    ap.add_argument("--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)")
-    ap.add_argument("--out", default="data_processed/build_reports/eval_cases_validation.json", help="output report (relative to root)")
-    ap.add_argument("--check-sources-exist", action="store_true", help="check that expected_sources path exists under root")
-    ap.add_argument("--check-must-include-in-sources", action="store_true", help="check each must_include appears in at least one expected_source file (only for file paths)")
+    ap.add_argument(
+        "--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)"
+    )
+    ap.add_argument(
+        "--out",
+        default="data_processed/build_reports/eval_cases_validation.json",
+        help="output report (relative to root)",
+    )
+    ap.add_argument(
+        "--check-sources-exist", action="store_true", help="check that expected_sources path exists under root"
+    )
+    ap.add_argument(
+        "--check-must-include-in-sources",
+        action="store_true",
+        help="check each must_include appears in at least one expected_source file (only for file paths)",
+    )
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
@@ -151,7 +164,9 @@ def main() -> int:
             bucket = str(raw_bucket).strip().lower()
             if bucket not in ALLOWED_BUCKETS:
                 report["overall"] = "FAIL"
-                report["errors"].append({"line": idx, "code": "invalid_bucket", "bucket": bucket, "allowed": sorted(list(ALLOWED_BUCKETS))})
+                report["errors"].append(
+                    {"line": idx, "code": "invalid_bucket", "bucket": bucket, "allowed": sorted(list(ALLOWED_BUCKETS))}
+                )
                 report["counts"]["errors"] += 1
                 bucket = "unknown"
 
@@ -221,7 +236,14 @@ def main() -> int:
                 merged = "\n".join(texts)
                 for t in mi_list:
                     if t and (t not in merged):
-                        report["warnings"].append({"line": idx, "code": "must_include_not_in_expected_sources", "term": t, "sources_checked": [str(p.relative_to(root)) for p in file_paths[:5]]})
+                        report["warnings"].append(
+                            {
+                                "line": idx,
+                                "code": "must_include_not_in_expected_sources",
+                                "term": t,
+                                "sources_checked": [str(p.relative_to(root)) for p in file_paths[:5]],
+                            }
+                        )
                         report["counts"]["warnings"] += 1
 
     if report["counts"]["errors"] > 0:

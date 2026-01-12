@@ -170,7 +170,7 @@ def _collect(root: Path, inv_path: Path, units_path: Path, max_samples: int) -> 
                 st.md_doc_refs += len(doc_refs)
 
             # ---- 3) refs sanity ----
-            for ref in (asset_refs if isinstance(asset_refs, list) else []):
+            for ref in asset_refs if isinstance(asset_refs, list) else []:
                 tgt = (ref.get("target_uri") if isinstance(ref, dict) else "") or ""
                 if not _is_local_target(tgt):
                     continue
@@ -183,7 +183,7 @@ def _collect(root: Path, inv_path: Path, units_path: Path, max_samples: int) -> 
                 if "unknown" in str(loc):
                     st.md_unknown_locator_refs += 1
 
-            for ref in (doc_refs if isinstance(doc_refs, list) else []):
+            for ref in doc_refs if isinstance(doc_refs, list) else []:
                 tgt = (ref.get("target_uri") if isinstance(ref, dict) else "") or ""
                 if not _is_local_target(tgt):
                     continue
@@ -206,7 +206,7 @@ def _collect(root: Path, inv_path: Path, units_path: Path, max_samples: int) -> 
     # duplicates by uri
     for uri, objs in unit_by_uri.items():
         if len(objs) > 1:
-            st.dup_unit_uris += (len(objs) - 1)
+            st.dup_unit_uris += len(objs) - 1
 
     # ---- 2) Alignment checks ----
     missing_units = [u for u in inv_uris if u not in unit_by_uri]
@@ -235,7 +235,9 @@ def _is_fail(st: Stats) -> bool:
     )
 
 
-def _print_summary(root: Path, inv_path: Path, units_path: Path, st: Stats, issues: List[str], max_samples: int, *, fatal: List[str]) -> None:
+def _print_summary(
+    root: Path, inv_path: Path, units_path: Path, st: Stats, issues: List[str], max_samples: int, *, fatal: List[str]
+) -> None:
     if fatal:
         print("=== RAG ARTIFACTS VALIDATION SUMMARY ===")
         print(f"Root: {root}")

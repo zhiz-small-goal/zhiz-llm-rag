@@ -83,12 +83,16 @@ def main() -> int:
     overlap_chars = int(_get(prof, "chunking", "overlap_chars", default=int(prof.get("overlap_chars", 120))))
     min_chunk_chars = int(_get(prof, "chunking", "min_chunk_chars", default=int(prof.get("min_chunk_chars", 200))))
 
-    include_media_stub = bool(_get(prof, "chunking", "include_media_stub", default=bool(prof.get("include_media_stub", True))))
+    include_media_stub = bool(
+        _get(prof, "chunking", "include_media_stub", default=bool(prof.get("include_media_stub", True)))
+    )
     include_media_flag = "true" if include_media_stub else "false"
 
     # sync/index_state (optional)
     sync_mode = str(_get(prof, "sync", "mode", default=str(prof.get("sync_mode", "incremental"))))
-    state_root = str(_get(prof, "sync", "state_root", default=str(prof.get("state_root", "data_processed/index_state"))))
+    state_root = str(
+        _get(prof, "sync", "state_root", default=str(prof.get("state_root", "data_processed/index_state")))
+    )
     on_missing_state = str(_get(prof, "sync", "on_missing_state", default=str(prof.get("on_missing_state", "reset"))))
     schema_change = str(_get(prof, "sync", "schema_change", default=str(prof.get("schema_change", "reset"))))
     strict_sync = _get(prof, "sync", "strict_sync", default=prof.get("strict_sync", True))
@@ -109,36 +113,86 @@ def main() -> int:
     # capture env is optional; you already have it, but keep for completeness
     add_step("capture_env", [sys.executable, "tools/capture_rag_env.py", "--out", "data_processed/env_report.json"])
     add_step("validate_units", [sys.executable, "validate_rag_units.py", "--max-samples", str(args.max_samples)])
-    add_step("plan_chunks", [
-        sys.executable, "tools/plan_chunks_from_units.py",
-        "--root", ".", "--units", units,
-        "--chunk-chars", str(chunk_chars), "--overlap-chars", str(overlap_chars), "--min-chunk-chars", str(min_chunk_chars),
-        "--include-media-stub", include_media_flag,
-        "--out", "data_processed/chunk_plan.json"
-    ])
-    add_step("build_chroma_flagembedding", [
-        sys.executable, "tools/build_chroma_index_flagembedding.py", "build",
-        "--root", ".", "--units", units,
-        "--db", db, "--collection", collection,
-        "--plan", "data_processed/chunk_plan.json",
-        "--embed-model", embed_model, "--device", device,
-        "--embed-batch", str(embed_batch), "--upsert-batch", str(upsert_batch),
-        "--chunk-chars", str(chunk_chars), "--overlap-chars", str(overlap_chars), "--min-chunk-chars", str(min_chunk_chars),
-        "--include-media-stub" if include_media_stub else "",
-        "--sync-mode", sync_mode,
-        "--state-root", state_root,
-        "--on-missing-state", on_missing_state,
-        "--schema-change", schema_change,
-        "--strict-sync", strict_sync_flag
-    ])
+    add_step(
+        "plan_chunks",
+        [
+            sys.executable,
+            "tools/plan_chunks_from_units.py",
+            "--root",
+            ".",
+            "--units",
+            units,
+            "--chunk-chars",
+            str(chunk_chars),
+            "--overlap-chars",
+            str(overlap_chars),
+            "--min-chunk-chars",
+            str(min_chunk_chars),
+            "--include-media-stub",
+            include_media_flag,
+            "--out",
+            "data_processed/chunk_plan.json",
+        ],
+    )
+    add_step(
+        "build_chroma_flagembedding",
+        [
+            sys.executable,
+            "tools/build_chroma_index_flagembedding.py",
+            "build",
+            "--root",
+            ".",
+            "--units",
+            units,
+            "--db",
+            db,
+            "--collection",
+            collection,
+            "--plan",
+            "data_processed/chunk_plan.json",
+            "--embed-model",
+            embed_model,
+            "--device",
+            device,
+            "--embed-batch",
+            str(embed_batch),
+            "--upsert-batch",
+            str(upsert_batch),
+            "--chunk-chars",
+            str(chunk_chars),
+            "--overlap-chars",
+            str(overlap_chars),
+            "--min-chunk-chars",
+            str(min_chunk_chars),
+            "--include-media-stub" if include_media_stub else "",
+            "--sync-mode",
+            sync_mode,
+            "--state-root",
+            state_root,
+            "--on-missing-state",
+            on_missing_state,
+            "--schema-change",
+            schema_change,
+            "--strict-sync",
+            strict_sync_flag,
+        ],
+    )
     # remove empty arg if include_media_stub is false
     steps[-1]["cmd"] = [c for c in steps[-1]["cmd"] if c]
 
-    add_step("check_chroma_build", [
-        sys.executable, "check_chroma_build.py",
-        "--db", db, "--collection", collection,
-        "--plan", "data_processed/chunk_plan.json"
-    ])
+    add_step(
+        "check_chroma_build",
+        [
+            sys.executable,
+            "check_chroma_build.py",
+            "--db",
+            db,
+            "--collection",
+            collection,
+            "--plan",
+            "data_processed/chunk_plan.json",
+        ],
+    )
 
     if args.smoke:
         add_step("smoke_retriever", [sys.executable, "retriever_chroma.py", "--q", "存档导入与导出怎么做", "--k", "5"])

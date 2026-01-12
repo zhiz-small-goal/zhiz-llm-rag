@@ -14,6 +14,7 @@ ROOT_PREFIXES = ("教程/", "综合指南/")  # 按需扩展
 ASSET_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp4", ".mkv", ".mov"}
 DOC_EXT = {".md", ".markdown"}
 
+
 def _split_query_anchor(raw: str) -> tuple[str, str]:
     """return (clean_path, hint) where hint keeps original #/? part if any."""
     hint = ""
@@ -26,6 +27,7 @@ def _split_query_anchor(raw: str) -> tuple[str, str]:
         hint += f"#{a}" if hint == "" else f"#{a}"
     return s.strip(), hint
 
+
 def _normalize_target(raw_target: str | int | float) -> tuple[str, str]:
     """Decode URL encoding + normalize slashes + strip query/anchor."""
     s = unquote(str(raw_target).strip()).replace("\\", "/")
@@ -34,6 +36,7 @@ def _normalize_target(raw_target: str | int | float) -> tuple[str, str]:
     if clean.startswith("<") and clean.endswith(">"):
         clean = clean[1:-1].strip()
     return clean, hint
+
 
 def _resolve_to_project_rel(md_path: Path, target_path: str, project_root: Path) -> Optional[str]:
     """
@@ -54,6 +57,7 @@ def _resolve_to_project_rel(md_path: Path, target_path: str, project_root: Path)
         return abs_p.relative_to(project_root).as_posix()
     except ValueError:
         return None
+
 
 def extract_refs_from_md(
     md_path: Path,
@@ -104,13 +108,15 @@ def extract_refs_from_md(
                 if rel in seen_asset:
                     continue
                 seen_asset.add(rel)
-                asset_refs.append({
-                    "ref_type": ref_type,
-                    "target_uri": rel,
-                    "from_locator": from_locator,
-                    "raw": src,
-                    "hint": hint,
-                })
+                asset_refs.append(
+                    {
+                        "ref_type": ref_type,
+                        "target_uri": rel,
+                        "from_locator": from_locator,
+                        "raw": src,
+                        "hint": hint,
+                    }
+                )
 
             elif c.type == "link_open":
                 href = (c.attrs or {}).get("href", "")
@@ -125,33 +131,37 @@ def extract_refs_from_md(
                     if rel in seen_doc:
                         continue
                     seen_doc.add(rel)
-                    doc_refs.append({
-                        "ref_type": "md",
-                        "target_uri": rel,
-                        "from_locator": from_locator,
-                        "raw": href,
-                        "hint": hint,
-                    })
+                    doc_refs.append(
+                        {
+                            "ref_type": "md",
+                            "target_uri": rel,
+                            "from_locator": from_locator,
+                            "raw": href,
+                            "hint": hint,
+                        }
+                    )
                 elif ext in ASSET_EXT:
                     ref_type = "video" if ext in {".mp4", ".mkv", ".mov"} else "image"
                     if rel in seen_asset:
                         continue
                     seen_asset.add(rel)
-                    asset_refs.append({
-                        "ref_type": ref_type,
-                        "target_uri": rel,
-                        "from_locator": from_locator,
-                        "raw": href,
-                        "hint": hint,
-                    })
+                    asset_refs.append(
+                        {
+                            "ref_type": ref_type,
+                            "target_uri": rel,
+                            "from_locator": from_locator,
+                            "raw": href,
+                            "hint": hint,
+                        }
+                    )
 
     return asset_refs, doc_refs
+
 
 if __name__ == "__main__":
     import json
     import sys
     from pathlib import Path
-
 
     if len(sys.argv) < 2:
         print("Usage: python md_refs.py <path-to-md> [project-root]", file=sys.stderr)

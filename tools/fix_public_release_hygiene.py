@@ -51,12 +51,30 @@ DEFAULTS = {
     ],
     "root_screenshots": ["image.png", "image-1.png"],
     "text_extensions": [
-        ".md", ".txt", ".toml", ".yaml", ".yml", ".json", ".jsonl",
-        ".py", ".ps1", ".cmd", ".bat", ".ini", ".cfg"
+        ".md",
+        ".txt",
+        ".toml",
+        ".yaml",
+        ".yml",
+        ".json",
+        ".jsonl",
+        ".py",
+        ".ps1",
+        ".cmd",
+        ".bat",
+        ".ini",
+        ".cfg",
     ],
     "exclude_dirs": [
-        ".git", ".venv", ".venv_ci", ".venv_rag", ".venv_embed",
-        "__pycache__", "node_modules", ".mypy_cache", ".pytest_cache",
+        ".git",
+        ".venv",
+        ".venv_ci",
+        ".venv_rag",
+        ".venv_embed",
+        "__pycache__",
+        "node_modules",
+        ".mypy_cache",
+        ".pytest_cache",
         ".ruff_cache",
     ],
     "absolute_path_regexes": [
@@ -237,7 +255,7 @@ def _redact_abs_paths(repo: Path, cfg: dict, apply: bool, actions: List[str]) ->
             text = rx.sub("<REPO_ROOT>", text)
         if text != orig:
             changed += 1
-            actions.append(f"redact: { _rel(p, repo) }")
+            actions.append(f"redact: {_rel(p, repo)}")
             if apply:
                 p.write_text(text, encoding="utf-8")
     actions.append(f"redact: changed_files={changed}")
@@ -316,7 +334,9 @@ def _write_fix_report(repo: Path, actions: List[str], apply: bool, out: Optional
     ]
     md += [f"- {a}" for a in actions]
     report = "\n".join(md) + "\n"
-    out_path = Path(out).expanduser().resolve() if out else (_desktop_dir() / f"public_release_fix_report_{_now_tag()}.md")
+    out_path = (
+        Path(out).expanduser().resolve() if out else (_desktop_dir() / f"public_release_fix_report_{_now_tag()}.md")
+    )
     try:
         out_path.write_text(report, encoding="utf-8")
     except Exception:

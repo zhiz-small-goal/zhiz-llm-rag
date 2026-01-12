@@ -10,6 +10,7 @@ run_rag_eval_batch.py
   python tools/run_rag_eval_batch.py --queries tests/rag_queries_v1.json --k 5 --pipeline
   python tools/run_rag_eval_batch.py --queries tests/rag_queries_v1.json --k 5 --answer
 """
+
 from __future__ import annotations
 
 import argparse
@@ -131,6 +132,7 @@ def main() -> int:
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"REPORT: {report_path}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

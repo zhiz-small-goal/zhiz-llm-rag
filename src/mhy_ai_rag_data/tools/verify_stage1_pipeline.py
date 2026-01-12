@@ -122,7 +122,7 @@ def check_chroma_counts(root: Path, db: str, collection: str) -> Tuple[bool, Dic
         count = col.count()
         details["collection_count"] = count
         if planned is not None:
-            ok = (count == planned)
+            ok = count == planned
             details["match"] = ok
             return ok, details
         else:
@@ -131,7 +131,9 @@ def check_chroma_counts(root: Path, db: str, collection: str) -> Tuple[bool, Dic
         return False, {**details, "error": f"{type(e).__name__}: {e}"}
 
 
-def probe_llm(base_url: str, connect_timeout: float, read_timeout: float, trust_env_mode: str) -> Tuple[bool, Dict[str, Any]]:
+def probe_llm(
+    base_url: str, connect_timeout: float, read_timeout: float, trust_env_mode: str
+) -> Tuple[bool, Dict[str, Any]]:
     """
     Optional check:
     - GET {base_url}/models or {base_url}/v1/models depending on user input
@@ -139,7 +141,13 @@ def probe_llm(base_url: str, connect_timeout: float, read_timeout: float, trust_
 
     base_url should look like: http://localhost:8000/v1
     """
-    details: Dict[str, Any] = {"enabled": False, "base_url": base_url, "connect_timeout": connect_timeout, "read_timeout": read_timeout, "trust_env": trust_env_mode}
+    details: Dict[str, Any] = {
+        "enabled": False,
+        "base_url": base_url,
+        "connect_timeout": connect_timeout,
+        "read_timeout": read_timeout,
+        "trust_env": trust_env_mode,
+    }
     details["enabled"] = True
     base = base_url.rstrip("/")
     trust_env = resolve_trust_env(base_url, trust_env_mode)
@@ -219,7 +227,12 @@ def main() -> int:
     ap.add_argument("--base-url", default="http://localhost:8000/v1", help="OpenAI-compatible base URL")
     ap.add_argument("--connect-timeout", type=float, default=10.0, help="HTTP connect timeout seconds")
     ap.add_argument("--timeout", type=float, default=10.0, help="HTTP read timeout seconds (legacy name: --timeout)")
-    ap.add_argument("--trust-env", default="auto", choices=["auto","true","false"], help="trust env proxies: auto(loopback->false), true, false")
+    ap.add_argument(
+        "--trust-env",
+        default="auto",
+        choices=["auto", "true", "false"],
+        help="trust env proxies: auto(loopback->false), true, false",
+    )
     ap.add_argument("--skip-chroma", action="store_true", help="Skip chroma checks")
     ap.add_argument("--skip-llm", action="store_true", help="Skip LLM probe")
     args = ap.parse_args()

@@ -44,7 +44,7 @@ def load_json(path: Path) -> Dict[str, Any]:
 
 def index_files(manifest: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     out: Dict[str, Dict[str, Any]] = {}
-    for f in (manifest.get("files") or []):
+    for f in manifest.get("files") or []:
         rel = str(f.get("rel") or "")
         if rel:
             out[rel.replace("/", "\\")] = f
@@ -99,18 +99,18 @@ def main() -> int:
     }
 
     # 1) artifacts
-    a_art = (ja.get("artifacts") or {})
-    b_art = (jb.get("artifacts") or {})
+    a_art = ja.get("artifacts") or {}
+    b_art = jb.get("artifacts") or {}
     for name in ["text_units", "chunk_plan"]:
-        da = (a_art.get(name) or {})
-        db = (b_art.get(name) or {})
+        da = a_art.get(name) or {}
+        db = b_art.get(name) or {}
         d = diff_kv(da, db, ["size", "sha256"])
         if d:
             report["diffs"]["artifacts"].append({"artifact": name, "diff": d})
 
     # 2) chroma manifest
-    a_m = (ja.get("chroma_db_manifest") or {})
-    b_m = (jb.get("chroma_db_manifest") or {})
+    a_m = ja.get("chroma_db_manifest") or {}
+    b_m = jb.get("chroma_db_manifest") or {}
     a_files = index_files(a_m)
     b_files = index_files(b_m)
 
@@ -134,8 +134,8 @@ def main() -> int:
             report["diffs"]["chroma_files_changed"].append({"rel": rel, "diff": d})
 
     # 3) git
-    ga = (ja.get("git") or {})
-    gb = (jb.get("git") or {})
+    ga = ja.get("git") or {}
+    gb = jb.get("git") or {}
     gdiff = diff_kv(ga, gb, ["commit", "dirty"])
     if gdiff:
         report["diffs"]["git"] = gdiff
@@ -152,7 +152,15 @@ def main() -> int:
 
     # overall
     has_any_diff = any(
-        report["diffs"][k] for k in ["artifacts", "chroma_files_added", "chroma_files_removed", "chroma_files_changed", "git", "pip_freeze"]
+        report["diffs"][k]
+        for k in [
+            "artifacts",
+            "chroma_files_added",
+            "chroma_files_removed",
+            "chroma_files_changed",
+            "git",
+            "pip_freeze",
+        ]
     )
     report["overall"] = "FAIL" if has_any_diff else "PASS"
 

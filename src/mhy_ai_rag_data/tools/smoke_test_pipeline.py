@@ -44,7 +44,11 @@ def main() -> int:
     ap.add_argument("--q", default="存档导入与导出怎么做")
     ap.add_argument("--k", type=int, default=5)
     ap.add_argument("--build-if-missing", default="false", help="true/false")
-    ap.add_argument("--use-flag-build", default="true", help="true/false; if true and build, call build_chroma_index_flagembedding.py")
+    ap.add_argument(
+        "--use-flag-build",
+        default="true",
+        help="true/false; if true and build, call build_chroma_index_flagembedding.py",
+    )
     ap.add_argument("--device", default="cpu", help="cpu/cuda:0")
     ap.add_argument("--embed-model", default="BAAI/bge-m3")
     ap.add_argument(
@@ -160,7 +164,7 @@ def main() -> int:
                     str(args.overlap_chars),
                     "--min-chunk-chars",
                     str(args.min_chunk_chars),
-                    *( ["--include-media-stub"] if include_media_stub else [] ),
+                    *(["--include-media-stub"] if include_media_stub else []),
                 ],
                 cwd=root,
             )

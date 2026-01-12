@@ -97,9 +97,17 @@ def build_id_to_line(cases: List[Dict[str, Any]]) -> Dict[str, int]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".", help="project root")
-    ap.add_argument("--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)")
-    ap.add_argument("--validation", default="data_processed/build_reports/eval_cases_validation.json", help="validation report json")
-    ap.add_argument("--retrieval", default="data_processed/build_reports/eval_retrieval_report.json", help="retrieval eval report json")
+    ap.add_argument(
+        "--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)"
+    )
+    ap.add_argument(
+        "--validation", default="data_processed/build_reports/eval_cases_validation.json", help="validation report json"
+    )
+    ap.add_argument(
+        "--retrieval",
+        default="data_processed/build_reports/eval_retrieval_report.json",
+        help="retrieval eval report json",
+    )
     ap.add_argument("--rag", default="data_processed/build_reports/eval_rag_report.json", help="rag eval report json")
     ap.add_argument("--md-out", default="", help="optional: write a markdown summary file")
     ap.add_argument("--show-fails", type=int, default=5, help="how many failing cases to show per report")
@@ -150,14 +158,16 @@ def main() -> int:
         sample = next((c for c in cases if not c.get("_parse_error")), None)
         if sample:
             lines.append("- 样例字段：`id/query/expected_sources/must_include/tags`\n")
-            lines.append(f"- 样例 id：`{sample.get('id','')}`\n")
+            lines.append(f"- 样例 id：`{sample.get('id', '')}`\n")
 
     # validation
     lines.append("\n## 2) 用例集门禁（eval_cases_validation.json）\n")
     lines.append(f"- 路径：`{val_path}`\n")
     lines.append(f"- overall：`{val.get('overall')}`\n")
     counts = val.get("counts") or {}
-    lines.append(f"- 统计：errors={counts.get('errors')}  warnings={counts.get('warnings')}  cases={counts.get('cases')}\n")
+    lines.append(
+        f"- 统计：errors={counts.get('errors')}  warnings={counts.get('warnings')}  cases={counts.get('cases')}\n"
+    )
     errs = val.get("errors") or []
     warns = val.get("warnings") or []
     if errs:
@@ -186,21 +196,23 @@ def main() -> int:
             lines.append("- buckets（分桶指标）：\n")
             for b in sorted(buckets.keys()):
                 st = buckets.get(b) or {}
-                lines.append(f"  - {b}: cases={st.get('cases')} hit_cases={st.get('hit_cases')} hit_rate={st.get('hit_rate')}\n")
+                lines.append(
+                    f"  - {b}: cases={st.get('cases')} hit_cases={st.get('hit_cases')} hit_rate={st.get('hit_rate')}\n"
+                )
         cases_ret = ret.get("cases") or []
         fail_cases = [c for c in cases_ret if not c.get("hit_at_k")]
         lines.append(f"- 用例数：{len(cases_ret)}，未命中：{len(fail_cases)}\n")
         if fail_cases:
             lines.append(f"- 未命中样例（前 {args.show_fails} 条；含可点击定位）：\n")
             for c in fail_cases[: args.show_fails]:
-                cid = str(c.get("id",""))
+                cid = str(c.get("id", ""))
                 line_no = id2line.get(cid)
                 loc = vscode_loc(cases_path, line_no) if line_no else vscode_loc(cases_path)
                 topk = c.get("topk") or []
                 srcs: List[str] = []
                 for t in topk[:3]:
-                    srcs.append(str(t.get("source","")))
-                lines.append(f"  - {loc}  id={cid}  query={clip(str(c.get('query','')))}\n")
+                    srcs.append(str(t.get("source", "")))
+                lines.append(f"  - {loc}  id={cid}  query={clip(str(c.get('query', '')))}\n")
                 lines.append(f"    expected={fmt_list([str(x) for x in (c.get('expected_sources') or [])])}\n")
                 lines.append(f"    top_sources={fmt_list(srcs)}\n")
 
@@ -218,12 +230,12 @@ def main() -> int:
         if fail_cases:
             lines.append(f"- 未通过样例（前 {args.show_fails} 条；含可点击定位）：\n")
             for c in fail_cases[: args.show_fails]:
-                cid = str(c.get("id",""))
+                cid = str(c.get("id", ""))
                 line_no = id2line.get(cid)
                 loc = vscode_loc(cases_path, line_no) if line_no else vscode_loc(cases_path)
-                lines.append(f"  - {loc}  id={cid}  query={clip(str(c.get('query','')))}\n")
+                lines.append(f"  - {loc}  id={cid}  query={clip(str(c.get('query', '')))}\n")
                 lines.append(f"    missing={fmt_list([str(x) for x in (c.get('missing') or [])])}\n")
-                lines.append(f"    answer_snippet={clip(str(c.get('answer','')), 220)}\n")
+                lines.append(f"    answer_snippet={clip(str(c.get('answer', '')), 220)}\n")
 
     md = "".join(lines)
     print(md)

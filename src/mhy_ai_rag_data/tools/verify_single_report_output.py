@@ -24,6 +24,7 @@ import argparse
 from pathlib import Path
 import glob as _glob
 
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--glob", default="llm_probe_report_*.json", help="检查当前目录中不应出现的默认报告文件匹配模式")
@@ -38,6 +39,7 @@ def main() -> int:
 
     print("[PASS] no default report files found.")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

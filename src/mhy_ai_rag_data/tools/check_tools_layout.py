@@ -225,12 +225,12 @@ def _entry() -> int:
     try:
         return main()
     except KeyboardInterrupt:
-        print('[ERROR] KeyboardInterrupt', file=sys.stderr)
+        print("[ERROR] KeyboardInterrupt", file=sys.stderr)
         return 3
     except SystemExit:
         raise
     except Exception:
-        print('[ERROR] unhandled exception', file=sys.stderr)
+        print("[ERROR] unhandled exception", file=sys.stderr)
         traceback.print_exc()
         return 3
 

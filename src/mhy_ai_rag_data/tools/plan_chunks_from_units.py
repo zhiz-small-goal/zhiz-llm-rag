@@ -30,7 +30,9 @@ def _bool(s: str) -> bool:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Dry-run chunk planning from text_units.jsonl (same logic as build_chroma_index.py)")
+    ap = argparse.ArgumentParser(
+        description="Dry-run chunk planning from text_units.jsonl (same logic as build_chroma_index.py)"
+    )
     ap.add_argument("--root", default=".", help="Project root")
     ap.add_argument("--units", default="data_processed/text_units.jsonl", help="Units JSONL path (relative to root)")
     ap.add_argument("--chunk-chars", type=int, default=1200)
@@ -118,7 +120,9 @@ def main() -> int:
     print(f"units_skipped={units_skipped}")
     print(f"planned_chunks={planned_chunks}")
     print(f"include_media_stub={include_media_stub}")
-    print(f"chunk_conf=chunk_chars:{args.chunk_chars} overlap_chars:{args.overlap_chars} min_chunk_chars:{args.min_chunk_chars}")
+    print(
+        f"chunk_conf=chunk_chars:{args.chunk_chars} overlap_chars:{args.overlap_chars} min_chunk_chars:{args.min_chunk_chars}"
+    )
     print(f"out={out_path}")
     return 0
 

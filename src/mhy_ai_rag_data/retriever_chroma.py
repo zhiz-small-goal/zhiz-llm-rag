@@ -1,4 +1,3 @@
-
 """Chroma 检索封装。
 
 提供 retrieve(question, k) -> SourceChunk 列表，
@@ -30,6 +29,7 @@ def _get_collection():
     global _CLIENT, _COLLECTION
     if _COLLECTION is None:
         from chromadb import PersistentClient
+
         _CLIENT = PersistentClient(path=CHROMA_DB_PATH)
         _COLLECTION = _CLIENT.get_collection(CHROMA_COLLECTION)
     return _COLLECTION
@@ -60,7 +60,7 @@ def retrieve(question: str, k: int | None = None, where: Optional[Dict[str, str]
         text = docs[idx] or ""
         chunks.append(
             SourceChunk(
-                sid=f"S{idx+1}",
+                sid=f"S{idx + 1}",
                 doc_id=meta.get("doc_id"),
                 source_uri=meta.get("source_uri"),
                 locator=meta.get("locator"),
@@ -77,7 +77,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="简单 CLI：检索并打印前 k 条结果。")
     parser.add_argument("--q", required=True, help="查询问题文本")
     parser.add_argument("--k", type=int, default=None, help="返回结果条数，默认取配置中的 RAG_TOP_K")
-    parser.add_argument("--where", default=None, help='Metadata filter, e.g. "source_type=md" or "access=public,pii=no"')
+    parser.add_argument(
+        "--where", default=None, help='Metadata filter, e.g. "source_type=md" or "access=public,pii=no"'
+    )
     args = parser.parse_args()
 
     where = None

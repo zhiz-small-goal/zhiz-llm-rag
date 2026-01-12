@@ -165,8 +165,16 @@ def main() -> int:
     ap.add_argument("--root", default=".", help="Project root")
     ap.add_argument("--db", default="chroma_db", help="Chroma persistent dir")
     ap.add_argument("--collection", default="rag_chunks", help="Chroma collection")
-    ap.add_argument("--state-root", default="data_processed/index_state", help="index_state root (default: data_processed/index_state)")
-    ap.add_argument("--plan", default="data_processed/chunk_plan.json", help="plan path (optional; default points to standard location)")
+    ap.add_argument(
+        "--state-root",
+        default="data_processed/index_state",
+        help="index_state root (default: data_processed/index_state)",
+    )
+    ap.add_argument(
+        "--plan",
+        default="data_processed/chunk_plan.json",
+        help="plan path (optional; default points to standard location)",
+    )
     ap.add_argument("--writer", default="manual", help="writer tag (e.g., build_chroma_index_flagembedding)")
     ap.add_argument("--count", type=int, default=None, help="optional: override collection_count (skip opening chroma)")
     ap.add_argument("--out", default=None, help="output path (default: <state_root>/db_build_stamp.json)")
@@ -174,7 +182,11 @@ def main() -> int:
 
     root = Path(args.root).resolve()
     db = (root / args.db).resolve() if not Path(args.db).is_absolute() else Path(args.db).resolve()
-    state_root = (root / args.state_root).resolve() if not Path(args.state_root).is_absolute() else Path(args.state_root).resolve()
+    state_root = (
+        (root / args.state_root).resolve()
+        if not Path(args.state_root).is_absolute()
+        else Path(args.state_root).resolve()
+    )
 
     plan_path: Optional[Path] = None
     if args.plan:

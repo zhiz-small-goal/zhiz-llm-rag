@@ -45,9 +45,7 @@ def _require_chromadb():
 
         return chromadb
     except Exception as e:  # pragma: no cover
-        raise ImportError(
-            "chromadb not installed. Install Stage-2 deps via: pip install -e .[embed]"
-        ) from e
+        raise ImportError("chromadb not installed. Install Stage-2 deps via: pip install -e .[embed]") from e
 
 
 def _require_sentence_transformers():
@@ -66,6 +64,7 @@ def _require_sentence_transformers():
 # ---------------------------
 # Chunking
 # ---------------------------
+
 
 @dataclass
 class ChunkConf:
@@ -160,11 +159,11 @@ def pack_paragraphs_to_chunks(paras: List[str], conf: ChunkConf) -> List[str]:
         for i, c in enumerate(chunks):
             if i == 0:
                 out.append(c)
-                prev_tail = c[-conf.overlap_chars:]
+                prev_tail = c[-conf.overlap_chars :]
                 continue
             merged_text = (prev_tail + "\n" + c).strip()
             out.append(merged_text)
-            prev_tail = c[-conf.overlap_chars:]
+            prev_tail = c[-conf.overlap_chars :]
         chunks = out
 
     # Merge very small chunks into previous where possible
@@ -180,6 +179,7 @@ def pack_paragraphs_to_chunks(paras: List[str], conf: ChunkConf) -> List[str]:
 # ---------------------------
 # IO
 # ---------------------------
+
 
 def iter_units(units_path: Path) -> Iterable[Dict[str, Any]]:
     with units_path.open("r", encoding="utf-8") as f:
@@ -226,6 +226,7 @@ def build_chunks_from_unit(unit: Dict[str, Any], conf: ChunkConf) -> Tuple[List[
         # Chroma metadata values must be scalar (str/int/float/bool/None).
         # Store refs as JSON strings + counts.
         import json as _json
+
         asset_refs = unit.get("asset_refs", []) or []
         doc_refs = unit.get("doc_refs", []) or []
         base_md["asset_refs_n"] = int(len(asset_refs))
@@ -240,6 +241,7 @@ def build_chunks_from_unit(unit: Dict[str, Any], conf: ChunkConf) -> Tuple[List[
 # Chroma
 # ---------------------------
 
+
 def get_chroma_collection(db_path: Path, name: str):
     # PersistentClient: data is stored on disk and loaded automatically.
     chromadb = _require_chromadb()
@@ -251,6 +253,7 @@ def get_chroma_collection(db_path: Path, name: str):
 # ---------------------------
 # Embeddings
 # ---------------------------
+
 
 def load_embedder(model_name_or_path: str, device: Optional[str]) -> Any:
     """
@@ -279,6 +282,7 @@ def embed_texts(model: Any, texts: List[str], batch_size: int) -> List[List[floa
 # ---------------------------
 # Build / Query
 # ---------------------------
+
 
 def cmd_build(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
@@ -363,7 +367,9 @@ def cmd_build(args: argparse.Namespace) -> int:
     print(f"units_skipped={units_skipped}")
     print(f"chunks_indexed={total_chunks}")
     print(f"include_media_stub={args.include_media_stub}")
-    print(f"chunk_conf=chunk_chars:{args.chunk_chars} overlap_chars:{args.overlap_chars} min_chunk_chars:{args.min_chunk_chars}")
+    print(
+        f"chunk_conf=chunk_chars:{args.chunk_chars} overlap_chars:{args.overlap_chars} min_chunk_chars:{args.min_chunk_chars}"
+    )
     print(f"db_path={db_path}")
     print(f"collection={args.collection}")
     print(f"embed_model={args.embed_model} (cached after first download)")
@@ -374,6 +380,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     # write DB build stamp (stable freshness basis for rag-status)
     try:
         from mhy_ai_rag_data.tools.write_db_build_stamp import write_db_build_stamp
+
         state_root = (root / "data_processed" / "index_state").resolve()
         stamp_out = write_db_build_stamp(
             root=root,

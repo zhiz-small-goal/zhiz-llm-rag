@@ -30,11 +30,19 @@ from mhy_ai_rag_data.tools.reporting import build_base, add_error, write_report,
 
 
 GET_CANDIDATES = [
-    "/", "/v1/models", "/models", "/docs", "/openapi.json", "/v1", "/api/tags",
+    "/",
+    "/v1/models",
+    "/models",
+    "/docs",
+    "/openapi.json",
+    "/v1",
+    "/api/tags",
 ]
 
 POST_CANDIDATES = [
-    "/v1/chat/completions", "/chat/completions", "/v1/completions",
+    "/v1/chat/completions",
+    "/chat/completions",
+    "/v1/completions",
 ]
 
 
@@ -66,8 +74,15 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", required=True, help="例如 http://localhost:8000 或 http://localhost:8000/v1")
     ap.add_argument("--connect-timeout", type=float, default=5.0, help="连接超时秒（requests connect timeout）")
-    ap.add_argument("--timeout", type=float, default=10.0, help="读取超时秒（requests read timeout；legacy 名称 --timeout）")
-    ap.add_argument("--trust-env", default="auto", choices=["auto","true","false"], help="是否信任环境代理：auto(loopback->false), true, false")
+    ap.add_argument(
+        "--timeout", type=float, default=10.0, help="读取超时秒（requests read timeout；legacy 名称 --timeout）"
+    )
+    ap.add_argument(
+        "--trust-env",
+        default="auto",
+        choices=["auto", "true", "false"],
+        help="是否信任环境代理：auto(loopback->false), true, false",
+    )
     ap.add_argument("--json-out", default=None, help="JSON 报告输出路径（提供则只写这一份）")
     ap.add_argument("--json-stdout", action="store_true", help="将 JSON 报告打印到 stdout（可与 --json-out 同时使用）")
     args = ap.parse_args()
@@ -76,20 +91,28 @@ def main() -> int:
     trust_env = resolve_trust_env(args.base, args.trust_env)
 
     # Choose a real model id when possible (avoid placeholder values)
-    base_for_client = args.base.rstrip('/')
-    if not base_for_client.endswith('/v1'):
-        base_for_client = base_for_client + '/v1'
+    base_for_client = args.base.rstrip("/")
+    if not base_for_client.endswith("/v1"):
+        base_for_client = base_for_client + "/v1"
     resolved_model, model_resolve = resolve_model_id(
         base_for_client,
-        'auto',
+        "auto",
         connect_timeout=args.connect_timeout,
         read_timeout=args.timeout,
         trust_env_mode=args.trust_env,
-        fallback_model='gpt-3.5-turbo',
+        fallback_model="gpt-3.5-turbo",
     )
-    report = build_base("llm_probe", inputs={"base": args.base, "connect_timeout": args.connect_timeout, "read_timeout": args.timeout, "trust_env": args.trust_env})
-    report['resolved_model'] = resolved_model
-    report['model_resolve'] = model_resolve
+    report = build_base(
+        "llm_probe",
+        inputs={
+            "base": args.base,
+            "connect_timeout": args.connect_timeout,
+            "read_timeout": args.timeout,
+            "trust_env": args.trust_env,
+        },
+    )
+    report["resolved_model"] = resolved_model
+    report["model_resolve"] = model_resolve
 
     # payloads
     chat_payload = {
@@ -113,7 +136,7 @@ def main() -> int:
         report["get"].append({"path": path, "url": url, **res})
         ok = "OK" if res.get("ok") and res.get("status") == 200 else "FAIL"
         code = res.get("status", "")
-        print(f"{ok:<4} {str(code):<4} {path:<16} {res.get('seconds',0):>6.2f}s")
+        print(f"{ok:<4} {str(code):<4} {path:<16} {res.get('seconds', 0):>6.2f}s")
 
     print("\n== POST probes ==")
     report["post"] = []
@@ -124,7 +147,7 @@ def main() -> int:
         report["post"].append({"path": path, "url": url, "payload": payload, **res})
         ok = "OK" if res.get("ok") and res.get("status") == 200 else "FAIL"
         code = res.get("status", "")
-        print(f"{ok:<4} {str(code):<4} {path:<22} {res.get('seconds',0):>6.2f}s")
+        print(f"{ok:<4} {str(code):<4} {path:<22} {res.get('seconds', 0):>6.2f}s")
 
     post_ok = any(x.get("ok") and x.get("status") == 200 for x in report["post"])
     report["status"] = "PASS" if post_ok else "FAIL"

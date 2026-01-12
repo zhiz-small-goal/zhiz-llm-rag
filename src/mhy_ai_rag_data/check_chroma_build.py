@@ -28,7 +28,6 @@ from typing import Any, Dict, Optional
 from mhy_ai_rag_data.tools.reporting import build_base, add_error, status_to_rc, write_report
 
 
-
 def _load_plan(plan_path: Path) -> Dict[str, Any]:
     obj = json.loads(plan_path.read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
@@ -93,7 +92,9 @@ def main(
     if plan_conf is not None:
         print(f"plan.include_media_stub={plan_conf.get('include_media_stub')}")
         print(f"plan.chunk_conf={plan_conf.get('chunk_conf')}")
-        print(f"plan.units_read={plan_conf.get('units_read')} units_indexed={plan_conf.get('units_indexed')} units_skipped={plan_conf.get('units_skipped')}")
+        print(
+            f"plan.units_read={plan_conf.get('units_read')} units_indexed={plan_conf.get('units_indexed')} units_skipped={plan_conf.get('units_skipped')}"
+        )
 
     # --- open collection ---
     try:
@@ -101,7 +102,7 @@ def main(
     except Exception as e:
         add_error(report, "import", f"cannot import chromadb: {e}")
         print(f"[FATAL] cannot import chromadb: {e}")
-        print("[HINT] install optional deps: pip install -e .[embed]  (or pip install \".[embed]\" on bash)")
+        print('[HINT] install optional deps: pip install -e .[embed]  (or pip install ".[embed]" on bash)')
         report["status"] = "FAIL"
         return status_to_rc(report["status"])
 
@@ -242,11 +243,16 @@ if __name__ == "__main__":
         if not plan_path.exists():
             print(f"[FATAL] plan not found: {plan_path}")
             # report as FAIL if requested
-            rep = build_base("check", inputs={"db": str(Path(args.db).resolve()), "collection": args.collection, "plan": str(plan_path)})
+            rep = build_base(
+                "check",
+                inputs={"db": str(Path(args.db).resolve()), "collection": args.collection, "plan": str(plan_path)},
+            )
             rep["status"] = "FAIL"
             add_error(rep, "PLAN_NOT_FOUND", "plan not found", detail=str(plan_path))
             if args.json_out:
-                out_path = write_report(rep, json_out=args.json_out, default_name=f"check_report_{rep.get('ts',0)}.json")
+                out_path = write_report(
+                    rep, json_out=args.json_out, default_name=f"check_report_{rep.get('ts', 0)}.json"
+                )
                 print(f"Wrote report: {out_path}")
             if args.json_stdout:
                 print(json.dumps(rep, ensure_ascii=False, indent=2))
@@ -255,11 +261,16 @@ if __name__ == "__main__":
             plan_obj = _load_plan(plan_path)
         except Exception as e:
             print(f"[FATAL] cannot load plan: {e}")
-            rep = build_base("check", inputs={"db": str(Path(args.db).resolve()), "collection": args.collection, "plan": str(plan_path)})
+            rep = build_base(
+                "check",
+                inputs={"db": str(Path(args.db).resolve()), "collection": args.collection, "plan": str(plan_path)},
+            )
             rep["status"] = "FAIL"
             add_error(rep, "PLAN_LOAD_FAIL", "cannot load plan", detail=repr(e))
             if args.json_out:
-                out_path = write_report(rep, json_out=args.json_out, default_name=f"check_report_{rep.get('ts',0)}.json")
+                out_path = write_report(
+                    rep, json_out=args.json_out, default_name=f"check_report_{rep.get('ts', 0)}.json"
+                )
                 print(f"Wrote report: {out_path}")
             if args.json_stdout:
                 print(json.dumps(rep, ensure_ascii=False, indent=2))

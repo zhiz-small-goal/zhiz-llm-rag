@@ -157,8 +157,6 @@ def extract_date_from_filename(name: str) -> Optional[str]:
     return None
 
 
-
-
 def pretty_title_from_filename(filename: str) -> str:
     """Derive a human-friendly title from filename when YAML/title is missing."""
     stem = Path(filename).stem
@@ -167,6 +165,7 @@ def pretty_title_from_filename(filename: str) -> str:
     stem = stem.replace("_", " ").replace("-", " ")
     stem = re.sub(r"\s+", " ", stem).strip()
     return stem if stem else filename
+
 
 def _as_list(v: Any) -> List[str]:
     if v is None:
@@ -202,8 +201,24 @@ def extract_keywords(meta: Dict[str, Any], body: str) -> Optional[str]:
 
 
 _STOPWORDS = {
-    "postmortem", "md", "the", "a", "an", "and", "or", "to", "of", "in", "on", "for", "with",
-    "docs", "doc", "tool", "tools", "index",
+    "postmortem",
+    "md",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "to",
+    "of",
+    "in",
+    "on",
+    "for",
+    "with",
+    "docs",
+    "doc",
+    "tool",
+    "tools",
+    "index",
 }
 
 
@@ -286,30 +301,36 @@ def extract_entry(md_path: Path) -> Tuple[Entry, List[Dict[str, Any]]]:
 
     issues: List[Dict[str, Any]] = []
     if not date:
-        issues.append({
-            "loc": _diag(md_path, 1, 1, "missing date (YAML date/last_updated or filename prefix YYYY-MM-DD)"),
-            "code": "MISSING_DATE",
-            "file": md_path.as_posix(),
-            "line": 1,
-            "col": 1,
-        })
+        issues.append(
+            {
+                "loc": _diag(md_path, 1, 1, "missing date (YAML date/last_updated or filename prefix YYYY-MM-DD)"),
+                "code": "MISSING_DATE",
+                "file": md_path.as_posix(),
+                "line": 1,
+                "col": 1,
+            }
+        )
     if not title or title.strip() == filename:
         # only warn when title is fully absent; filename as title is acceptable but less useful
-        issues.append({
-            "loc": _diag(md_path, 1, 1, "title falls back to filename; consider YAML title or a meaningful H1"),
-            "code": "WEAK_TITLE",
-            "file": md_path.as_posix(),
-            "line": 1,
-            "col": 1,
-        })
+        issues.append(
+            {
+                "loc": _diag(md_path, 1, 1, "title falls back to filename; consider YAML title or a meaningful H1"),
+                "code": "WEAK_TITLE",
+                "file": md_path.as_posix(),
+                "line": 1,
+                "col": 1,
+            }
+        )
     if not kw:
-        issues.append({
-            "loc": _diag(md_path, 1, 1, "missing keywords; consider YAML keywords/tags or a [关键词] header"),
-            "code": "MISSING_KEYWORDS",
-            "file": md_path.as_posix(),
-            "line": 1,
-            "col": 1,
-        })
+        issues.append(
+            {
+                "loc": _diag(md_path, 1, 1, "missing keywords; consider YAML keywords/tags or a [关键词] header"),
+                "code": "MISSING_KEYWORDS",
+                "file": md_path.as_posix(),
+                "line": 1,
+                "col": 1,
+            }
+        )
 
     return Entry(file=filename, date=date, title=title, keywords=kw), issues
 
@@ -394,7 +415,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--link-text", default="docs_path", choices=["docs_path", "filename"], help="link text style")
     ap.add_argument("--check", action="store_true", help="Check mode: do not write; FAIL if index out-of-date")
     ap.add_argument("--write", action="store_true", help="Write mode: update index file if needed")
-    ap.add_argument("--strict", action="store_true", help="FAIL if any postmortem lacks date/title/keywords (see output)")
+    ap.add_argument(
+        "--strict", action="store_true", help="FAIL if any postmortem lacks date/title/keywords (see output)"
+    )
     ap.add_argument("--json-out", default=None, help="Write JSON report to this path")
     ap.add_argument("--json-stdout", action="store_true", help="Print JSON report to stdout")
     args = ap.parse_args(argv)
@@ -416,7 +439,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         if not pm_dir.exists():
             msg = f"missing postmortems dir: {pm_dir}"
-            report_errors.append({"loc": _diag(pm_dir, 1, 1, msg), "code": "MISSING_DIR", "file": pm_dir.as_posix(), "line": 1, "col": 1})
+            report_errors.append(
+                {"loc": _diag(pm_dir, 1, 1, msg), "code": "MISSING_DIR", "file": pm_dir.as_posix(), "line": 1, "col": 1}
+            )
             rep = build_report(status="FAIL", inputs={"root": str(repo_root)}, metrics={}, errors=report_errors)
             if args.json_out:
                 write_text(Path(args.json_out), json.dumps(rep, ensure_ascii=False, indent=2))
@@ -439,18 +464,22 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         block = generate_block(entries, link_text_mode=args.link_text)
 
-        old = read_text(idx_path) if idx_path.exists() else (
-            "# Postmortems Index\n\n"
-            "> 目的：按“时间 + 主题 + 关键字”快速定位复盘文档。细节请进入各文档正文。\n\n\n"
-            "## 相关资产（跨复盘复用）\n"
-            "- [Postmortem 提示词模板（参考）](../reference/postmortem_prompt_template.md)\n"
-            "- [Lessons / 经验库（可迁移）](../explanation/LESSONS.md)\n"
-            "- [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)\n"
-            "\n"
+        old = (
+            read_text(idx_path)
+            if idx_path.exists()
+            else (
+                "# Postmortems Index\n\n"
+                "> 目的：按“时间 + 主题 + 关键字”快速定位复盘文档。细节请进入各文档正文。\n\n\n"
+                "## 相关资产（跨复盘复用）\n"
+                "- [Postmortem 提示词模板（参考）](../reference/postmortem_prompt_template.md)\n"
+                "- [Lessons / 经验库（可迁移）](../explanation/LESSONS.md)\n"
+                "- [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)\n"
+                "\n"
+            )
         )
 
         new = upsert_generated_section(old, block)
-        changed = (old != new)
+        changed = old != new
 
         # Strict policy: treat missing date/keywords as FAIL
         strict_fail = False
@@ -464,13 +493,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         rc: int
         if args.check:
             if changed:
-                report_errors.append({
-                    "loc": _diag(idx_path, 1, 1, "index out-of-date; run with --write"),
-                    "code": "INDEX_STALE",
-                    "file": idx_path.as_posix(),
-                    "line": 1,
-                    "col": 1,
-                })
+                report_errors.append(
+                    {
+                        "loc": _diag(idx_path, 1, 1, "index out-of-date; run with --write"),
+                        "code": "INDEX_STALE",
+                        "file": idx_path.as_posix(),
+                        "line": 1,
+                        "col": 1,
+                    }
+                )
                 print(_diag(idx_path, 1, 1, "index out-of-date; run with --write"))
                 print("Diff (unified):")
                 diff = difflib.unified_diff(

@@ -65,6 +65,7 @@ def load_embedder(backend: str, model_name: str, device: str) -> Any:
     if backend in ("auto", "flagembedding"):
         try:
             from FlagEmbedding import FlagModel
+
             return ("flagembedding", FlagModel(model_name, device=device))
         except Exception:
             if backend == "flagembedding":
@@ -72,6 +73,7 @@ def load_embedder(backend: str, model_name: str, device: str) -> Any:
     if backend in ("auto", "sentence-transformers", "sentence_transformers"):
         try:
             from sentence_transformers import SentenceTransformer
+
             return ("sentence-transformers", SentenceTransformer(model_name, device=device))
         except Exception:
             raise
@@ -150,27 +152,62 @@ def main() -> int:
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument("--db", default="chroma_db", help="chroma db dir (relative to root)")
     ap.add_argument("--collection", default="rag_chunks", help="collection name")
-    ap.add_argument("--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)")
+    ap.add_argument(
+        "--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)"
+    )
     ap.add_argument("--k", type=int, default=5, help="topK for retrieval")
-    ap.add_argument("--meta-field", default="source_uri|source|path|file", help="metadata field(s) for source path (use | to separate)")
+    ap.add_argument(
+        "--meta-field",
+        default="source_uri|source|path|file",
+        help="metadata field(s) for source path (use | to separate)",
+    )
     ap.add_argument("--embed-backend", default="auto", help="auto|flagembedding|sentence-transformers")
     ap.add_argument("--embed-model", default="BAAI/bge-m3", help="embed model name")
     ap.add_argument("--device", default="cpu", help="cpu|cuda")
     ap.add_argument("--base-url", default="http://localhost:8000/v1", help="OpenAI-compatible base url")
     ap.add_argument("--connect-timeout", type=float, default=10.0, help="HTTP connect timeout seconds")
     ap.add_argument("--timeout", type=float, default=300.0, help="HTTP read timeout seconds (legacy name: --timeout)")
-    ap.add_argument("--trust-env", default="auto", choices=["auto","true","false"], help="trust env proxies: auto(loopback->false), true, false")
-    ap.add_argument("--llm-model", default="auto", help="LLM model id to send; default auto: GET /models and prefer *instruct/*chat")
+    ap.add_argument(
+        "--trust-env",
+        default="auto",
+        choices=["auto", "true", "false"],
+        help="trust env proxies: auto(loopback->false), true, false",
+    )
+    ap.add_argument(
+        "--llm-model", default="auto", help="LLM model id to send; default auto: GET /models and prefer *instruct/*chat"
+    )
     ap.add_argument("--context-max-chars", type=int, default=12000, help="max context chars to send to LLM")
     ap.add_argument("--max-tokens", type=int, default=256, help="max_tokens for answer")
     ap.add_argument("--temperature", type=float, default=0.0, help="temperature for answer")
-    ap.add_argument("--out", default="data_processed/build_reports/eval_rag_report.json", help="output json (relative to root)")
+    ap.add_argument(
+        "--out", default="data_processed/build_reports/eval_rag_report.json", help="output json (relative to root)"
+    )
     # real-time observability (optional)
-    ap.add_argument("--stream-out", default="", help="optional streaming events output (relative to root), e.g. data_processed/build_reports/eval_rag_report.events.jsonl")
-    ap.add_argument("--stream-format", default="jsonl", choices=["jsonl","json-seq"], help="stream file format: jsonl or json-seq (RFC 7464)")
-    ap.add_argument("--stream-answer-chars", type=int, default=0, help="if >0, include truncated answer snippet in stream records")
-    ap.add_argument("--progress-every-seconds", type=float, default=10.0, help="print progress summary every N seconds; 0 to disable")
-    ap.add_argument("--print-case-errors", action="store_true", help="print a one-line error per failed case to console (for live debugging)")
+    ap.add_argument(
+        "--stream-out",
+        default="",
+        help="optional streaming events output (relative to root), e.g. data_processed/build_reports/eval_rag_report.events.jsonl",
+    )
+    ap.add_argument(
+        "--stream-format",
+        default="jsonl",
+        choices=["jsonl", "json-seq"],
+        help="stream file format: jsonl or json-seq (RFC 7464)",
+    )
+    ap.add_argument(
+        "--stream-answer-chars", type=int, default=0, help="if >0, include truncated answer snippet in stream records"
+    )
+    ap.add_argument(
+        "--progress-every-seconds",
+        type=float,
+        default=10.0,
+        help="print progress summary every N seconds; 0 to disable",
+    )
+    ap.add_argument(
+        "--print-case-errors",
+        action="store_true",
+        help="print a one-line error per failed case to console (for live debugging)",
+    )
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
@@ -188,16 +225,18 @@ def main() -> int:
         stream_path = (root / args.stream_out).resolve()
         ensure_dir(stream_path.parent)
         stream_writer = StreamWriter(stream_path, fmt=args.stream_format, flush_per_record=True).open()
-        stream_writer.emit({
-            "record_type": "meta",
-            "run_id": run_id,
-            "tool": "run_eval_rag",
-            "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_rag.py",
-            "argv": sys.argv,
-            "root": str(root),
-            "out_final": str(out_path),
-            "stream_out": str(stream_path),
-        })
+        stream_writer.emit(
+            {
+                "record_type": "meta",
+                "run_id": run_id,
+                "tool": "run_eval_rag",
+                "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_rag.py",
+                "argv": sys.argv,
+                "root": str(root),
+                "out_final": str(out_path),
+                "stream_out": str(stream_path),
+            }
+        )
 
     def _close_stream() -> None:
         nonlocal stream_closed
@@ -217,13 +256,15 @@ def main() -> int:
         tb = ""
         if exc is not None:
             tb = traceback.format_exc()
-        stream_writer.emit({
-            "record_type": "error",
-            "run_id": run_id,
-            "ts_ms": int(time.time() * 1000),
-            "message": safe_truncate(message, 2000),
-            "traceback": safe_truncate(tb, 8000) if tb else "",
-        })
+        stream_writer.emit(
+            {
+                "record_type": "error",
+                "run_id": run_id,
+                "ts_ms": int(time.time() * 1000),
+                "message": safe_truncate(message, 2000),
+                "traceback": safe_truncate(tb, 8000) if tb else "",
+            }
+        )
 
     def _fail(rc: int, message: str, exc: Optional[BaseException] = None) -> int:
         print(f"[eval_rag] FAIL: {message}")
@@ -260,20 +301,22 @@ def main() -> int:
         )
         if stream_writer is not None:
             # 追加一条 meta 记录：把 LLM 解析后的 model/base_url/timeout 写入 stream，便于运行中诊断
-            stream_writer.emit({
-                "record_type": "meta",
-                "run_id": run_id,
-                "ts_ms": int(time.time() * 1000),
-                "llm": {
-                    "base_url": args.base_url,
-                    "model_arg": args.llm_model,
-                    "resolved_model": resolved_model,
-                    "connect_timeout": args.connect_timeout,
-                    "read_timeout": args.timeout,
-                    "trust_env": args.trust_env,
-                },
-                "model_resolve": model_resolve,
-            })
+            stream_writer.emit(
+                {
+                    "record_type": "meta",
+                    "run_id": run_id,
+                    "ts_ms": int(time.time() * 1000),
+                    "llm": {
+                        "base_url": args.base_url,
+                        "model_arg": args.llm_model,
+                        "resolved_model": resolved_model,
+                        "connect_timeout": args.connect_timeout,
+                        "read_timeout": args.timeout,
+                        "trust_env": args.trust_env,
+                    },
+                    "model_resolve": model_resolve,
+                }
+            )
 
     except Exception as e:
         return _fail(2, f"embedder/llm init failed: {type(e).__name__}: {e}", exc=e)
@@ -300,7 +343,9 @@ def main() -> int:
 
             qvec = embed_query(embedder, backend, q)
             query_embeddings: List[Sequence[float]] = [qvec]
-            res = col.query(query_embeddings=query_embeddings, n_results=args.k, include=["documents", "metadatas", "distances"])
+            res = col.query(
+                query_embeddings=query_embeddings, n_results=args.k, include=["documents", "metadatas", "distances"]
+            )
             docs = (res.get("documents") or [[]])[0]
             metas = (res.get("metadatas") or [[]])[0]
             dists = (res.get("distances") or [[]])[0]
@@ -309,7 +354,10 @@ def main() -> int:
             ctx = build_context([str(d or "") for d in docs], sources, args.context_max_chars)
 
             messages = [
-                {"role": "system", "content": "你是一个严格基于提供上下文回答问题的助手；若上下文不足以回答，请明确说明缺失信息。"},
+                {
+                    "role": "system",
+                    "content": "你是一个严格基于提供上下文回答问题的助手；若上下文不足以回答，请明确说明缺失信息。",
+                },
                 {"role": "user", "content": f"问题：{q}\n\n上下文：\n{ctx}\n\n请给出回答："},
             ]
 
@@ -355,7 +403,10 @@ def main() -> int:
                     cause_snip = safe_truncate(cause, 300) if cause else ""
 
                     # 控制台输出：避免单行过长（Windows 终端常被截断），采用多行、并留出空行分隔。
-                    print(f"[eval_rag] CASE_FAIL idx={idx}/{total_cases} id={cid}" + (f" status={status}" if status else ""))
+                    print(
+                        f"[eval_rag] CASE_FAIL idx={idx}/{total_cases} id={cid}"
+                        + (f" status={status}" if status else "")
+                    )
                     print(f"  err  : {safe_truncate(err, 300)}")
                     if cause_snip:
                         print(f"  cause: {cause_snip}")
@@ -366,60 +417,70 @@ def main() -> int:
             if passed:
                 pass_count += 1
 
-            per_case.append({
-                "id": cid,
-                "query": q,
-                "bucket": c.get("bucket"),
-                "pair_id": c.get("pair_id"),
-                "concept_id": c.get("concept_id"),
-                "passed": passed,
-                "llm_call_ok": ok_call,
-                "must_include": must_inc,
-                "missing": missing,
-                "context_chars": len(ctx),
-                "llm_request": {"model": resolved_model, "max_tokens": args.max_tokens, "temperature": args.temperature},
-                "topk": [
-                    {
-                        "rank": i + 1,
-                        "source": sources[i] if i < len(sources) else "",
-                        "distance": dists[i] if i < len(dists) else None,
-                    }
-                    for i in range(min(args.k, len(sources)))
-                ],
-                "answer": answer,
-                "error": err,
-                "error_detail": err_detail,
-            })
-
-            if stream_writer is not None:
-                ans_snip = safe_truncate(answer, args.stream_answer_chars) if args.stream_answer_chars > 0 else ""
-                stream_writer.emit({
-                    "record_type": "case",
-                    "run_id": run_id,
-                    "ts_ms": int(time.time() * 1000),
-                    "case_index": idx,
-                    "cases_total": total_cases,
-                    "case_id": cid,
+            per_case.append(
+                {
+                    "id": cid,
+                    "query": q,
                     "bucket": c.get("bucket"),
                     "pair_id": c.get("pair_id"),
                     "concept_id": c.get("concept_id"),
-                    "query": q,
                     "passed": passed,
                     "llm_call_ok": ok_call,
+                    "must_include": must_inc,
                     "missing": missing,
                     "context_chars": len(ctx),
-                    "answer_chars": len(answer),
-                    "answer_snippet": ans_snip,
+                    "llm_request": {
+                        "model": resolved_model,
+                        "max_tokens": args.max_tokens,
+                        "temperature": args.temperature,
+                    },
+                    "topk": [
+                        {
+                            "rank": i + 1,
+                            "source": sources[i] if i < len(sources) else "",
+                            "distance": dists[i] if i < len(dists) else None,
+                        }
+                        for i in range(min(args.k, len(sources)))
+                    ],
+                    "answer": answer,
                     "error": err,
                     "error_detail": err_detail,
-                    "elapsed_ms": int((time.time() - case_t0) * 1000),
-                })
+                }
+            )
+
+            if stream_writer is not None:
+                ans_snip = safe_truncate(answer, args.stream_answer_chars) if args.stream_answer_chars > 0 else ""
+                stream_writer.emit(
+                    {
+                        "record_type": "case",
+                        "run_id": run_id,
+                        "ts_ms": int(time.time() * 1000),
+                        "case_index": idx,
+                        "cases_total": total_cases,
+                        "case_id": cid,
+                        "bucket": c.get("bucket"),
+                        "pair_id": c.get("pair_id"),
+                        "concept_id": c.get("concept_id"),
+                        "query": q,
+                        "passed": passed,
+                        "llm_call_ok": ok_call,
+                        "missing": missing,
+                        "context_chars": len(ctx),
+                        "answer_chars": len(answer),
+                        "answer_snippet": ans_snip,
+                        "error": err,
+                        "error_detail": err_detail,
+                        "elapsed_ms": int((time.time() - case_t0) * 1000),
+                    }
+                )
 
             if args.progress_every_seconds > 0 and (time.time() - last_progress) >= args.progress_every_seconds:
                 elapsed = time.time() - t0
                 pr = (pass_count / idx) if idx else 0.0
                 stream_tag = str(stream_path) if stream_path else "-"
-                print(f"[eval_rag] PROGRESS cases_done={idx}/{total_cases} passed_cases={pass_count} pass_rate={pr:.3f} elapsed_s={elapsed:.1f} stream={stream_tag}")
+                print(
+                    f"[eval_rag] PROGRESS cases_done={idx}/{total_cases} passed_cases={pass_count} pass_rate={pr:.3f} elapsed_s={elapsed:.1f} stream={stream_tag}"
+                )
                 last_progress = time.time()
 
     except Exception as e:
@@ -435,7 +496,13 @@ def main() -> int:
         "collection": args.collection,
         "k": args.k,
         "embed": {"backend": backend, "model": args.embed_model, "device": args.device},
-        "llm": {"base_url": args.base_url, "connect_timeout": args.connect_timeout, "read_timeout": args.timeout, "trust_env": args.trust_env, "model_field": args.llm_model},
+        "llm": {
+            "base_url": args.base_url,
+            "connect_timeout": args.connect_timeout,
+            "read_timeout": args.timeout,
+            "trust_env": args.trust_env,
+            "model_field": args.llm_model,
+        },
         "metrics": {"cases": total, "passed_cases": pass_count, "pass_rate": pass_rate},
         "cases": per_case,
     }
@@ -444,14 +511,16 @@ def main() -> int:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     if stream_writer is not None:
-        stream_writer.emit({
-            "record_type": "summary",
-            "run_id": run_id,
-            "ts_ms": int(time.time() * 1000),
-            "metrics": report.get("metrics"),
-            "out_final": str(out_path),
-            "elapsed_ms": int((time.time() - t0) * 1000),
-        })
+        stream_writer.emit(
+            {
+                "record_type": "summary",
+                "run_id": run_id,
+                "ts_ms": int(time.time() * 1000),
+                "metrics": report.get("metrics"),
+                "out_final": str(out_path),
+                "elapsed_ms": int((time.time() - t0) * 1000),
+            }
+        )
         _close_stream()
 
     print(f"[eval_rag] OK  pass_rate={pass_rate:.3f}  out={out_path}")

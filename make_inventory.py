@@ -50,13 +50,32 @@ NOTE_CONFIG: dict[str, Any] = {
 # ============================================
 
 EXT_MAP = {
-    ".pdf": "pdf", ".md": "md", ".markdown": "md", ".txt": "txt",
-    ".html": "html", ".htm": "html",
-    ".c": "code", ".cc": "code", ".cpp": "code", ".h": "code", ".hpp": "code",
-    ".py": "code", ".js": "code", ".ts": "code", ".java": "code", ".rs": "code",
-    ".png": "image", ".jpg": "image", ".jpeg": "image", ".webp": "image", ".gif": "image",
-    ".mp4": "video", ".mkv": "video", ".mov": "video",
-    ".mp3": "audio", ".wav": "audio",
+    ".pdf": "pdf",
+    ".md": "md",
+    ".markdown": "md",
+    ".txt": "txt",
+    ".html": "html",
+    ".htm": "html",
+    ".c": "code",
+    ".cc": "code",
+    ".cpp": "code",
+    ".h": "code",
+    ".hpp": "code",
+    ".py": "code",
+    ".js": "code",
+    ".ts": "code",
+    ".java": "code",
+    ".rs": "code",
+    ".png": "image",
+    ".jpg": "image",
+    ".jpeg": "image",
+    ".webp": "image",
+    ".gif": "image",
+    ".mp4": "video",
+    ".mkv": "video",
+    ".mov": "video",
+    ".mp3": "audio",
+    ".wav": "audio",
 }
 
 FIELDS = [
@@ -175,16 +194,18 @@ def main() -> None:
 
         doc_id = existing.get(source_uri) or str(uuid.uuid4())
 
-        rows.append({
-            "doc_id": doc_id,
-            "source_uri": source_uri,
-            "filename": filename,
-            "source_type": source_type,
-            "content_sha256": sha256_file(p),
-            "size_bytes": str(st.st_size),
-            "updated_at": iso_time_from_mtime(st.st_mtime),
-            "note": note_value,  # 从字典配置生成
-        })
+        rows.append(
+            {
+                "doc_id": doc_id,
+                "source_uri": source_uri,
+                "filename": filename,
+                "source_type": source_type,
+                "content_sha256": sha256_file(p),
+                "size_bytes": str(st.st_size),
+                "updated_at": iso_time_from_mtime(st.st_mtime),
+                "note": note_value,  # 从字典配置生成
+            }
+        )
 
     rows.sort(key=lambda r: r["source_uri"])
 

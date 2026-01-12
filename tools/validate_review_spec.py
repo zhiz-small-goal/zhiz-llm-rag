@@ -109,8 +109,8 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "## 1. 概览",
         "",
-        f"- 项目类型：{scope.get('project_type','')}",
-        f"- 当前阶段：{scope.get('stage','')}",
+        f"- 项目类型：{scope.get('project_type', '')}",
+        f"- 当前阶段：{scope.get('stage', '')}",
         f"- 审查优先级（高→低）：{' > '.join(scope.get('priority_order', []))}",
         "",
         "## 2. 适用范围与优先级",
@@ -135,14 +135,14 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "### 3.1 角色",
         "",
-        f"- Author：{(process.get('roles') or {}).get('author','')}",
-        f"- Reviewer：{(process.get('roles') or {}).get('reviewer','')}",
+        f"- Author：{(process.get('roles') or {}).get('author', '')}",
+        f"- Reviewer：{(process.get('roles') or {}).get('reviewer', '')}",
         "",
         "### 3.2 流程（MUST）",
         "",
     ]
     for idx, st in enumerate(process.get("workflow", []) or [], start=1):
-        lines.append(f"**Step {idx}：{st.get('step','')}**")
+        lines.append(f"**Step {idx}：{st.get('step', '')}**")
         for m in st.get("must", []) or []:
             lines.append(f"- MUST: {m}")
         lines.append("")
@@ -189,8 +189,8 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "### 5.2 报告模板",
         "",
-        f"- 人类可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('md','')}`",
-        f"- 机器可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('json','')}`",
+        f"- 人类可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('md', '')}`",
+        f"- 机器可读模板：`{((spec.get('reporting') or {}).get('templates') or {}).get('json', '')}`",
         "",
         "### 5.3 与 Gate/CI 的关系",
         "",
@@ -198,8 +198,8 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         "",
         "## 6. 演进接口与版本策略",
         "",
-        f"- 版本策略：SemVer（{((spec.get('evolution') or {}).get('compat') or {}).get('semver','')}）",
-        f"- 兼容策略：{((spec.get('evolution') or {}).get('compat') or {}).get('policy','')}",
+        f"- 版本策略：SemVer（{((spec.get('evolution') or {}).get('compat') or {}).get('semver', '')}）",
+        f"- 兼容策略：{((spec.get('evolution') or {}).get('compat') or {}).get('policy', '')}",
         "",
         "### 6.1 扩展点（extensions）",
         "",
@@ -215,7 +215,7 @@ def _gen_md(spec: Dict[str, Any]) -> str:
         if not isinstance(r, dict):
             continue
         lines.append(
-            f"- {r.get('title','')} | {r.get('url','')} | {r.get('version_or_date','')} | {r.get('kind','')} | {r.get('locator','')}"
+            f"- {r.get('title', '')} | {r.get('url', '')} | {r.get('version_or_date', '')} | {r.get('kind', '')} | {r.get('locator', '')}"
         )
     lines.append("")
     return "\n".join(lines) + "\n"
@@ -260,7 +260,7 @@ def _validate_checklists(spec: Dict[str, Any]) -> List[str]:
             continue
         items = area.get("items") or []
         if not isinstance(items, list):
-            issues.append(f"checklists[{area.get('area','?')}] items must be a list")
+            issues.append(f"checklists[{area.get('area', '?')}] items must be a list")
             continue
         for it in items:
             if not isinstance(it, dict):
@@ -319,7 +319,7 @@ def main(argv: List[str] | None = None) -> int:
             for x in issues[:200]:
                 _diag(ssot_p, 1, 1, "FAIL", f"  - {x}")
             if len(issues) > 200:
-                _diag(ssot_p, 1, 1, "FAIL", f"  ... ({len(issues)-200} more)")
+                _diag(ssot_p, 1, 1, "FAIL", f"  ... ({len(issues) - 200} more)")
             return 2
 
         generated = _gen_md(spec).replace("\r\n", "\n")
@@ -330,7 +330,9 @@ def main(argv: List[str] | None = None) -> int:
 
         current = out_p.read_text(encoding="utf-8", errors="ignore").replace("\r\n", "\n")
         if current != generated:
-            _diag(out_p, 1, 1, "FAIL", "generated doc out-of-date; run: python tools/generate_review_spec_docs.py --write")
+            _diag(
+                out_p, 1, 1, "FAIL", "generated doc out-of-date; run: python tools/generate_review_spec_docs.py --write"
+            )
             return 2
 
         print("[PASS] Review Spec SSOT + generated doc are consistent")

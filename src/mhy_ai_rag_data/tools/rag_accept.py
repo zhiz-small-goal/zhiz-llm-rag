@@ -377,7 +377,9 @@ def main() -> int:
 
     collection = _pick(args.collection, profile, ["collection"], "rag_chunks")
     db = _resolve(root, _pick(args.db, profile, ["db"], "chroma_db"))
-    plan = _resolve(root, _pick(args.plan, profile, ["planner_out", "plan", "chunk_plan"], "data_processed/chunk_plan.json"))
+    plan = _resolve(
+        root, _pick(args.plan, profile, ["planner_out", "plan", "chunk_plan"], "data_processed/chunk_plan.json")
+    )
     reports_dir = _resolve(root, _pick(args.reports_dir, profile, ["reports_dir"], "data_processed/build_reports"))
     state_root = _resolve(root, _pick(args.state_root, profile, ["state_root"], "data_processed/index_state"))
 
