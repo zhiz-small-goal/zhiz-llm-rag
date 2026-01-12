@@ -45,6 +45,8 @@ ci = [
   "jsonschema>=4.26.0",
   "ruff>=0.14.11,<0.15",
   "mypy>=1.19.1,<1.20",
+  "types-requests>=2.31.0.20240106",
+  "types-PyYAML>=6.0.12.20241230",
 ]
 
 # Dev extras: optional local tooling. See docs/reference/deps_policy.md#dev-extras
