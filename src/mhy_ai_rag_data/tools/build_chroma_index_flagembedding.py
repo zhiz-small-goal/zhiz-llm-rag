@@ -26,13 +26,13 @@ tools/build_chroma_index_flagembedding.py
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Mapping, cast
+
+# Chroma metadata values are scalars, but stubs also allow SparseVector; keep Any for compatibility.
+MetaValue = Any
 
 # -------- shared loader --------
 
@@ -351,7 +351,7 @@ def main() -> int:
     # 8) embed + upsert (for selected docs)
     ids_buf: List[str] = []
     docs_buf: List[str] = []
-    metas_buf: List[Dict[str, Any]] = []
+    metas_buf: List[Dict[str, MetaValue]] = []
     embeds_buf: List[List[float]] = []
 
     def l2_normalize(dense):
@@ -373,10 +373,11 @@ def main() -> int:
             vecs = l2_normalize(vecs)
 
         # upsert
+        metas_for_upsert = cast(List[Mapping[str, MetaValue]], metas_buf)
         collection.upsert(
             ids=ids_buf,
             documents=docs_buf,
-            metadatas=metas_buf,
+            metadatas=metas_for_upsert,
             embeddings=vecs,
         )
         ids_buf, docs_buf, metas_buf, embeds_buf = [], [], [], []

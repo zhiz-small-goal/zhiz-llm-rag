@@ -359,12 +359,12 @@ def _evaluate_item(it: CheckItem) -> Dict[str, Any]:
             out["status"] = "FAIL"
             out["detail"]["reason"] = f"schema_version_not_1: {obj.get('schema_version')}"
             return out
-        st = str(obj.get("status") or "INFO").upper()
-        out["detail"]["report_status"] = st
+        report_status = str(obj.get("status") or "INFO").upper()
+        out["detail"]["report_status"] = report_status
         out["detail"]["step"] = obj.get("step")
-        if st == "PASS":
+        if report_status == "PASS":
             out["status"] = "OK"
-        elif st in ("FAIL", "ERROR"):
+        elif report_status in ("FAIL", "ERROR"):
             out["status"] = "FAIL"
             out["detail"]["errors"] = obj.get("errors", [])
         else:

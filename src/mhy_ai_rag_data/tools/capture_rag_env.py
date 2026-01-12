@@ -32,6 +32,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict
 
 
 KEY_PACKAGES = [
@@ -75,7 +76,8 @@ def main() -> int:
     out_path = Path(args.out).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    report = {
+    packages: Dict[str, Any] = {}
+    report: Dict[str, Any] = {
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "python": {
             "version": sys.version,
@@ -92,7 +94,7 @@ def main() -> int:
             "VIRTUAL_ENV": os.environ.get("VIRTUAL_ENV"),
             "CUDA_VISIBLE_DEVICES": os.environ.get("CUDA_VISIBLE_DEVICES"),
         },
-        "packages": {},
+        "packages": packages,
         "pip_freeze": None,
         "torch": None,
     }
@@ -109,7 +111,7 @@ def main() -> int:
 
     # torch details (optional)
     try:
-        import torch  # type: ignore
+        import torch
 
         report["torch"] = {
             "__version__": getattr(torch, "__version__", None),

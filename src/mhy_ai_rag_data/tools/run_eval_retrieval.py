@@ -31,11 +31,10 @@ import argparse
 import json
 import sys
 import time
-import platform
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Mapping, Sequence
 
-import traceback
+import platform
 
 from mhy_ai_rag_data.tools.report_stream import StreamWriter, default_run_id
 
@@ -85,14 +84,14 @@ def load_embedder(backend: str, model_name: str, device: str) -> Any:
     backend = backend.lower().strip()
     if backend in ("auto", "flagembedding"):
         try:
-            from FlagEmbedding import FlagModel  # type: ignore
+            from FlagEmbedding import FlagModel
             return ("flagembedding", FlagModel(model_name, device=device))
-        except Exception as e:
+        except Exception:
             if backend == "flagembedding":
                 raise
     if backend in ("auto", "sentence-transformers", "sentence_transformers"):
         try:
-            from sentence_transformers import SentenceTransformer  # type: ignore
+            from sentence_transformers import SentenceTransformer
             return ("sentence-transformers", SentenceTransformer(model_name, device=device))
         except Exception:
             raise
@@ -109,7 +108,7 @@ def embed_query(embedder: Any, backend: str, text: str) -> List[float]:
     raise RuntimeError(f"Unknown backend: {backend}")
 
 
-def extract_source(meta: Dict[str, Any], meta_field: str) -> str:
+def extract_source(meta: Mapping[str, Any], meta_field: str) -> str:
     """
     从 metadata 提取来源字段。不同管道可能叫 source/path/file 等。
     - meta_field 支持 "source|path|file" 的优先级表达：用 '|' 分隔多个候选字段
@@ -171,7 +170,7 @@ def main() -> int:
         return 2
 
     try:
-        import chromadb  # type: ignore
+        import chromadb
     except Exception as e:
         print(f"[eval_retrieval] FAIL: chromadb import failed: {type(e).__name__}: {e}")
         return 2
@@ -208,11 +207,12 @@ def main() -> int:
         expected = [str(x) for x in expected]
 
         qvec = embed_query(embedder, backend, q)
-        res = col.query(query_embeddings=[qvec], n_results=args.k, include=["metadatas", "distances"])
+        query_embeddings: List[Sequence[float]] = [qvec]
+        res = col.query(query_embeddings=query_embeddings, n_results=args.k, include=["metadatas", "distances"])
         metadatas = (res.get("metadatas") or [[]])[0]
         distances = (res.get("distances") or [[]])[0]
 
-        got_sources = []
+        got_sources: List[Dict[str, Any]] = []
         for i, m in enumerate(metadatas):
             m = m or {}
             src = extract_source(m, args.meta_field)

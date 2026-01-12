@@ -46,7 +46,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 
 ALLOWED_INT_EXIT_CODES = {0, 2, 3}

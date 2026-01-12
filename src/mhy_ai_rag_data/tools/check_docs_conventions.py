@@ -24,8 +24,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -63,7 +61,6 @@ def split_front_matter(lines: List[str]) -> Tuple[List[str], List[str]]:
 
 
 def check_one(path: Path) -> Dict[str, Any]:
-    relname = path.name
     stem = path.stem  # filename without extension
     expected_title = f"# {stem}目录："
 
@@ -119,8 +116,15 @@ def main() -> int:
     ensure_dir(out_path.parent)
 
     if not docs_dir.exists():
-        report = {"timestamp": now_iso(), "root": str(root), "docs_dir": str(docs_dir), "overall": "FAIL", "reason": "docs_dir not found", "files": []}
-        out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        missing_report: Dict[str, Any] = {
+            "timestamp": now_iso(),
+            "root": str(root),
+            "docs_dir": str(docs_dir),
+            "overall": "FAIL",
+            "reason": "docs_dir not found",
+            "files": [],
+        }
+        out_path.write_text(json.dumps(missing_report, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"[docs_check] FAIL: docs_dir not found: {docs_dir}  out={out_path}")
         return 2
 
@@ -128,7 +132,7 @@ def main() -> int:
     results = [check_one(p) for p in files]
     bad = [r for r in results if not r.get("ok")]
 
-    report = {
+    report: Dict[str, Any] = {
         "timestamp": now_iso(),
         "root": str(root),
         "docs_dir": str(docs_dir),

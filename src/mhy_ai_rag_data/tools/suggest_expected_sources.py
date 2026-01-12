@@ -29,11 +29,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Sequence
 
 
 def now_iso() -> str:
@@ -114,7 +113,7 @@ def suggest_must_include(query: str, recommended_sources: List[str], hits: List[
         text = " ".join([(h.get("snippet") or "") for h in (hits or [])[:8]])
         cjk = re.findall(r"[\u4e00-\u9fff]+", text)
         joined = "".join(cjk)
-        freq = {}
+        freq: Dict[str, int] = {}
         for i in range(len(joined) - 1):
             bg = joined[i:i+2]
             if bg in stop:
@@ -158,7 +157,7 @@ def rel_to_root_if_possible(root: Path, s: str) -> str:
     return normalize_path_like(x)
 
 
-def pick_meta_source(md: Dict[str, Any], field_priority: List[str]) -> str:
+def pick_meta_source(md: Mapping[str, Any], field_priority: List[str]) -> str:
     for k in field_priority:
         v = md.get(k)
         if isinstance(v, str) and v.strip():
@@ -180,22 +179,31 @@ def embed_query(query: str, backend: str, model_name: str, device: str) -> List[
     if backend == "auto":
         backend = "flagembedding"
         try:
-            import FlagEmbedding  # type: ignore
+            import importlib
+
+            importlib.import_module("FlagEmbedding")
         except Exception:
             backend = "sentence-transformers"
 
+    if backend not in ("flagembedding", "sentence-transformers"):
+        backend = "sentence-transformers"
+
     if backend == "flagembedding":
-        from FlagEmbedding import FlagModel  # type: ignore
+        from FlagEmbedding import FlagModel
+
         model = FlagModel(model_name, query_instruction_for_retrieval=None, use_fp16=("cuda" in device.lower()))
         emb = model.encode([query])
         v = emb[0].tolist() if hasattr(emb[0], "tolist") else list(emb[0])
         return [float(x) for x in v]
+    if backend == "sentence-transformers":
+        from sentence_transformers import SentenceTransformer
 
-    from sentence_transformers import SentenceTransformer  # type: ignore
-    model = SentenceTransformer(model_name, device=device)
-    emb = model.encode([query], normalize_embeddings=True)
-    v = emb[0].tolist() if hasattr(emb[0], "tolist") else list(emb[0])
-    return [float(x) for x in v]
+        model = SentenceTransformer(model_name, device=device)
+        emb = model.encode([query], normalize_embeddings=True)
+        v = emb[0].tolist() if hasattr(emb[0], "tolist") else list(emb[0])
+        return [float(x) for x in v]
+
+    return []
 
 
 def main() -> int:
@@ -233,7 +241,7 @@ def main() -> int:
 
     # chroma
     try:
-        import chromadb  # type: ignore
+        import chromadb
     except Exception as e:
         print(f"[sources] FAIL: chromadb not available: {type(e).__name__}: {e}")
         return 2
@@ -245,8 +253,9 @@ def main() -> int:
         print(f"[sources] FAIL: collection not found: {args.collection} ({type(e).__name__}: {e})")
         return 2
 
+    query_embeddings: List[Sequence[float]] = [qvec]
     res = col.query(
-        query_embeddings=[qvec],
+        query_embeddings=query_embeddings,
         n_results=int(args.k),
         include=["documents", "metadatas", "distances"],
     )
@@ -366,9 +375,7 @@ def main() -> int:
         append_case(apath, case)
         print(f"[sources] appended eval case skeleton to: {apath}")
 
-
-
-        return 0
+    return 0
 
 
 if __name__ == "__main__":

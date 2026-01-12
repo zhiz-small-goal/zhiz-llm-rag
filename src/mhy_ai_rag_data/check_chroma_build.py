@@ -70,7 +70,10 @@ def main(
     expected_from = None
     plan_conf = None
     if plan is not None:
-        expected_chunks = int(plan.get("planned_chunks"))
+        planned = plan.get("planned_chunks")
+        if planned is None:
+            raise ValueError("plan missing planned_chunks")
+        expected_chunks = int(planned)
         expected_from = f"plan:{plan_path}" if plan_path else "plan:chunk_plan.json"
         plan_conf = {
             "include_media_stub": plan.get("include_media_stub"),
@@ -99,7 +102,8 @@ def main(
         add_error(report, "import", f"cannot import chromadb: {e}")
         print(f"[FATAL] cannot import chromadb: {e}")
         print("[HINT] install optional deps: pip install -e .[embed]  (or pip install \".[embed]\" on bash)")
-        return status_to_rc(report, "FAIL")
+        report["status"] = "FAIL"
+        return status_to_rc(report["status"])
 
     client = PersistentClient(path=str(db_path))
     try:
@@ -140,15 +144,16 @@ def main(
             report["status"] = "FAIL"
             add_error(report, "COUNT_MISMATCH", "count mismatch", detail={"expected": expected_chunks, "got": n})
             # Still print a minimal hint for debugging.
-            if plan_conf is not None and isinstance(plan_conf.get("type_breakdown"), dict):
-                tb = plan_conf["type_breakdown"]
-                top = sorted(
-                    ((k, v.get("chunks", 0)) for k, v in tb.items() if isinstance(v, dict)),
-                    key=lambda x: x[1],
-                    reverse=True,
-                )[:8]
-                print(f"plan.type_breakdown.top_chunks={top}")
-                report["metrics"]["plan_type_breakdown_top_chunks"] = top
+            if plan_conf is not None:
+                tb = plan_conf.get("type_breakdown")
+                if isinstance(tb, dict):
+                    top = sorted(
+                        ((k, v.get("chunks", 0)) for k, v in tb.items() if isinstance(v, dict)),
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )[:8]
+                    print(f"plan.type_breakdown.top_chunks={top}")
+                    report["metrics"]["plan_type_breakdown_top_chunks"] = top
             _emit_report(report, json_out=json_out, json_stdout=json_stdout)
             return status_to_rc(report["status"])
     else:

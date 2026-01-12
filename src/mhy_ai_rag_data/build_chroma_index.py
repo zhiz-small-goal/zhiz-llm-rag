@@ -41,7 +41,7 @@ def _require_chromadb():
     """
 
     try:
-        import chromadb  # type: ignore
+        import chromadb
 
         return chromadb
     except Exception as e:  # pragma: no cover
@@ -54,7 +54,7 @@ def _require_sentence_transformers():
     """Import sentence-transformers only when needed."""
 
     try:
-        from sentence_transformers import SentenceTransformer  # type: ignore
+        from sentence_transformers import SentenceTransformer
 
         return SentenceTransformer
     except Exception as e:  # pragma: no cover
@@ -162,8 +162,8 @@ def pack_paragraphs_to_chunks(paras: List[str], conf: ChunkConf) -> List[str]:
                 out.append(c)
                 prev_tail = c[-conf.overlap_chars:]
                 continue
-            merged = (prev_tail + "\n" + c).strip()
-            out.append(merged)
+            merged_text = (prev_tail + "\n" + c).strip()
+            out.append(merged_text)
             prev_tail = c[-conf.overlap_chars:]
         chunks = out
 

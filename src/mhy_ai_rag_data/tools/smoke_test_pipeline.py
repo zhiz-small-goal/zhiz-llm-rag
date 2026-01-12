@@ -93,7 +93,7 @@ def main() -> int:
         import chromadb
 
         client = chromadb.PersistentClient(path=str(db))
-        cols = [c.name for c in client.list_collections()]  # type: ignore
+        cols = [c.name for c in client.list_collections()]
         collection_ok = "rag_chunks" in cols
     except Exception:
         collection_ok = False

@@ -33,7 +33,7 @@ def main() -> int:
     inst_path = Path(args.instance)
 
     try:
-        import jsonschema  # type: ignore
+        import jsonschema
     except Exception as e:  # pragma: no cover
         print("[ERROR] jsonschema is not installed. Install with: pip install -e '.[ci]'")
         print("        underlying:", repr(e))
@@ -48,7 +48,7 @@ def main() -> int:
 
     try:
         jsonschema.validate(instance=inst, schema=schema)
-    except jsonschema.ValidationError as e:  # type: ignore[attr-defined]
+    except jsonschema.ValidationError as e:
         loc = "/".join([str(x) for x in e.path]) if e.path else ""
         print("[FAIL] schema validation failed")
         print("  instance:", str(inst_path))

@@ -31,7 +31,7 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List
 
 from mhy_ai_rag_data.project_paths import find_project_root
 
@@ -212,7 +212,7 @@ def diff_inventory(
         snap_upd = str(snap.get("updated_at") or "")
 
         # content drift: sha/size (updated_at optional)
-        content_diff = []
+        content_diff: List[Dict[str, Any]] = []
         if cur.content_sha256 != snap_sha:
             content_diff.append({"field": "content_sha256", "a": snap_sha, "b": cur.content_sha256})
         if int(cur.size_bytes) != int(snap_size):
@@ -227,7 +227,7 @@ def diff_inventory(
             doc_id_changed.append({"source_uri": k, "a": snap_doc_id, "b": cur.doc_id})
 
         # meta drift
-        meta_diff = []
+        meta_diff: List[Dict[str, Any]] = []
         for field in ["filename", "source_type", "note"]:
             av = str(snap.get(field) or "")
             bv = getattr(cur, field)

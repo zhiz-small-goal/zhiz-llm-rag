@@ -8,12 +8,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Dict, Optional
-
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from chromadb import PersistentClient
+from typing import List, Dict, Optional, Any
 
 from mhy_ai_rag_data.rag_config import CHROMA_DB_PATH, CHROMA_COLLECTION, RAG_TOP_K
 from mhy_ai_rag_data.embeddings_bge_m3 import embed_query

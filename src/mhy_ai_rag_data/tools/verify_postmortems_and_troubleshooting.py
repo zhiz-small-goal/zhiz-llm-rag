@@ -24,6 +24,7 @@ import re
 import argparse
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import Callable
 
 from mhy_ai_rag_data.project_paths import find_project_root
 import os
@@ -324,7 +325,11 @@ def _collect_md_refs_with_lines(text: str, *, check_title_backticks: bool = Fals
                 span_start, span_end = m.start(1), m.end(1)
                 if any(span_start >= s and span_end <= e for s, e in title_spans):
                     continue
-                parts = _split_md_ref(m.group(1), from_backtick=True)
+                parts = _split_md_ref(
+                    m.group(1),
+                    from_backtick=True,
+                    treat_leading_slash_as_repo_root=treat_leading_slash_as_repo_root,
+                )
                 if parts:
                     token, path, suffix = parts
                     out.append(RefHit(
@@ -552,7 +557,7 @@ def main() -> int:
     def _print_grouped_section(
         title: str,
         rows: list[tuple],
-        render: callable,
+        render: Callable[[tuple[object, ...]], str],
     ) -> None:
         """Human-friendly console output.
 

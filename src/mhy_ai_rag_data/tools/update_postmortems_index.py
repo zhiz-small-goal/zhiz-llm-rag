@@ -30,16 +30,19 @@ import argparse
 import difflib
 import json
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 # Optional dependency (present in project deps, but keep tool usable in "no-install" mode)
+yaml: Optional[ModuleType]
 try:
-    import yaml  # type: ignore
+    import yaml as _yaml
+
+    yaml = _yaml
 except Exception:  # pragma: no cover
-    yaml = None  # type: ignore
+    yaml = None
 
 
 BEGIN_MARK = "<!-- AUTO-GENERATED:BEGIN postmortems-index -->"

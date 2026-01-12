@@ -25,7 +25,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 
 
 DEFAULT_PATTERNS = [

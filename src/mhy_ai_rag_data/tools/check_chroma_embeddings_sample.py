@@ -54,7 +54,7 @@ def main() -> int:
         return 2
 
     try:
-        res = coll.get(limit=args.limit, include=["embeddings", "metadatas", "ids"])
+        res = coll.get(limit=args.limit, include=["embeddings", "metadatas"])
     except Exception as e:
         print(f"STATUS: FAIL (cannot get embeddings) - {e}")
         return 2

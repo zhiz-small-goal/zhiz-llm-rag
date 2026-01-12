@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from mhy_ai_rag_data.project_paths import find_project_root
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 from urllib.parse import unquote
 
 from markdown_it import MarkdownIt
@@ -27,9 +26,9 @@ def _split_query_anchor(raw: str) -> tuple[str, str]:
         hint += f"#{a}" if hint == "" else f"#{a}"
     return s.strip(), hint
 
-def _normalize_target(raw_target: str) -> tuple[str, str]:
+def _normalize_target(raw_target: str | int | float) -> tuple[str, str]:
     """Decode URL encoding + normalize slashes + strip query/anchor."""
-    s = unquote(raw_target.strip()).replace("\\", "/")
+    s = unquote(str(raw_target).strip()).replace("\\", "/")
     clean, hint = _split_query_anchor(s)
     # drop surrounding angle brackets <...> if present
     if clean.startswith("<") and clean.endswith(">"):

@@ -26,7 +26,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Mapping, Sequence
 
 
 def now_iso() -> str:
@@ -38,7 +38,7 @@ def stable_id_from_query(query: str) -> str:
     return f"case_{h}"
 
 
-def pick_meta_source(md: Dict[str, Any], field_priority: List[str]) -> str:
+def pick_meta_source(md: Mapping[str, Any], field_priority: List[str]) -> str:
     for k in field_priority:
         v = md.get(k)
         if isinstance(v, str) and v.strip():
@@ -169,13 +169,15 @@ def main() -> int:
     if backend == "auto":
         backend = "flagembedding"
         try:
-            import FlagEmbedding  # type: ignore
+            import importlib
+
+            importlib.import_module("FlagEmbedding")
         except Exception:
             backend = "sentence-transformers"
 
     if backend == "flagembedding":
         try:
-            from FlagEmbedding import FlagModel  # type: ignore
+            from FlagEmbedding import FlagModel
         except Exception as e:
             print(f"[suggest] FAIL: FlagEmbedding not available: {type(e).__name__}: {e}")
             return 2
@@ -184,7 +186,7 @@ def main() -> int:
         query_vec = emb[0].tolist() if hasattr(emb[0], "tolist") else list(emb[0])
     else:
         try:
-            from sentence_transformers import SentenceTransformer  # type: ignore
+            from sentence_transformers import SentenceTransformer
         except Exception as e:
             print(f"[suggest] FAIL: sentence_transformers not available: {type(e).__name__}: {e}")
             return 2
@@ -194,7 +196,7 @@ def main() -> int:
 
     # 2) query chroma
     try:
-        import chromadb  # type: ignore
+        import chromadb
     except Exception as e:
         print(f"[suggest] FAIL: chromadb not available: {type(e).__name__}: {e}")
         return 2
@@ -206,8 +208,9 @@ def main() -> int:
         print(f"[suggest] FAIL: collection not found: {args.collection}  ({type(e).__name__}: {e})")
         return 2
 
+    query_embeddings: List[Sequence[float]] = [query_vec]
     res = col.query(
-        query_embeddings=[query_vec],
+        query_embeddings=query_embeddings,
         n_results=int(args.k),
         include=["documents", "metadatas", "distances"],
     )

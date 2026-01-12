@@ -20,8 +20,6 @@ check_llm_http.py
 from __future__ import annotations
 
 import argparse
-import json
-import sys
 import time
 
 from mhy_ai_rag_data.tools.llm_http_client import resolve_trust_env, get_session

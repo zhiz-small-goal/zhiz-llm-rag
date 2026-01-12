@@ -21,23 +21,24 @@ run_eval_rag.py
 from __future__ import annotations
 
 import argparse
-
-try:
-    # 兼容两种运行方式：python -m tools.run_eval_rag 以及 python tools/run_eval_rag.py
-    from mhy_ai_rag_data.tools.llm_http_client import chat_completions, extract_chat_content, resolve_model_id, LLMHTTPError
-except Exception:  # noqa: BLE001
-    from llm_http_client import chat_completions, extract_chat_content, resolve_model_id, LLMHTTPError  # type: ignore
+import importlib
 import json
-import re
 import sys
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-import platform
 import traceback
+from pathlib import Path
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from mhy_ai_rag_data.tools.report_stream import StreamWriter, default_run_id, safe_truncate
+
+# 兼容两种运行方式：python -m tools.run_eval_rag 以及 python tools/run_eval_rag.py
+try:
+    _llm_http_client = importlib.import_module("mhy_ai_rag_data.tools.llm_http_client")
+except Exception:  # noqa: BLE001
+    _llm_http_client = importlib.import_module("llm_http_client")
+chat_completions = _llm_http_client.chat_completions
+resolve_model_id = _llm_http_client.resolve_model_id
+LLMHTTPError = _llm_http_client.LLMHTTPError
 
 
 def now_iso() -> str:
@@ -63,14 +64,14 @@ def load_embedder(backend: str, model_name: str, device: str) -> Any:
     backend = backend.lower().strip()
     if backend in ("auto", "flagembedding"):
         try:
-            from FlagEmbedding import FlagModel  # type: ignore
+            from FlagEmbedding import FlagModel
             return ("flagembedding", FlagModel(model_name, device=device))
-        except Exception as e:
+        except Exception:
             if backend == "flagembedding":
                 raise
     if backend in ("auto", "sentence-transformers", "sentence_transformers"):
         try:
-            from sentence_transformers import SentenceTransformer  # type: ignore
+            from sentence_transformers import SentenceTransformer
             return ("sentence-transformers", SentenceTransformer(model_name, device=device))
         except Exception:
             raise
@@ -87,7 +88,7 @@ def embed_query(embedder: Any, backend: str, text: str) -> List[float]:
     raise RuntimeError(f"Unknown backend: {backend}")
 
 
-def extract_source(meta: Dict[str, Any], meta_field: str) -> str:
+def extract_source(meta: Mapping[str, Any], meta_field: str) -> str:
     for key in [k.strip() for k in meta_field.split("|") if k.strip()]:
         if key in meta and meta[key]:
             return str(meta[key])
@@ -236,7 +237,7 @@ def main() -> int:
         return _fail(2, f"db not found: {db_path}")
 
     try:
-        import chromadb  # type: ignore
+        import chromadb
     except Exception as e:
         return _fail(2, f"chromadb import failed: {type(e).__name__}: {e}", exc=e)
 
@@ -298,7 +299,8 @@ def main() -> int:
             case_t0 = time.time()
 
             qvec = embed_query(embedder, backend, q)
-            res = col.query(query_embeddings=[qvec], n_results=args.k, include=["documents", "metadatas", "distances"])
+            query_embeddings: List[Sequence[float]] = [qvec]
+            res = col.query(query_embeddings=query_embeddings, n_results=args.k, include=["documents", "metadatas", "distances"])
             docs = (res.get("documents") or [[]])[0]
             metas = (res.get("metadatas") or [[]])[0]
             dists = (res.get("distances") or [[]])[0]

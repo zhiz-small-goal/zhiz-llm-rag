@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 REQ_TOP = ["schema_version", "step", "ts", "status", "inputs", "metrics", "errors"]
 ALLOWED_STATUS = {"PASS", "FAIL", "ERROR", "INFO", "WARN"}
@@ -49,7 +49,7 @@ def main() -> int:
 
     if args.schema:
         try:
-            import jsonschema  # type: ignore
+            import jsonschema
         except Exception as e:
             print("[ERROR] jsonschema not installed; cannot use --schema")
             print("        underlying:", repr(e))
@@ -58,7 +58,7 @@ def main() -> int:
         try:
             schema = _load_json(Path(args.schema))
             jsonschema.validate(instance=obj, schema=schema)
-        except jsonschema.ValidationError as e:  # type: ignore[attr-defined]
+        except jsonschema.ValidationError as e:
             loc = "/".join([str(x) for x in e.path]) if e.path else ""
             print("[FAIL] jsonschema validation failed")
             if loc:

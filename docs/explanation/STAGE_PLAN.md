@@ -1,5 +1,51 @@
 ﻿# STAGE_PLAN
 
+### [015] 2026-01-12 修复 Ruff/mypy 报错并补齐 stub 依赖
+
+日期：2026-01-12  
+状态：已完成  
+
+**变更类型：**  
+- Bug 修复
+
+**目标：**  
+- 清理 Ruff/mypy 报错，恢复 ci gate 通过  
+- 为 requests/PyYAML 补齐 stub 依赖以消除 import-untyped  
+
+**触发原因：**  
+- 新增 Ruff/mypy 门禁后，旧代码在未使用导入、类型不明确与可达性方面触发 FAIL  
+
+**涉及文件：**  
+- pyproject.toml  
+- src/mhy_ai_rag_data/tools/suggest_expected_sources.py  
+- src/mhy_ai_rag_data/tools/update_postmortems_index.py  
+- src/mhy_ai_rag_data/tools/*  
+- src/mhy_ai_rag_data/*  
+- tools/*  
+
+**改动概览：**  
+- pyproject.toml  
+  - `[project.optional-dependencies].ci` 增加 `types-requests` 与 `types-PyYAML`  
+- src/mhy_ai_rag_data/tools/suggest_expected_sources.py  
+  - `main()` 确保所有路径返回退出码 0  
+- src/mhy_ai_rag_data/tools/update_postmortems_index.py  
+  - 可选依赖 `yaml` 使用 `Optional[ModuleType]` 以兼容未安装场景  
+- src/mhy_ai_rag_data/tools/* 与 src/mhy_ai_rag_data/*  
+  - 修复 ruff/mypy 报错（未使用导入、重复定义、类型标注与可达性）  
+
+**关键点说明：**  
+- 仅处理静态检查报错，不引入功能行为变化  
+- 仍保留 “无依赖可运行” 的可选导入策略  
+
+**测试验证：**  
+- [ ] `pip install -e ".[ci]"`  
+- [ ] `python tools/check_ruff.py --root .`  
+- [ ] `python tools/check_mypy.py --root .`  
+- [ ] `rag-gate --profile ci --root .`  
+
+**后续 TODO：**  
+- 无
+
 ### [014] 2026-01-12 新增 Ruff/mypy 门禁（保留可选开关）
 
 日期：2026-01-12  
@@ -1089,4 +1135,5 @@
 **后续 TODO：**  
 
 - 无
+
 

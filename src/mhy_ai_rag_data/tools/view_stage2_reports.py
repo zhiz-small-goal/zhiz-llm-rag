@@ -129,6 +129,9 @@ def main() -> int:
             print(" - " + m)
         return 2
 
+    assert cases is not None
+    assert val is not None
+
     id2line = build_id_to_line(cases)
 
     lines: List[str] = []

@@ -21,14 +21,11 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
-import json
-import os
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple, Dict, Set
+from typing import Iterable, List, Optional, Tuple, Dict
 
 
 DEFAULTS = {

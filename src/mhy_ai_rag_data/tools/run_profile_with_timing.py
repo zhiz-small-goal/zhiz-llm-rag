@@ -23,16 +23,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Sequence
 
 
-def _run(cmd: List[str], cwd: Path) -> Tuple[int, float]:
+def _run(cmd: Sequence[str], cwd: Path) -> Tuple[int, float]:
     t0 = time.perf_counter()
     p = subprocess.run(cmd, cwd=str(cwd))
     dt = time.perf_counter() - t0

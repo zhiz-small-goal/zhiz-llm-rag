@@ -31,7 +31,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from mhy_ai_rag_data.tools.reporting import build_base, add_error, status_to_rc, write_report
 

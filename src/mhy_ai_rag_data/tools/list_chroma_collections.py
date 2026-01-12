@@ -36,7 +36,7 @@ def main() -> int:
 
     try:
         client = PersistentClient(path=str(db))
-        cols = client.list_collections()  # type: ignore
+        cols = client.list_collections()
     except Exception as e:
         print(f"STATUS: FAIL (cannot open db) - {e}")
         return 2

@@ -94,7 +94,7 @@ def _run_step(repo: Path, step_id: str, argv_tail: List[str], logs_dir: Path) ->
     # Prefer current interpreter (more deterministic in venv/CI)
     argv[0] = os.environ.get("PYTHON", "") or shutil.which("python") or "python"
     try:
-        argv[0] = os.environ.get("PYTHON", "") or os.environ.get("PY") or os.sys.executable
+        argv[0] = os.environ.get("PYTHON", "") or os.environ.get("PY") or sys.executable
     except Exception:
         pass
     argv = [argv[0]] + argv_tail
@@ -310,7 +310,7 @@ def _overall_rc(results: List[StepResult]) -> Tuple[str, int]:
 def _validate_self_schema(repo: Path, ssot: Dict[str, Any], gate_report_path: Path) -> Optional[Dict[str, Any]]:
     """Return warning object on validation failure; None on success."""
     try:
-        import jsonschema  # type: ignore
+        import jsonschema
     except Exception as e:
         return {"code": "schema_validator_missing", "message": "jsonschema not installed; skip gate_report schema validation", "detail": repr(e)}
 
@@ -370,8 +370,9 @@ def main() -> int:
             continue
 
         argv_tail = []
-        if isinstance(step_cfg, dict) and isinstance(step_cfg.get("argv"), list):
-            argv_tail = [str(x) for x in step_cfg.get("argv")]
+        argv_cfg = step_cfg.get("argv") if isinstance(step_cfg, dict) else None
+        if isinstance(step_cfg, dict) and isinstance(argv_cfg, list):
+            argv_tail = [str(x) for x in argv_cfg]
         else:
             # allow step id to be directly an argv list in future
             warnings.append({"code": "unknown_step", "message": f"unknown step_id in profile: {step_id}"})

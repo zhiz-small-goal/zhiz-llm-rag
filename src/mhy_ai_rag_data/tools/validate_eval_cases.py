@@ -20,10 +20,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set
 
 
 def now_iso() -> str:

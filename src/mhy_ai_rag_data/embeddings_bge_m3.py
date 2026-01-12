@@ -4,8 +4,6 @@
 注意：本模块假定已经通过 FlagEmbedding 安装了 BGEM3FlagModel。
 """
 
-from typing import List
-
 from FlagEmbedding import BGEM3FlagModel
 
 from mhy_ai_rag_data.rag_config import EMBED_MODEL_NAME, EMBED_DEVICE, EMBED_BATCH

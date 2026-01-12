@@ -19,7 +19,6 @@ import datetime as _dt
 import json
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
@@ -430,7 +429,7 @@ def scan_absolute_paths(repo: Path, cfg: dict, files: Iterable[Path]) -> Optiona
             title="Absolute-path regex compilation failed (scan skipped)",
             facts=bad,
             inference=["Your local file might have been edited or regex patterns are incompatible; v2 uses simpler defaults."],
-            locations=[f"tools/check_public_release_hygiene.py:1:1"],
+            locations=["tools/check_public_release_hygiene.py:1:1"],
             remediation=["Replace absolute_path_regexes with simpler patterns, or use v2 script as provided."],
         )
 
@@ -476,7 +475,7 @@ def scan_secrets(repo: Path, cfg: dict, files: Iterable[Path]) -> Optional[Findi
             title="Secret regex compilation failed (scan skipped)",
             facts=bad,
             inference=[],
-            locations=[f"tools/check_public_release_hygiene.py:1:1"],
+            locations=["tools/check_public_release_hygiene.py:1:1"],
             remediation=["Use simpler secret patterns or v2 script defaults."],
         )
 

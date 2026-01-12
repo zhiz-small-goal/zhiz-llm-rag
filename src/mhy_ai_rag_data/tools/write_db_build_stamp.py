@@ -74,7 +74,7 @@ def _infer_planned_chunks(plan_obj: Any) -> Optional[int]:
 
 def _maybe_get_collection_count(db: Path, collection: str) -> Tuple[Optional[int], Optional[str]]:
     try:
-        import chromadb  # type: ignore
+        import chromadb
     except Exception as e:  # noqa: BLE001
         return None, f"chromadb_import_failed: {type(e).__name__}: {e}"
 

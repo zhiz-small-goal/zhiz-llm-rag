@@ -19,17 +19,19 @@ Notes:
 from __future__ import annotations
 
 import argparse
-
-try:
-    # 兼容两种运行方式：python -m tools.verify_stage1_pipeline 以及 python tools/verify_stage1_pipeline.py
-    from mhy_ai_rag_data.tools.llm_http_client import resolve_trust_env, get_session
-except Exception:  # noqa: BLE001
-    from llm_http_client import resolve_trust_env, get_session  # type: ignore
+import importlib
 import json
-import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
+
+# 兼容两种运行方式：python -m tools.verify_stage1_pipeline 以及 python tools/verify_stage1_pipeline.py
+try:
+    _llm_http_client = importlib.import_module("mhy_ai_rag_data.tools.llm_http_client")
+except Exception:  # noqa: BLE001
+    _llm_http_client = importlib.import_module("llm_http_client")
+resolve_trust_env = _llm_http_client.resolve_trust_env
+get_session = _llm_http_client.get_session
 
 
 def _now_iso() -> str:
@@ -95,7 +97,7 @@ def check_chroma_counts(root: Path, db: str, collection: str) -> Tuple[bool, Dic
         return False, {"enabled": False, "reason": f"db path not found: {db_path}"}
 
     try:
-        import chromadb  # type: ignore
+        import chromadb
     except Exception as e:
         return False, {"enabled": False, "reason": f"chromadb import failed: {type(e).__name__}: {e}"}
 
