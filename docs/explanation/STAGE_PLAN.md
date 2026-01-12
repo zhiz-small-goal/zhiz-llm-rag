@@ -1,40 +1,117 @@
 ﻿# STAGE_PLAN
 
-### [016] 2026-01-12 Gate report schema ?? per-finding ??
+### [018] 2026-01-12 view_gate_report 文档补齐与语法修复
 
-???2026-01-12  
-??????  
+日期：2026-01-12  
+状态：已完成  
 
-**?????**  
-- ??/?????
+**变更类型：**  
+- Bug 修复
 
-**???**  
-- gate_report schema ???? finding ?????id/category/severity/loc/fix/owner/status?
-- ?? gate ??? report ??? findings ??????
+**目标：**  
+- 修复 view_gate_report 统计输出的语法错误，确保脚本可运行
+- 新增 view_gate_report 使用说明文档
 
-**?????**  
-- ??? S6-2?schema ??? per-finding ?????????????????
+**触发原因：**  
+- Pylance 报错提示括号未关闭，脚本无法通过解析
 
-**?????**  
+**涉及文件：**  
+- src/mhy_ai_rag_data/tools/view_gate_report.py  
+- tools/view_gate_report_README.md  
+- docs/explanation/STAGE_PLAN.md  
+
+**改动概览：**  
+- src/mhy_ai_rag_data/tools/view_gate_report.py  
+  - 修复 counts 输出的 format 关键字语法错误  
+- tools/view_gate_report_README.md  
+  - 新增脚本说明、参数与输出约定  
+
+**关键点说明：**  
+- 输出格式不变，仅修复语法问题  
+- README 不改变工具行为  
+
+**测试验证：**  
+- [ ] `python tools/view_gate_report.py --root . --md-out data_processed/build_reports/gate_report.md`  
+- [ ] `python tools/view_gate_report.py -h`  
+
+**后续 TODO：**  
+- 无
+
+### [017] 2026-01-12 Gate 报告人类可读摘要约定
+
+日期：2026-01-12  
+状态：已完成  
+
+**变更类型：**  
+- 功能新增
+
+**目标：**  
+- 约定 gate_report 人类可读摘要生成方式与落盘路径
+- 提供 view_gate_report 工具用于从 gate_report.json 生成 Markdown 摘要
+
+**触发原因：**  
+- 审查项 S6-1：gate 产物缺少人类可读报告约定
+
+**涉及文件：**  
+- src/mhy_ai_rag_data/tools/view_gate_report.py  
+- tools/view_gate_report.py  
+- tools/gate_README.md  
+- docs/howto/ci_pr_gates.md  
+- docs/explanation/STAGE_PLAN.md  
+
+**改动概览：**  
+- src/mhy_ai_rag_data/tools/view_gate_report.py  
+  - 新增 gate_report 人类可读摘要生成脚本（支持 --md-out）  
+- tools/view_gate_report.py  
+  - tools 侧兼容入口转发至 src  
+- tools/gate_README.md / docs/howto/ci_pr_gates.md  
+  - 增加人类可读报告约定与示例命令  
+
+**关键点说明：**  
+- gate_report.json 仍为主契约；摘要仅从 JSON 派生  
+- 默认不改变 gate runner 的产物与退出码  
+
+**测试验证：**  
+- [ ] `python tools/view_gate_report.py --root . --md-out data_processed/build_reports/gate_report.md`  
+- [ ] `python tools/gate.py --profile ci --root .`，确认 gate_report.json 可解析  
+
+**后续 TODO：**  
+- 无
+### [016] 2026-01-12 Gate report schema 补齐 per-finding 字段
+
+日期：2026-01-12  
+状态：已完成  
+
+**变更类型：**  
+- 契约/可读性增强
+
+**目标：**  
+- gate_report schema 增加统一 finding 字段定义（id/category/severity/loc/fix/owner/status）
+- 支持 gate 步骤在 report 中附带 findings 列表（可选）
+
+**触发原因：**  
+- 审查项 S6-2：schema 未定义 per-finding 统一字段，影响报告可读性与可汇总性
+
+**涉及文件：**  
 - schemas/gate_report_v1.schema.json  
 - docs/explanation/STAGE_PLAN.md  
 
-**?????**  
+**改动概览：**  
 - schemas/gate_report_v1.schema.json  
-  - ?? `finding` ????? results ?????? `findings` ??  
+  - 新增 `finding` 定义，并在 results 项中增加可选 `findings` 数组  
 - docs/explanation/STAGE_PLAN.md  
-  - ????????  
+  - 追加本次变更记录  
 
-**??????**  
-- ??? schema??? gate_report ???  
-- `findings` ???????? gate runner ????  
+**关键点说明：**  
+- 仅扩展 schema，旧版 gate_report 仍兼容  
+- `findings` 为可选字段，现有 gate runner 行为不变  
 
-**?????**  
+**测试验证：**  
 - [ ] `python tools/schema_validate.py --schema schemas/gate_report_v1.schema.json --instance data_processed/build_reports/gate_report.json`  
-- [ ] `python tools/gate.py --profile ci --root .`??? gate_report ???? schema ??  
+- [ ] `python tools/gate.py --profile ci --root .`，确认 gate_report 仍可通过 schema 校验  
 
-**?? TODO?**  
-- ?
+**后续 TODO：**  
+- 无
 ### [015] 2026-01-12 修复 Ruff/mypy 报错并补齐 stub 依赖
 
 日期：2026-01-12  

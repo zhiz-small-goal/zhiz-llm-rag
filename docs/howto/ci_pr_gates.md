@@ -1,6 +1,6 @@
 ---
 title: How-to：PR/CI Lite 门禁（快速回归）
-version: v1.2
+version: v1.3
 last_updated: 2026-01-12
 ---
 
@@ -40,11 +40,16 @@ python tools/gate.py --profile ci --root .
 python tools/gate.py --profile release --root .
 ```
 
+人类可读报告（可选）：
+- 运行 `python tools/view_gate_report.py --root . --md-out data_processed/build_reports/gate_report.md`
+- 产物：`data_processed/build_reports/gate_report.md`（从 `gate_report.json` 派生）
+
 - profile=fast：不含 public release hygiene / policy（更快）
 - profile=ci：CI 默认（包含 policy_conftest；Linux runner 会安装 conftest）
 
 进一步说明：
 - [Gate runner 使用说明](../../tools/gate_README.md)
+- [view_gate_report 使用说明](../../tools/view_gate_report_README.md)
 - [pSSOT（门禁顺序/输出/inputs）](../reference/reference.yaml)
 - [Policy（Conftest/Rego）](../../policy/README.md)
 

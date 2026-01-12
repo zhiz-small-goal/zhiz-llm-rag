@@ -1,6 +1,6 @@
 ---
 title: gate.py / rag-gate 使用说明（单入口 Gate：Schema + Policy + 可审计报告）
-version: v1.1
+version: v1.2
 last_updated: 2026-01-12
 ---
 
@@ -20,6 +20,7 @@ last_updated: 2026-01-12
 - [执行流程](#执行流程)
 - [退出码与判定](#退出码与判定)
 - [产物与副作用](#产物与副作用)
+- [人类可读报告](#人类可读报告)
 - [常见失败与处理](#常见失败与处理)
 - [关联文档](#关联文档)
 
@@ -125,8 +126,19 @@ Gate runner 统一遵循项目退出码契约：
 - 日志目录：`data_processed/build_reports/gate_logs/`
   - 例如：`pytest.log`、`check_tools_layout.log`、`policy_conftest.log`
 - repo health 报告（release profile）：`data_processed/build_reports/repo_health_report.json`
+- 人类可读摘要（可选）：`data_processed/build_reports/gate_report.md`
+  - 由 `python tools/view_gate_report.py --root . --md-out data_processed/build_reports/gate_report.md` 生成
 - 默认不修改仓库源文件；但会创建/更新上述产物目录。
 
+
+## 人类可读报告
+
+- `gate_report.json` 为机器可读主产物，人类可读摘要从 JSON 派生。
+- 生成人类可读摘要（Markdown）：
+  ```bash
+  python tools/view_gate_report.py --root . --md-out data_processed/build_reports/gate_report.md
+  ```
+- 完成后，可直接打开 `data_processed/build_reports/gate_report.md` 快速扫描 FAIL/ERROR step 与 log 指向。
 
 ## 常见失败与处理
 
@@ -161,6 +173,7 @@ Gate runner 统一遵循项目退出码契约：
 ## 关联文档
 
 - [PR/CI Lite 门禁主线](../docs/howto/ci_pr_gates.md)
+- [view_gate_report 使用说明](view_gate_report_README.md)
 - [参考与契约（退出码/报告契约/SSOT）](../docs/reference/REFERENCE.md)
 - [SSOT（机器可读）](../docs/reference/reference.yaml)
 - [Gate report schema](../schemas/gate_report_v1.schema.json)
