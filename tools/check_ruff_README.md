@@ -1,6 +1,6 @@
 ---
 title: check_ruff.py 使用说明
-version: v1.1
+version: v1.2
 last_updated: 2026-01-12
 ---
 
@@ -26,6 +26,7 @@ last_updated: 2026-01-12
 ```bash
 python tools/check_ruff.py --root .
 python tools/check_ruff.py --root . --format
+python tools/check_ruff.py --root . --format src/mhy_ai_rag_data/rag_config.py
 ```
 
 ## 参数说明
@@ -33,6 +34,7 @@ python tools/check_ruff.py --root . --format
 - `--format` / `--no-format`：启用/关闭 `ruff format --check`
 - `--output-format`：Ruff lint 输出格式（默认 `concise`）
 - `--config`：可选配置路径（默认 Ruff 自动发现配置文件）
+- `files...`：可选文件列表（如 pre-commit 传入的暂存文件）
 
 ## 环境变量开关
 - `RAG_RUFF_FORMAT=1`：当未指定 CLI 开关时，启用 `ruff format --check`

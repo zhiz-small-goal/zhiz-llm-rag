@@ -63,6 +63,7 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument("--no-format", dest="format_check", action="store_false", help="Disable ruff format --check")
     ap.add_argument("--output-format", default="concise", help="Ruff lint output format (default: concise)")
     ap.add_argument("--config", default="", help="Optional config path (default: auto-discovery)")
+    ap.add_argument("files", nargs="*", help="Optional file list (e.g., from pre-commit)")
     ap.set_defaults(format_check=None)
     args = ap.parse_args(argv)
 
@@ -76,8 +77,9 @@ def main(argv: List[str] | None = None) -> int:
     else:
         format_check = bool(args.format_check)
 
+    targets = args.files or ["."]
     base = [sys.executable, "-m", "ruff"]
-    lint_cmd = base + ["check", "."]
+    lint_cmd = base + ["check", *targets]
     if args.output_format:
         lint_cmd += ["--output-format", str(args.output_format)]
     if args.config:
@@ -88,7 +90,7 @@ def main(argv: List[str] | None = None) -> int:
 
     format_rc = 0
     if format_check:
-        fmt_cmd = base + ["format", "--check", "."]
+        fmt_cmd = base + ["format", "--check", *targets]
         if args.config:
             fmt_cmd += ["--config", str(args.config)]
         print("[check_ruff] format:", " ".join(fmt_cmd))
