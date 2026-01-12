@@ -1,6 +1,21 @@
+---
+title: 文档导航（Diátaxis）
+version: v1.0
+last_updated: 2026-01-12
+---
+
 # 文档导航（Diátaxis）
 
 > 目标：按“用途”而不是按“文件名”组织文档，降低重复与漂移，提升可维护性与可操作性。
+
+## 目录
+- [Tutorials（教程：从 0 到 1）](#tutorials教程从-0-到-1)
+- [How-to（操作指南：如何完成具体任务）](#how-to操作指南如何完成具体任务)
+- [Reference（参考：契约/参数/格式）](#reference参考契约参数格式)
+- [Explanation（解释：架构/取舍/演进）](#explanation解释架构取舍演进)
+- [Project Meta（开源与治理）](#project-meta开源与治理)
+- [Postmortems（复盘：事故记录与证据链）](#postmortems复盘事故记录与证据链)
+- [Archive（归档：仅重定向，不再维护）](#archive归档仅重定向不再维护)
 
 ## Tutorials（教程：从 0 到 1）
 - [Getting Started：跑通 Stage-1 + PR/CI Lite 回归](tutorials/01_getting_started.md)
