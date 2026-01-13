@@ -166,7 +166,6 @@ def _add_blank_lines_after_title(
 
 
 def check_one(path: Path, fix: bool = False) -> Dict[str, Any]:
-    stem = path.stem  # filename without extension
     expected_title = "# <H1>"
 
     raw = path.read_text(encoding="utf-8", errors="replace").splitlines(True)  # keep line endings
