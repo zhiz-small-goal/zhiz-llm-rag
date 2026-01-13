@@ -1,3 +1,9 @@
+---
+title: Getting Started（教程）：跑通 Stage-1 + PR/CI Lite 回归
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # Getting Started（教程）：跑通 Stage-1 + PR/CI Lite 回归
 
 > 目标：在不下载大模型、不构建 Chroma 的前提下，跑通一次可复现的 PASS 基线（Golden Path）。

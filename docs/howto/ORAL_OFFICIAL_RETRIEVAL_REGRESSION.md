@@ -1,3 +1,9 @@
+---
+title: How-to：建立“口语 vs 官方术语”检索回归（防止 topK 漏召回）
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # How-to：建立“口语 vs 官方术语”检索回归（防止 topK 漏召回）
 
 > 适用日期：2026-01-05  

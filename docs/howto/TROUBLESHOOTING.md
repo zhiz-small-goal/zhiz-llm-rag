@@ -1,3 +1,9 @@
+---
+title: 排障手册（Runbook）
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # 排障手册（Runbook）
 
 > 目标：把故障定位从“感觉不对”变成“分层检查 + 可复核证据”。  

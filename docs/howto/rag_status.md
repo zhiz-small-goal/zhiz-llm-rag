@@ -1,3 +1,9 @@
+---
+title: rag-status 使用说明
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # rag-status 使用说明
 
 - [目标](#目标)

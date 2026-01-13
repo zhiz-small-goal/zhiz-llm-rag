@@ -1,3 +1,9 @@
+---
+title: 依赖策略（Dependency Policy）
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # 依赖策略（Dependency Policy）
 
 ## 目录

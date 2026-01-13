@@ -1,3 +1,9 @@
+---
+title: Stage-2 评测契约：eval_cases.jsonl 与 eval_retrieval_report.json
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # Stage-2 评测契约：`eval_cases.jsonl` 与 `eval_retrieval_report.json`
 
 > 适用日期：2026-01-05  

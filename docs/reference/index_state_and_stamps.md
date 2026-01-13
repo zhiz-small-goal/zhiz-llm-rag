@@ -1,3 +1,9 @@
+---
+title: Index State 与 Stamps 契约
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # Index State 与 Stamps 契约
 
 > 目的：把“增量同步状态（index_state）”与“写库完成戳（stamps）”写成可核验契约，避免把 DB 目录 mtime 当成上游输入，从而降低 `rag-status` 的误报与漂移。

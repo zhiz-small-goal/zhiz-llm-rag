@@ -1,3 +1,9 @@
+---
+title: OPERATION GUIDE（运行手册）
+version: v1.0
+last_updated: 2026-01-13
+---
+
 # OPERATION_GUIDE目录：
 
 - [OPERATION\_GUIDE目录：](#operation_guide目录)
