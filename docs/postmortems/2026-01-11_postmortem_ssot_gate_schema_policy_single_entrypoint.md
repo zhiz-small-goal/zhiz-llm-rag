@@ -12,6 +12,7 @@ scope:
 
 # Postmortem｜门禁治理架构：SSOT → Gate 单入口 → JSON Schema →（可选）Conftest Policy
 
+
 ## 目录（TOC）
 - [0) 元信息（YAML）](#0-元信息yaml)
 - [1) 总结（Summary）](#1-总结summary)

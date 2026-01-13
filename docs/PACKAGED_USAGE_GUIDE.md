@@ -1,5 +1,6 @@
 # PACKAGED_USAGE_GUIDE（已退役并归档）
 
+
 本文件已退役并迁移到归档区：
 
 - 📦 归档位置：[`docs/archive/PACKAGED_USAGE_GUIDE.md`](archive/PACKAGED_USAGE_GUIDE.md)

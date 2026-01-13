@@ -6,6 +6,7 @@ last_updated: 2026-01-11
 
 # 完全离线运行 Policy Gate（Vendoring conftest / 内部镜像源）
 
+
 > 目标：在**无外网**（air-gapped / 内网隔离）环境里仍能运行 `python tools/gate.py --profile ci` 的 policy 步骤。
 >
 > 关键原则：gate runner **不做任何联网行为**；所有依赖由“预置/镜像/内网制品库”提供。

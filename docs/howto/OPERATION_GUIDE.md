@@ -6,6 +6,7 @@ last_updated: 2026-01-13
 
 # OPERATION_GUIDE目录：
 
+
 - [OPERATION\_GUIDE目录：](#operation_guide目录)
   - [1) 详细指导（按 Step 组织）](#1-详细指导按-step-组织)
     - [Step 0：环境与依赖安装（core vs embed）——避免在 Python 3.13 及以上误装 Stage-2](#step-0环境与依赖安装core-vs-embed避免在-python-313-及以上误装-stage-2)

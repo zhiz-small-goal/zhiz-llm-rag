@@ -6,6 +6,7 @@ last_updated: 2026-01-13
 
 # Stage-2 评测契约：`eval_cases.jsonl` 与 `eval_retrieval_report.json`
 
+
 > 适用日期：2026-01-05  
 > 目标：把 Stage-2 的输入/输出定义成“可版本化契约”，支持口语 vs 官方术语的分桶回归与可解释证据落盘。
 

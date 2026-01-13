@@ -6,6 +6,7 @@ last_updated: 2026-01-13
 
 # 依赖策略（Dependency Policy）
 
+
 ## 目录
 - [依赖策略总览](#deps-policy-overview)
 - [默认安装范围](#default-install-scope)

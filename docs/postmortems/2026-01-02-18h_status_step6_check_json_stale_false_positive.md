@@ -1,5 +1,6 @@
 # 2026-01-02-18h_status_step6_check_json_stale_false_positive.md目录：
 
+
 > 注：本文记录的当时环境可能包含 Python 3.10；当前仓库已提升基线为 Python >= 3.11（issue1 方案B），以降低 pyproject/TOML 解析类故障。
 - [2026-01-02-18h_status_step6_check_json_stale_false_positive.md目录：](#2026-01-02-18h_status_step6_check_json_stale_false_positivemd目录)
   - [0) 元信息](#0-元信息)

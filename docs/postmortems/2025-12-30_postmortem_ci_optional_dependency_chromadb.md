@@ -1,5 +1,6 @@
 # 2025-12-30_postmortem_ci_optional_dependency_chromadb.md目录：
 
+
 > 注：本文记录的当时环境可能包含 Python 3.10；当前仓库已提升基线为 Python >= 3.11（issue1 方案B），以降低 pyproject/TOML 解析类故障。
 - [0) 元信息](#0-元信息)
   - [0.1 基本信息](#01-基本信息)

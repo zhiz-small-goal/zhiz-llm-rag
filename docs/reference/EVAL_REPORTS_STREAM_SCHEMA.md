@@ -7,6 +7,7 @@ timezone: America/Los_Angeles
 
 # Eval 报告流式事件（stream）schema
 
+
 > 目标：为长任务提供可增量消费的“事件流”工件（jsonl/json-seq），用于实时观测与事后审计。该工件是旁路，不替代最终汇总报告 JSON。
 
 ## 目录

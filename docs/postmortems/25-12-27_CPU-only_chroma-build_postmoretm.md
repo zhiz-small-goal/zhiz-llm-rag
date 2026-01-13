@@ -1,5 +1,6 @@
 [关键词] CPU-only构建， PyTorch,  cuda:0, CUDA wheel, chroma_db, check计数漂移
 
+
 [阶段] chunks / embedding /chroma
 
 [工具] verify_torch_cuda.py， verify_sentence_transformer_cuda.py

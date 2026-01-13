@@ -1,4 +1,6 @@
 # 2025-12-30_postmortem_pip_embed_py314_numpy_meson_fail.md目录：
+
+
 - [2025-12-30\_postmortem\_pip\_embed\_py314\_numpy\_meson\_fail.md目录：](#2025-12-30_postmortem_pip_embed_py314_numpy_meson_failmd目录)
   - [0) 元信息](#0-元信息)
   - [1) 现象与触发（拆分）](#1-现象与触发拆分)

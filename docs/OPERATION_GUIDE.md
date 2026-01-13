@@ -1,5 +1,6 @@
 # OPERATION_GUIDE（已迁移）
 
+
 本文件已按 **Diátaxis（按用途分型）** 重构迁移。
 
 - ✅ 新位置（权威版本 / SSOT）：[`docs/howto/OPERATION_GUIDE.md`](howto/OPERATION_GUIDE.md)

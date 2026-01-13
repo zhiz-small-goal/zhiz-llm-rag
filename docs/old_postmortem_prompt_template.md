@@ -1,5 +1,6 @@
 # Postmortem 提示词模板（已迁移）
 
+
 该文件名因历史编码原因不稳定，已迁移到稳定路径：
 
 - ✅ 新位置：[`docs/reference/postmortem_prompt_template.md`](reference/postmortem_prompt_template.md)

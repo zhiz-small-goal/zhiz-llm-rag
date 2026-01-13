@@ -6,6 +6,7 @@ last_updated: 2026-01-13
 
 # How-to：建立“口语 vs 官方术语”检索回归（防止 topK 漏召回）
 
+
 > 适用日期：2026-01-05  
 > 适用范围：Stage-2 retrieval（`run_eval_retrieval.py`），目标是把“表达断桥”变成可回归指标与可解释证据。
 

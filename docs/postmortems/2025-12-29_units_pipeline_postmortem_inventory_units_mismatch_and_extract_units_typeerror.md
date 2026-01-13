@@ -1,4 +1,6 @@
 # 2025-12-29_units_pipeline_postmortem_inventory_units_mismatch_and_extract_units_typeerror.md目录：
+
+
 - [0. 元信息](#0-元信息)
 - [1. 现象与触发](#1-现象与触发)
   - [1.1 validate_rag_units.py 对账失败（inventory>units）](#1-1-validateragunitspy-对账失败-inventoryunits)

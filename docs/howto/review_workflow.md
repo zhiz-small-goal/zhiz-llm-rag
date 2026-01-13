@@ -6,6 +6,7 @@ last_updated: 2026-01-12
 
 # How-to：在本项目执行审查（Review Workflow）
 
+
 > 目标：把审查从“主观判断”收敛为“按优先级执行的清单 + 证据包”，并与本仓库 gate runner（`tools/gate.py`）对齐，降低迭代过程中的口径漂移与回归风险。
 
 ## 目录

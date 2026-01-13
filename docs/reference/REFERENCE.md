@@ -5,6 +5,8 @@ last_updated: 2026-01-12
 ---
 
 > SSOT（机器可读）: `docs/reference/reference.yaml`。CI 与 gate runner 以此为准。
+
+
 # 参考与契约（口径、产物、架构）
 
 本文件收敛三类稳定口径：

@@ -6,6 +6,7 @@ last_updated: 2026-01-12
 
 # How-to：PR/CI Lite 门禁（快速回归）
 
+
 > 目标：在不触发 embedding/chroma 的情况下，对“入口点/契约/最小集成”做快速回归，用于重构后自检与 PR gate。
 
 ## 目录

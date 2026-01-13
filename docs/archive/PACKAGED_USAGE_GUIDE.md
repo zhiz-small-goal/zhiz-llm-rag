@@ -1,5 +1,6 @@
 # PACKAGED_USAGE_GUIDE（Deprecated）
 
+
 - 退役日期：2025-12-30
 - 原因：该文档与 README/OPERATION_GUIDE/TROUBLESHOOTING 存在大量重复，易漂移；现按 **Diátaxis（按用途分型）** 重构后，权威入口已收敛到文档导航页。
 - 当前权威入口：

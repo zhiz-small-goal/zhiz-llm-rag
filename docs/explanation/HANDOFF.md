@@ -8,6 +8,7 @@ ssot: true
 
 # HANDOFF（单一真源 / SSOT）
 
+
 > 目的：这是本仓库“当前阶段状态 + 运行契约 + 演进触发器”的可携带快照。  
 > 规则：本仓库只允许 **1 个生效的 HANDOFF**，路径固定为 `docs/explanation/HANDOFF.md`。
 

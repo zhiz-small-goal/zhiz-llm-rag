@@ -1,4 +1,6 @@
 [关键词] LM Studio, proxy hijack, 127.0.0.1:7890, ReadTimeout, requests trust_env, NO_PROXY, OpenAI-compatible, /v1/chat/completions
+
+
 [阶段] answer / llm / stage2 eval
 [工具] tools/llm_http_client.py, tools/run_eval_rag.py, tools/probe_llm_server.py, tools/verify_stage1_pipeline.py, llm_client_http.py
 [复现] 访问 http://127.0.0.1:8000/v1 时，环境变量 ALL_PROXY/HTTP_PROXY 指向 127.0.0.1:7890，requests 默认 trust_env=True 导致请求走代理；出现 ReadTimeout(host='127.0.0.1', port=7890)

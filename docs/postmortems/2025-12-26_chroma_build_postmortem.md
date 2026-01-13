@@ -1,5 +1,6 @@
 [关键词] chroma build, expected_chunks, count mismatch, media skip, include-media-stub, chunk_plan
 
+
 [阶段] chunk_plan / build / check
 
 [工具] tools/plan_chunks_from_units.py, tools/build_chroma_index_flagembedding.py, check_chroma_build.py, tools/diff_units_sources_vs_chroma_sources.py

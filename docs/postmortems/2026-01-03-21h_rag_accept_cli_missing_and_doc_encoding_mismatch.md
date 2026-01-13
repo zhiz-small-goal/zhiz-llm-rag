@@ -1,4 +1,6 @@
 # 2026-01-03-21h_rag_accept_cli_missing_and_doc_encoding_mismatch.md目录：
+
+
 - [2026-01-03-21h_rag_accept_cli_missing_and_doc_encoding_mismatch.md目录：](#2026-01-03-21h_rag_accept_cli_missing_and_doc_encoding_mismatchmd目录)
   - [0) 元信息](#0-元信息)
   - [1) 现象与触发](#1-现象与触发)
