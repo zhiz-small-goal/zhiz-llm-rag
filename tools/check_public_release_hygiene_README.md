@@ -96,6 +96,7 @@ python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-
   - 二进制文件或大文件
   - 图片附件存在（提示人工复核）
   - OSS 基础文件缺失
+  - 绝对路径默认覆盖 Windows `C:\Users\...`、Linux `/home/<user>`、macOS `/Users/<user>`
 - **INFO**
   - CI workflow 启发式提示
   - 正则编译失败导致的扫描降级提示

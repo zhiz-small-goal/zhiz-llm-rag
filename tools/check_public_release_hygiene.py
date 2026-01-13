@@ -157,6 +157,8 @@ DEFAULT_CONFIG = {
     "absolute_path_regexes": [
         r"(?i)\b[A-Z]:\\[^\r\n\t\"'<>]+",  # <REPO_ROOT>
         r"(?i)\bC:\\Users\\[^\r\n\t\"'<>]+",  # <REPO_ROOT>
+        r"(?i)/home/[^/\r\n\t\"'<>]+",  # <USER_HOME> (Linux)
+        r"(?i)/Users/[^/\r\n\t\"'<>]+",  # <USER_HOME> (macOS)
     ],
     "secret_regexes": [
         r"(ghp_[A-Za-z0-9]{20,})",
