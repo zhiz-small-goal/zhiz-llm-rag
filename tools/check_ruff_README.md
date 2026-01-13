@@ -47,5 +47,5 @@ python tools/check_ruff.py --root . --format src/mhy_ai_rag_data/rag_config.py
 
 ## 备注与常见问题
 - 脚本不会修改文件，仅做检查。
-- lint 输出使用 `file:line:col` 形式，便于 VS Code 跳转。
+- lint 输出使用 `file:line:col` 形式，便于 VS Code 跳转（Windows 路径会归一为 `/`）。
 - 默认使用 `pyproject.toml` 中的 Ruff 配置；如需覆盖，使用 `--config`。

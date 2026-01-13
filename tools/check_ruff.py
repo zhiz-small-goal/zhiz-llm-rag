@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -47,12 +48,43 @@ def _map_rc(rc: int) -> int:
     return 3
 
 
+_LOC_RE = re.compile(r"^(?P<path>(?:[A-Za-z]:[/\\\\][^:]+|[^:]+)):(?P<line>\d+):(?P<col>\d+):(.*)$")
+
+
+def _normalize_loc_lines(text: str) -> str:
+    if not text:
+        return text
+    lines = []
+    for line in text.splitlines():
+        m = _LOC_RE.match(line)
+        if not m:
+            lines.append(line)
+            continue
+        path = m.group("path").replace("\\", "/")
+        rest = line[m.end("col") + 1 :]
+        lines.append(f"{path}:{m.group('line')}:{m.group('col')}:{rest}")
+    return "\n".join(lines)
+
+
 def _run(argv: List[str], cwd: Path) -> int:
     try:
-        proc = subprocess.run(argv, cwd=str(cwd), check=False)
+        proc = subprocess.run(
+            argv,
+            cwd=str(cwd),
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
     except Exception as e:
         print(f"[ERROR] failed to run: {argv}\n{e}", file=sys.stderr)
         return 3
+    if proc.stdout:
+        print(_normalize_loc_lines(proc.stdout), end="" if proc.stdout.endswith("\n") else "\n")
+    if proc.stderr:
+        print(_normalize_loc_lines(proc.stderr), end="" if proc.stderr.endswith("\n") else "\n", file=sys.stderr)
     return _map_rc(int(proc.returncode))
 
 
