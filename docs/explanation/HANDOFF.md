@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - zhiz-llm-rag
-version: 4
-last_updated: 2026-01-12
+version: 5
+last_updated: 2026-01-13
 timezone: America/Los_Angeles
 ssot: true
 ---
@@ -77,7 +77,13 @@ ssot: true
 - 检索回归用例：`data_processed/eval/eval_cases.jsonl`
 - 检索回归报告（SoT）：`data_processed/build_reports/eval_retrieval_report.json`（`schema_version=2`）
 - 端到端回归报告（SoT）：`data_processed/build_reports/eval_rag_report.json`
+- Stage-2 评测契约：`docs/reference/EVAL_CASES_SCHEMA.md`
+- 口语 vs 官方术语回归 How-to：`docs/howto/ORAL_OFFICIAL_RETRIEVAL_REGRESSION.md`
 - 方法论/演进背景：`docs/explanation/2026-01-04_retrieval_evolution_summary.md`
+
+### 1.4 运维/验收入口（Stage-1 补充）
+- `rag-status`：只读扫描管线状态，产物 `data_processed/build_reports/status.json`；STALE 基于 `data_processed/index_state/db_build_stamp.json`（契约见 `docs/reference/index_state_and_stamps.md`；用法见 `docs/howto/rag_status.md`）
+- `rag-accept`：一键验收入口（stamp → check → snapshot → status）；详见 `docs/howto/rag_accept.md`
 
 ---
 ## 2. Active workstreams（并行线路一览）
@@ -104,6 +110,7 @@ ssot: true
 - eval_cases 支持字段：
   - `bucket`：`oral|official|ambiguous`
   - `pair_id` / `concept_id`：同概念对照组（口语 vs 术语）
+- 新增用例生成工具：`tools/suggest_eval_case.py`（半自动生成 expected_sources/must_include，并支持 bucket/pair_id/concept_id）
 - eval_retrieval_report 输出（schema v2）：
   - `metrics`（overall）与 `buckets`（按桶聚合）
   - `warnings`（迁移期缺字段/非法值等）
@@ -203,6 +210,7 @@ next（最小改动优先）：
 - 单入口：`python tools/gate.py --profile ci --root .`（或安装后 `rag-gate ...`）
 - 产物：`data_processed/build_reports/gate_report.json` + `gate_logs/`
 - `profile=ci/release` 默认包含 `check_ruff` / `check_mypy`（format/strict 默认关闭，可用 `RAG_RUFF_FORMAT=1`、`RAG_MYPY_STRICT=1` 收紧）
+- Review Spec 门禁：`validate_review_spec` 校验 `docs/reference/review/review_spec.v1.json` 与 `docs/reference/review/REVIEW_SPEC.md` 一致；刷新用 `tools/generate_review_spec_docs.py --write`
 - Policy：通过 conftest 执行 `policy/` 下 Rego 规则；CI/Linux 会安装并强制执行，本地缺 conftest 时默认 SKIP。
 
 ---
@@ -242,3 +250,8 @@ next（最小改动优先）：
   - PR/CI Lite 门禁新增 ruff/mypy（`check_ruff` / `check_mypy`）并保留 format/strict 可选开关
   - 新增 repo-only gate 工具与说明：`tools/check_ruff.py` / `tools/check_mypy.py`（含 README）
   - SSOT 与门禁文档同步：`docs/reference/reference.yaml` / `docs/howto/ci_pr_gates.md` / `tools/gate_README.md`
+
+- 2026-01-13
+  - 补充 Stage-2 评测契约与口语/术语回归 how-to 入口：`docs/reference/EVAL_CASES_SCHEMA.md` / `docs/howto/ORAL_OFFICIAL_RETRIEVAL_REGRESSION.md`
+  - 补充 Stage-1 运维/验收入口与 db_build_stamp 契约：`docs/howto/rag_status.md` / `docs/howto/rag_accept.md` / `docs/reference/index_state_and_stamps.md`
+  - Repo Gate 补充 Review Spec SSOT 校验与生成器入口：`tools/validate_review_spec.py` / `tools/generate_review_spec_docs.py`
