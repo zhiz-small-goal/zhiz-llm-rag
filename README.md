@@ -15,6 +15,7 @@
 
 ## 文档导航（从这里开始）
 - 📚 [文档导航（Diátaxis）](docs/INDEX.md)
+- [tools 目录说明（入口层 / 治理脚本）](tools/README.md)
 - [审查规范（Review Spec）](docs/reference/review/README.md)
 - [审查流程（How-to）](docs/howto/review_workflow.md)
 

@@ -1,7 +1,7 @@
 ---
 title: tools/ 目录说明（入口层 / 治理脚本）
-version: v1.3
-last_updated: 2026-01-12
+version: v1.4
+last_updated: 2026-01-13
 ---
 
 # tools/ 目录说明（入口层 / 治理脚本）
@@ -16,6 +16,7 @@ last_updated: 2026-01-12
 
 ## 目录
 - [关键入口（先看这里）](#关键入口先看这里)
+- [治理/审计工具](#治理审计工具)
 - [wrapper 自动生成（推荐默认）](#wrapper-自动生成推荐默认)
 - [约定（contract）](#约定contract)
 - [工具布局审计](#工具布局审计)
@@ -28,6 +29,11 @@ last_updated: 2026-01-12
   - 使用说明：`tools/gate_README.md`
 - JSON Schema 校验：`tools/schema_validate.py` / `rag-schema-validate`
   - 使用说明：`tools/schema_validate_README.md`
+
+## 治理/审计工具
+
+- 基线/快照/哈希/报告工具静态扫描：`tools/audit_baseline_tools.py`
+  - 使用说明：`tools/audit_baseline_tools_README.md`
 
 ## wrapper 自动生成（推荐默认）
 为避免 wrapper 模板被手工改坏或复制粘贴导致漂移，本仓库提供统一生成器：

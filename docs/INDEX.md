@@ -1,7 +1,7 @@
 ---
 title: 文档导航（Diátaxis）
-version: v1.0
-last_updated: 2026-01-12
+version: v1.1
+last_updated: 2026-01-13
 ---
 
 # 文档导航（Diátaxis）
@@ -36,6 +36,7 @@ last_updated: 2026-01-12
 ## Reference（参考：契约/参数/格式）
 - [参考与契约（口径、产物、架构）](reference/REFERENCE.md)
 - [审查规范（Review Spec：SSOT/生成/模板）](reference/review/README.md)
+- [tools 目录说明（入口层 / 治理脚本）](../tools/README.md)
 - [Policy（Conftest/Rego）](../policy/README.md)
 - [Stage-2 评测契约：eval_cases.jsonl / eval_retrieval_report.json](reference/EVAL_CASES_SCHEMA.md)
 - [Index State 与 Stamps（db_build_stamp.json 等）](reference/index_state_and_stamps.md)

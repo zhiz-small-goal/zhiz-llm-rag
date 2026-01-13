@@ -18,6 +18,35 @@
 
 ---
 
+## 1.1 一分钟理解（怎么用、怎么看）
+
+**怎么用（最短命令）**：
+
+```bash
+python tools/audit_baseline_tools.py --root .
+```
+
+**怎么看结果**：
+- 控制台会打印 `file:line: text` 的命中行，优先从命中次数多的文件开始看。
+- 默认会生成 `data_processed/build_reports/audit_baseline_tools.json`，可用于后续对比或贴到 issue/复盘里。
+
+**什么时候需要加 pattern**：
+当你只关心某类能力时，追加 `--pattern` 精确聚焦：
+
+```bash
+python tools/audit_baseline_tools.py --root . --pattern "stage1_baseline_snapshot" --pattern "env_report\\.json"
+```
+
+---
+
+## 1.2 常见场景
+
+- **准备新增工具前**：先扫一遍确认仓库里有没有已有实现（避免重复建设）。
+- **排查“脚本重复/功能重叠”**：用命中行快速定位可能重叠的实现文件。
+- **做治理清理**：基于命中清单判断哪些脚本需要合并/归档/删除。
+
+---
+
 ## 2. 工具做什么 / 不做什么
 
 ### 2.1 做什么（Facts）
