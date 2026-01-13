@@ -121,26 +121,28 @@ repos:
     hooks:
       - id: rag-gate-fast
         name: rag-gate --profile fast
-        entry: .venv\\Scripts\\python.exe tools/gate.py --profile fast --root .
-        language: unsupported
+        entry: tools\\rag_python.cmd
+        args: [tools\\gate.py, --profile, fast, --root, .]
+        language: system
         pass_filenames: false
       - id: rag-ruff
         name: check_ruff --format
-        entry: .venv\\Scripts\\python.exe tools/check_ruff.py --root . --format
-        language: unsupported
-        pass_filenames: false
+        entry: tools\\rag_python.cmd
+        args: [tools\\check_ruff.py, --root, ., --format]
+        language: system
+        pass_filenames: true
       - id: rag-mypy
         name: check_mypy --root .
-        entry: .venv\\Scripts\\python.exe tools/check_mypy.py --root .
-        language: unsupported
+        entry: tools\\rag_python.cmd
+        args: [tools\\check_mypy.py, --root, .]
+        language: system
         pass_filenames: false
 ```
 
 要点：
 - pre-commit 要求 hook 在失败时返回非 0 退出码（否则不会阻断提交）。
 - 对这种“不依赖文件列表、而是审计仓库状态”的检查，建议 `pass_filenames: false`。
- - 后续不同设备需要相同的 `.venv_embed/` 路径
- - 如果你的虚拟环境不在 `.venv_embed/`，请把 entry 中的解释器路径改成实际路径。
+- 若不同设备/环境 Python 路径不同，设置环境变量 `RAG_PYTHON` 指向解释器路径（未设置则回退到 `python`）。
 
 ### 5.3 审查规范（Review Spec）门禁
 
