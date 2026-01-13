@@ -1,5 +1,6 @@
 # tools/llm_http_client.py 使用说明（替代方案 B：统一 LLM HTTP Client）
 
+
 ## 目的
 本模块为项目内所有脚本提供统一的 **OpenAI-compatible** HTTP 访问能力，解决以下问题：
 

@@ -1,5 +1,6 @@
 # `init_eval_cases.py` 使用说明（Stage-2：初始化评测用例集 JSONL）
 
+
 > **适用日期**：2025-12-28  
 > **脚本位置建议**：`tools/init_eval_cases.py`  
 > **输出位置**：默认写入 `data_processed/eval/eval_cases.jsonl`

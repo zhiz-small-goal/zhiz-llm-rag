@@ -1,5 +1,6 @@
 # `compare_stage1_baseline_snapshots.py` 使用说明（对比两份 Stage-1 基线快照）
 
+
 > **脚本位置建议**：`tools/compare_stage1_baseline_snapshots.py`  
 > **输入**：两份 `stage1_baseline_snapshot.json`（或同 schema 的快照 JSON）  
 > **输出**：一份差异报告 JSON（默认写到 `--a` 的同目录）

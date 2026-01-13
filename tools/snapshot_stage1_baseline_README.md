@@ -1,5 +1,6 @@
 # `snapshot_stage1_baseline.py` 使用说明（Stage-1 基线快照：产物指纹 + Chroma 落盘状态）
 
+
 > **适用日期**：2025-12-28  
 > **脚本位置建议**：`tools/snapshot_stage1_baseline.py`  
 > **输出位置**：默认写入 `data_processed/build_reports/stage1_baseline_snapshot.json`

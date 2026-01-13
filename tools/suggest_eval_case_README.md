@@ -1,5 +1,6 @@
 # `suggest_eval_case.py` 使用说明（半自动生成 eval case：expected_sources + must_include + bucket/pair_id）
 
+
 > **适用日期**：2026-01-05  
 > **脚本位置建议**：`tools/suggest_eval_case.py`  
 > **权威实现**：`src/mhy_ai_rag_data/tools/suggest_eval_case.py`

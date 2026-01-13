@@ -1,5 +1,6 @@
 # `check_docs_conventions.py` 使用说明（docs Markdown 工程约定门禁）
 
+
 > **适用日期**：2025-12-28  
 > **脚本位置建议**：`tools/check_docs_conventions.py`  
 > **输出位置**：默认写入 `data_processed/build_reports/docs_conventions_report.json`（可通过配置文件修改）

@@ -6,6 +6,7 @@ last_updated: 2026-01-11
 
 # schema_validate.py / rag-schema-validate 使用说明（JSON Schema 校验工具）
 
+
 > 目标：把“报告/产物 JSON 的结构契约”变成可执行的校验步骤（本地/CI 可复用）。
 
 ## 目录

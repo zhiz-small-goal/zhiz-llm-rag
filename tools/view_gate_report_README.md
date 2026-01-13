@@ -6,6 +6,7 @@ last_updated: 2026-01-12
 
 # view_gate_report.py 使用说明
 
+
 ## 目录
 - [目的](#目的)
 - [适用场景](#适用场景)

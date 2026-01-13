@@ -6,6 +6,7 @@ last_updated: 2026-01-12
 
 # tools/ 目录说明（入口层 / 治理脚本）
 
+
 本项目采用 **src-layout**：
 - **权威实现（SSOT）**：`src/mhy_ai_rag_data/...`（可被 `python -m ...` 或 console_scripts 调用）
 - **兼容入口（wrapper）**：`tools/*.py`（允许运行 `python tools\xxx.py`，但内部转发到 src）

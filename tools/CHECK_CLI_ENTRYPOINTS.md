@@ -1,5 +1,6 @@
 # check_cli_entrypoints 使用说明
 
+
 ## 目的
 
 在 Windows 多环境/多设备场景下，快速定位并门禁常见问题：

@@ -1,5 +1,6 @@
 # check_tools_layout_README
 
+
 目的：把「tools/ 作为入口层（wrapper + repo-only 工具）」与「src/ 作为权威实现层（SSOT）」这一结构约定，固化为可执行的审计检查，避免重构或新增脚本时出现 **双实现漂移**、**同名冲突（import shadowing）**、或 **入口语义不清**。
 
 ## 适用场景

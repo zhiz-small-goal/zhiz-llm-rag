@@ -1,5 +1,6 @@
 # `run_eval_retrieval.py` 使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）
 
+
 > **适用日期**：2026-01-05  
 > **脚本位置建议**：`tools/run_eval_retrieval.py`（根目录 wrapper）  
 > **权威实现**：`src/mhy_ai_rag_data/tools/run_eval_retrieval.py`  

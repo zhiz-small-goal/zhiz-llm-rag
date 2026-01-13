@@ -1,5 +1,6 @@
 # update_postmortems_index_README
 
+
 目的：把 `docs/postmortems/INDEX.md` 从“手工维护”变为“可再生产产物（generated）”，以脚本保证：
 
 - 新增/重命名/补写日期时，索引不会漂移

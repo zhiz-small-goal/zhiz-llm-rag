@@ -6,6 +6,7 @@ last_updated: 2026-01-12
 
 # validate_review_spec 使用说明
 
+
 ## 目的
 对审查规范 SSOT 执行结构校验，并校验生成产物与 SSOT 一致，用于 PR/CI 门禁，防止口径漂移。
 

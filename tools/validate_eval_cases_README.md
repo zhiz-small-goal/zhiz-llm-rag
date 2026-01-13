@@ -1,5 +1,6 @@
 # `validate_eval_cases.py` 使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）
 
+
 > **适用日期**：2026-01-05  
 > **脚本位置建议**：`tools/validate_eval_cases.py`  
 > **权威实现**：`src/mhy_ai_rag_data/tools/validate_eval_cases.py`  

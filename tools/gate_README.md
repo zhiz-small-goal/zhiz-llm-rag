@@ -6,6 +6,7 @@ last_updated: 2026-01-12
 
 # gate.py / rag-gate 使用说明（单入口 Gate）
 
+
 > 目标：用**一条命令**跑完 PR/CI Lite 门禁，并生成**确定性可审计产物**（`gate_report.json` + logs）。
 
 ## 目录

@@ -1,5 +1,6 @@
 # check_inventory_build_README
 
+
 目的：为 `inventory.csv` 提供**可审计快照（snapshot）**与**前后差异对比（diff）**，用于定位“输入集合漂移”的根因。
 
 ## 适用场景

@@ -1,5 +1,6 @@
 # `view_stage2_reports.py` 使用说明（Stage-2 输出文件一键解读）
 
+
 > **脚本位置建议**：`tools/view_stage2_reports.py`  
 > **适用日期**：2026-01-05
 

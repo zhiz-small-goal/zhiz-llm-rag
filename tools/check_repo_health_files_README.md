@@ -6,6 +6,7 @@ last_updated: 2026-01-11
 
 # check_repo_health_files.py 使用说明（Public Release Repo Health）
 
+
 > 目标：在公开发布/开源前，校验仓库“社区/治理文件”的存在性与占位符风险，避免遗漏 CHANGELOG/CITATION/.editorconfig/CoC 等关键文件。
 
 ## 目录

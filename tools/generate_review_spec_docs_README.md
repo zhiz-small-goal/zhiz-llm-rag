@@ -6,6 +6,7 @@ last_updated: 2026-01-12
 
 # generate_review_spec_docs 使用说明
 
+
 ## 目的
 将审查规范的 SSOT（`docs/reference/review/review_spec.v1.json`）生成成人类可读的 Reference 文档（`docs/reference/review/REVIEW_SPEC.md`），并提供 `--check` 用于门禁校验，避免双写漂移。
 

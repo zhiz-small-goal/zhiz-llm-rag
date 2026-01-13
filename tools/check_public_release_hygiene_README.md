@@ -6,6 +6,7 @@ last_updated: 2026-01-11
 
 # check_public_release_hygiene.py 使用说明（Public Release Hygiene Audit v3）
 
+
 > 适用目标：**公开发布/开源前**，对“将进入发布包的内容”做最小安全卫生检查（大文件/二进制/敏感信息/绝对路径指纹等）。
 
 ## 目录

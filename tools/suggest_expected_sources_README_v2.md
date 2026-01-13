@@ -1,5 +1,6 @@
 # `suggest_expected_sources.py` 使用说明（expected_sources 取证与推荐：基于 Chroma topK）
 
+
 > **脚本位置建议**：`tools/suggest_expected_sources.py`  
 > **适用日期**：2025-12-28  
 > **目标**：当你不熟资料内容、无法确认某个 query 应绑定到哪篇文档时，用“检索证据”生成稳定的 `expected_sources`
