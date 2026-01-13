@@ -1,4 +1,4 @@
-﻿---
+---
 title: 参考与契约（REFERENCE）
 version: v1.1
 last_updated: 2026-01-12
