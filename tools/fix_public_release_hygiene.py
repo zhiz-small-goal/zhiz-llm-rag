@@ -78,8 +78,8 @@ DEFAULTS = {
         ".ruff_cache",
     ],
     "absolute_path_regexes": [
-        r"(?i)\b[A-Z]:\\[^\r\n\t\"'<>]+",
-        r"(?i)\bC:\\Users\\[^\r\n\t\"'<>]+",
+        r"(?i)\b[A-Z]:\\(?![nrt](?:$|[^A-Za-z0-9_]))[^\\\r\n\t\"'<>]+(?:\\[^\\\r\n\t\"'<>]+)*",
+        r"(?i)\bC:\\Users\\(?![nrt](?:$|[^A-Za-z0-9_]))[^\\\r\n\t\"'<>]+(?:\\[^\\\r\n\t\"'<>]+)*",
     ],
     "gitignore_block": [
         "",

@@ -82,6 +82,7 @@ python tools\fix_public_release_hygiene.py --repo . --apply --skip-git --skip-gi
 - **绝对路径脱敏**
   - 仅对 `DEFAULTS.text_extensions` 中的文本文件生效
   - 使用 `DEFAULTS.absolute_path_regexes` 进行替换
+  - Windows 盘符路径规则已排除 `:\n` / `:\t` 等转义序列误报
 
 - **隔离根目录截图**
   - 默认关注 `image.png`、`image-1.png`
