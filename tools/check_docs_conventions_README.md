@@ -32,12 +32,17 @@
 - 若文件以 `---` 开头，视为 front matter，直到下一个 `---` 结束
 - 检查从 front matter 结束后的正文开始执行
 
+> 可选：使用 `--fix` 自动在目录标题后补齐缺失的空行。
+
 ---
 
 ## 3. 快速开始
 
 ```bash
 python tools/check_docs_conventions.py --root . --docs-dir docs
+
+# 如需自动补齐目录标题后的空行（会就地写回文件）
+python tools/check_docs_conventions.py --root . --docs-dir docs --fix
 ```
 
 ---

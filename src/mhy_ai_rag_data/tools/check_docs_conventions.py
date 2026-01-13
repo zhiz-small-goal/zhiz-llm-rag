@@ -60,7 +60,26 @@ def split_front_matter(lines: List[str]) -> Tuple[List[str], List[str]]:
     return lines, []
 
 
-def check_one(path: Path) -> Dict[str, Any]:
+def _add_blank_lines_after_title(
+    raw: List[str], fm_len: int, title_body_idx: int, blank_count: int
+) -> bool:
+    """
+    Ensure there are at least two blank lines after the title line.
+
+    raw: full file lines (including front matter)
+    fm_len: number of lines in the front matter block
+    title_body_idx: index of the title line inside body (after front matter)
+    blank_count: current consecutive blank lines after the title
+    """
+    if blank_count >= 2:
+        return False
+    insert_pos = fm_len + title_body_idx + 1
+    needed = 2 - blank_count
+    raw[insert_pos:insert_pos] = ["\n"] * needed
+    return True
+
+
+def check_one(path: Path, fix: bool = False) -> Dict[str, Any]:
     stem = path.stem  # filename without extension
     expected_title = f"# {stem}目录："
 
@@ -78,6 +97,7 @@ def check_one(path: Path) -> Dict[str, Any]:
         "file": str(path),
         "expected_title": expected_title,
         "has_front_matter": bool(fm),
+        "fixed_blank_lines": False,
         "ok": True,
         "issues": [],
     }
@@ -93,11 +113,22 @@ def check_one(path: Path) -> Dict[str, Any]:
         result["issues"].append(f"title mismatch: got='{first_line}'")
 
     # Check two blank lines after title line (in body)
-    # We require that next two lines exist and are blank (or one line blank then EOF is fail)
-    after = body[idx + 1 : idx + 3]
-    if len(after) < 2 or any(line.strip() != "" for line in after):
-        result["ok"] = False
-        result["issues"].append("need two blank lines after title")
+    blank_count = 0
+    for line in body[idx + 1 :]:
+        if line.strip() == "":
+            blank_count += 1
+        else:
+            break
+
+    if blank_count < 2:
+        if fix and _add_blank_lines_after_title(raw, len(fm), idx, blank_count):
+            path.write_text("".join(raw), encoding="utf-8")
+            result["fixed_blank_lines"] = True
+            blank_count = 2
+
+        if blank_count < 2:
+            result["ok"] = False
+            result["issues"].append("need two blank lines after title")
 
     return result
 
@@ -111,6 +142,11 @@ def main() -> int:
         "--out",
         default="data_processed/build_reports/docs_conventions_report.json",
         help="output json (relative to root)",
+    )
+    ap.add_argument(
+        "--fix",
+        action="store_true",
+        help="auto-insert missing blank lines after title (in-place)",
     )
     args = ap.parse_args()
 
@@ -133,7 +169,7 @@ def main() -> int:
         return 2
 
     files = sorted([p for p in docs_dir.glob(args.glob) if p.is_file()])
-    results = [check_one(p) for p in files]
+    results = [check_one(p, fix=args.fix) for p in files]
     bad = [r for r in results if not r.get("ok")]
 
     report: Dict[str, Any] = {
