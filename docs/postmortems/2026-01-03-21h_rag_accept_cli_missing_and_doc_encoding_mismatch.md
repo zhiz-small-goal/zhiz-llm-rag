@@ -38,6 +38,8 @@
 ### 1.2 现象：文档中新增说明出现“????”乱码
 - [Fact] `docs/howto/OPERATION_GUIDE.md`、`docs/howto/rag_status.md`、`docs/INDEX.md` 与 `docs/explanation/STAGE_PLAN.md` 中新增的中文出现 “????”。
 
+**注意, STAGE_PLAN 文件已删除**
+
 ### 1.3 触发：尝试使用 rag-accept 与补文档说明
 - [Fact] 触发点来自“希望有一键验收入口”的需求，因此先尝试执行命令并同步补充文档。
 
