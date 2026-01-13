@@ -153,12 +153,13 @@ DEFAULT_CONFIG = {
         ".pytest_cache",
         ".ruff_cache",
     ],
+    "exclude_files_globs": [],
     # v2: simplified to avoid fragile grouping/escaping
     "absolute_path_regexes": [
-        r"(?i)\b[A-Z]:\\[^\r\n\t\"'<>]+",  # <REPO_ROOT>
-        r"(?i)\bC:\\Users\\[^\r\n\t\"'<>]+",  # <REPO_ROOT>
-        r"(?i)/home/[^/\r\n\t\"'<>]+",  # <USER_HOME> (Linux)
-        r"(?i)/Users/[^/\r\n\t\"'<>]+",  # <USER_HOME> (macOS)
+        r"(?i)\b[A-Z]:\\(?![nrt](?:$|[^A-Za-z0-9_]))[^\\\r\n\t\"'<>]+(?:\\[^\\\r\n\t\"'<>]+)*",  # <REPO_ROOT>
+        r"(?i)\bC:\\Users\\(?![nrt](?:$|[^A-Za-z0-9_]))[^\\\r\n\t\"'<>]+(?:\\[^\\\r\n\t\"'<>]+)*",  # <REPO_ROOT>
+        r"(?i)/home/[^/\r\n\t\"'<>]+",  # <USER_HOME> (Linux) hygiene: ignore-abs-path
+        r"(?i)/Users/[^/\r\n\t\"'<>]+",  # <USER_HOME> (macOS) hygiene: ignore-abs-path
     ],
     "secret_regexes": [
         r"(ghp_[A-Za-z0-9]{20,})",
@@ -189,6 +190,8 @@ DEFAULT_CONFIG = {
         "git ls-files",
     ],
 }
+
+ABS_PATH_IGNORE_MARKER = "hygiene: ignore-abs-path"
 
 
 def load_config(path: Optional[Path]) -> dict:
@@ -322,14 +325,26 @@ def select_scan_files(
     Returns (files, meta_counts).
     """
     exclude = set(cfg.get("exclude_dirs", []))
+    exclude_globs = cfg.get("exclude_files_globs", [])
 
     if file_scope == "worktree_all" or tracked_list is None:
         files = list(iter_repo_files(repo_root, cfg))
+        excluded_by_globs = 0
+        if exclude_globs:
+            kept = []
+            for p in files:
+                rel = _rel(p, repo_root).replace("\\", "/")
+                if _matches_exclude_globs(rel, exclude_globs):
+                    excluded_by_globs += 1
+                    continue
+                kept.append(p)
+            files = kept
         return files, {
             "tracked": 0,
             "untracked_total": 0,
             "untracked_ignored": 0,
             "untracked_unignored": 0,
+            "excluded_by_globs": excluded_by_globs,
             "scanned": len(files),
         }
 
@@ -345,7 +360,7 @@ def select_scan_files(
             ignored = git_check_ignore(repo_root, untracked)
             untracked = [p for p in untracked if p not in ignored]
 
-    # De-dupe and filter by scan_roots/exclude_dirs
+    # De-dupe and filter by scan_roots/exclude_dirs/exclude_files_globs
     candidates = set(tracked_set) | set(untracked)
 
     files: List[Path] = []
@@ -354,6 +369,8 @@ def select_scan_files(
         if not _under_scan_roots(rel, cfg):
             continue
         if any(part in exclude for part in Path(rel).parts):
+            continue
+        if exclude_globs and _matches_exclude_globs(rel, exclude_globs):
             continue
         p = repo_root / rel
         if p.is_file():
@@ -364,6 +381,7 @@ def select_scan_files(
         "untracked_total": len(untracked_all),
         "untracked_ignored": len(ignored),
         "untracked_unignored": len(untracked),
+        "excluded_by_globs": 0,
         "scanned": len(files),
     }
 
@@ -375,6 +393,19 @@ def match_glob(path_posix: str, pat: str) -> bool:
         return path_posix == pat
     rx = "^" + re.escape(pat).replace("\\*", ".*") + "$"
     return re.match(rx, path_posix) is not None
+
+
+def _matches_exclude_globs(rel_posix: str, globs: Iterable[str]) -> bool:
+    for raw in globs:
+        pat = str(raw).strip()
+        if not pat:
+            continue
+        pat = pat.replace("\\", "/")
+        if pat.startswith("./"):
+            pat = pat[2:]
+        if match_glob(rel_posix, pat):
+            return True
+    return False
 
 
 def _safe_compile_many(patterns: List[str]) -> Tuple[List[re.Pattern], List[str]]:
@@ -468,6 +499,8 @@ def scan_absolute_paths(repo: Path, cfg: dict, files: Iterable[Path]) -> Optiona
             continue
         text = _read_text_best_effort(p)
         for i, line in enumerate(text.splitlines(), start=1):
+            if ABS_PATH_IGNORE_MARKER in line:
+                continue
             for rx in regexes:
                 for m in rx.finditer(line):
                     col = m.start() + 1
@@ -767,6 +800,7 @@ def render_report(
             {
                 "forbidden_tracked_paths": cfg["forbidden_tracked_paths"],
                 "exclude_dirs": cfg["exclude_dirs"],
+                "exclude_files_globs": cfg.get("exclude_files_globs", []),
                 "text_extensions": cfg["text_extensions"],
                 "image_extensions": cfg["image_extensions"],
                 "binary_extensions": cfg["binary_extensions"],
@@ -937,6 +971,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     except Exception:
         shown = str(out_path)
     print(f"[OK] report_written={shown}")
+    print(shown)
 
     highs = sum(1 for f in findings if f.severity == "HIGH")
     return 2 if highs > 0 else 0

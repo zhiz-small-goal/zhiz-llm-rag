@@ -96,7 +96,7 @@ python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-
   - 二进制文件或大文件
   - 图片附件存在（提示人工复核）
   - OSS 基础文件缺失
-  - 绝对路径默认覆盖 Windows `C:\Users\...`、Linux `/home/<user>`、macOS `/Users/<user>`
+  - 绝对路径默认覆盖 Windows `<REPO_ROOT><user>`、macOS `/Users/<user>`
 - **INFO**
   - CI workflow 启发式提示
   - 正则编译失败导致的扫描降级提示
@@ -125,6 +125,7 @@ python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-
 - `text_extensions` / `image_extensions` / `binary_extensions`
 - `max_file_size_mb_warn` / `max_file_size_mb_high`
 - `scan_roots` / `exclude_dirs`
+- `exclude_files_globs`
 - `absolute_path_regexes` / `secret_regexes`
 - `oss_files_required_any_of` / `oss_files_required_exact`
 - `ci_workflow_glob` / `ci_heuristic_patterns`
@@ -134,6 +135,7 @@ python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-
 {
   "forbidden_tracked_paths": ["data_raw/", "data_processed/", "chroma_db/"],
   "exclude_dirs": [".git", ".venv", "node_modules"],
+  "exclude_files_globs": ["tools/check_public_release_hygiene.py"],
   "max_file_size_mb_warn": 5,
   "max_file_size_mb_high": 20
 }

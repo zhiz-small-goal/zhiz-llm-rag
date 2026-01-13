@@ -11,6 +11,25 @@
     "*.pkl",
     "*.npz"
   ],
+  "scan_roots": [
+    "."
+  ],
+  "exclude_dirs": [
+    ".git",
+    ".venv",
+    ".venv_ci",
+    ".venv_rag",
+    ".venv_embed",
+    "__pycache__",
+    "node_modules",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "data_raw",
+    "data_processed",
+    "chroma_db"
+  ],
+  "exclude_files_globs": ["tools/check_public_release_hygiene.py"],
   "max_file_size_mb_warn": 5,
   "max_file_size_mb_high": 20
 }
