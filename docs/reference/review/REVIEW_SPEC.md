@@ -9,7 +9,6 @@ generated_artifact: docs/reference/review/REVIEW_SPEC.md
 
 # 项目审查规范（Review Spec）
 
-
 > SSOT（机器可读）：`docs/reference/review/review_spec.v1.json`
 > 生成产物（人类阅读）：`docs/reference/review/REVIEW_SPEC.md`（本文件）
 
