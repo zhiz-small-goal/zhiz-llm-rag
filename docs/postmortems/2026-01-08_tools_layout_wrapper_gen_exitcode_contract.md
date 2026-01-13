@@ -1,5 +1,6 @@
 ---
 title: "Postmortem: tools/分层与全量 wrapper 生成门禁自举失败 + 退出码契约对齐"
+version: 1.0
 date: "2026-01-08"
 mode: "solo_debug"
 repo: "zhiz-llm-rag (public)"
