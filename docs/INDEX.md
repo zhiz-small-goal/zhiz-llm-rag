@@ -42,7 +42,6 @@ last_updated: 2026-01-12
 
 ## Explanation（解释：架构/取舍/演进）
 - [文档体系第一性原理与写作规范（可复用）](explanation/documentation_principles.md)
-- [阶段计划与变更记录（STAGE_PLAN）](explanation/STAGE_PLAN.md)
 - [检索系统演进摘要（Stage-2 retrieval evolution）](explanation/2026-01-04_retrieval_evolution_summary.md)
 
 - [Lessons / 经验库（可迁移）](explanation/LESSONS.md)
