@@ -111,12 +111,12 @@ last_updated: "2026-01-08"
 
 ### 环境
 - Windows CMD
-- 仓库根目录（示例）：`D:\zhiz-c++\zhiz-llm-rag`
+- 仓库根目录（示例）：`<REPO_ROOT>
 - venv：`.venv_embed`（推断）
 
 ### 命令
 ```bat
-cd D:\zhiz-c++\zhiz-llm-rag
+cd <REPO_ROOT>
 python tools\gen_tools_wrappers.py --check
 ```
 

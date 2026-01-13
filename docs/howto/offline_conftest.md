@@ -75,7 +75,8 @@ export CONFTEST_BIN=/opt/tools/conftest/bin/conftest
 
 ```powershell
 # Windows PowerShell, 这个路径是示例, 根据自己实际路径设置
-$env:CONFTEST_BIN = "C:\\opt\\tools\\conftest\\conftest.exe"
+# <TOOLS_DIR> 替换为你实际的安装目录
+$env:CONFTEST_BIN = "<TOOLS_DIR>\\conftest.exe"
 ```
 
 ## 校验与追溯

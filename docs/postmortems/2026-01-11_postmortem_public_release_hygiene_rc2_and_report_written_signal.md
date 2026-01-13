@@ -88,7 +88,7 @@ scope:
 ```text
 3396: 
 3397: ## Prompt:
-3398: 日志写的是这样的:[OK] report_written=C:\Users\<USER>\Desktop\public_release_hygiene_report_20260111_173736.md
+3398: 日志写的是这样的:[OK] report_written=<REPO_ROOT>\<USER>\Desktop\public_release_hygiene_report_20260111_173736.md
 3399: 
 3400: ## Response:
 ```
