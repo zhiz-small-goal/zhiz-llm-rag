@@ -1,7 +1,7 @@
 ---
 title: 完全离线运行 Policy Gate（Vendoring conftest / 内部镜像源）
-version: v1.0
-last_updated: 2026-01-11
+version: v1.2
+last_updated: 2026-01-13
 ---
 
 # 完全离线运行 Policy Gate（Vendoring conftest / 内部镜像源）
@@ -12,11 +12,14 @@ last_updated: 2026-01-11
 > 关键原则：gate runner **不做任何联网行为**；所有依赖由“预置/镜像/内网制品库”提供。
 
 ## 目录
+
+
 - [结论与推荐](#结论与推荐)
 - [方案 1：Vendoring conftest 二进制到 repo（推荐）](#方案-1vendoring-conftest-二进制到-repo推荐)
 - [方案 2：内部镜像源/制品库（企业内网）](#方案-2内部镜像源制品库企业内网)
+- [方案 3: PATH(系统安装)](#方案-3-path系统安装)
 - [校验与追溯](#校验与追溯)
-- [常见坑](#常见坑)
+- [常见错误与处理](#常见错误与处理)
 
 ## 结论与推荐
 
@@ -34,7 +37,7 @@ gate runner 的 conftest 搜索顺序：
 - 版本以 `docs/reference/reference.yaml` 的 `policy.conftest.version` 为准。
 
 ### Step 2：在“可联网机器”下载 release 资产并解压
-- 资源链接: https://github.com/open-policy-agent/conftest/releases
+- 资源链接: https://github.com/open-policy-agent/conftest/releases, 下载 `Windows_x86_64.zip`
 - 参考官方安装文档/安装页的 release 方式，下载对应 OS/ARCH 的 tar.gz/zip。\
   （注意：Conftest 官方文档给了 Homebrew/Scoop/Docker/Release 二进制等多种安装方式。）
 
@@ -71,7 +74,7 @@ third_party/conftest/
 
 ```bash
 # Linux/macOS
-export CONFTEST_BIN=/opt/tools/conftest/bin/conftest
+export CONFTEST_BIN=<CONFTEST_BIN_PATH>
 ```
 
 ```powershell
@@ -80,6 +83,16 @@ export CONFTEST_BIN=/opt/tools/conftest/bin/conftest
 $env:CONFTEST_BIN = "<TOOLS_DIR>\\conftest.exe"
 ```
 
+## 方案 3: PATH(系统安装)
+
+- PATH 模式适合“已安装/已解压到某目录”的场景
+   - 你只需要把 `conftest` 所在目录加入 PATH，并在当前终端验证即可：
+     - Windows PowerShell：`$env:PATH = "<CONFTEST_DIR>;"+$env:PATH`
+     - Windows CMD：`set PATH=<CONFTEST_DIR>;%PATH%`
+     - Linux/macOS：`export PATH="<CONFTEST_DIR>:$PATH"`
+   - 验证：`conftest --version`
+   - 运行：`python tools/gate.py --profile ci --root .`
+   
 ## 校验与追溯
 
 最小建议：
@@ -89,8 +102,13 @@ $env:CONFTEST_BIN = "<TOOLS_DIR>\\conftest.exe"
 - GitHub Releases 已支持显示 release 资产的 SHA256 digest（可用于校验下载未被篡改）。
 - Homebrew 公式页也可看到 conftest 的 license（做合规审计时用）。
 
-## 常见坑
+## 常见错误与处理
 
-- **系统/架构不匹配**：Windows 常见 `AMD64` -> `amd64`，ARM 机器常见 `aarch64` -> `arm64`。
-- **可执行权限**：Linux/macOS 需要 `chmod +x conftest`。
-- **repo 体积**：二进制较大时建议 Git LFS 或“内部制品库方案”。
+- **policy step 仍然 SKIP（conftest_missing）**：环境变量未在当前终端生效，或路径拼写错误；先 `echo $env:CONFTEST_BIN`（PowerShell）确认，再用 `Test-Path $env:CONFTEST_BIN` 验证文件存在。
+- **无法执行或提示找不到文件**：PowerShell 执行路径时需要 `&` 调用运算符；路径含空格时必须加引号并用 `&` 执行。
+- **版本不一致**：`conftest --version` 与 `docs/reference/reference.yaml` 不同；请下载匹配版本，避免本地/CI 口径漂移。
+- **系统/架构不匹配**：Windows 常见 `AMD64` -> `amd64`，ARM 机器常见 `aarch64` -> `arm64`；请更换对应架构的 release 资产。
+- **权限不足（Linux/macOS）**：二进制无执行权限，运行 `chmod +x conftest`。
+- **Windows 文件被阻止**：从浏览器下载的 exe 可能被标记为受限，需在文件属性中“解除阻止”或使用 `Unblock-File`.
+- **policy 输入文件缺失**：请确保从 repo 根目录运行，或使用绝对路径；gate runner 建议固定 `--root .`。
+- **repo 体积顾虑**：二进制较大时建议 Git LFS 或“内部制品库方案”。
