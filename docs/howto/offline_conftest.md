@@ -34,6 +34,7 @@ gate runner 的 conftest 搜索顺序：
 - 版本以 `docs/reference/reference.yaml` 的 `policy.conftest.version` 为准。
 
 ### Step 2：在“可联网机器”下载 release 资产并解压
+- 资源链接: https://github.com/open-policy-agent/conftest/releases
 - 参考官方安装文档/安装页的 release 方式，下载对应 OS/ARCH 的 tar.gz/zip。\
   （注意：Conftest 官方文档给了 Homebrew/Scoop/Docker/Release 二进制等多种安装方式。）
 
