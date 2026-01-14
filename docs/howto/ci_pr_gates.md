@@ -1,7 +1,7 @@
 ---
 title: How-to：PR/CI Lite 门禁（快速回归）
 version: v1.3
-last_updated: 2026-01-12
+last_updated: 2026-01-14
 ---
 
 # How-to：PR/CI Lite 门禁（快速回归）
@@ -114,6 +114,8 @@ python tools\check_pyproject_preflight.py --ascii-only ^
 ### 5.2 可选：把门禁搬到本地 pre-commit（更早失败，更低 PR 往返）
 
 如果你希望在本地提交前就阻止“工具布局契约被破坏”，可以把以下命令接入 pre-commit 的 `repo: local` hooks：
+
+完整的 pre-commit 使用流程与常见问题，见 [本地 pre-commit 使用指南](pre_commit.md)。
 
 ```yaml
 repos:

@@ -1,7 +1,7 @@
 ---
 title: 文档导航（Diátaxis）
 version: v1.1
-last_updated: 2026-01-13
+last_updated: 2026-01-14
 ---
 
 # 文档导航（Diátaxis）
@@ -27,6 +27,7 @@ last_updated: 2026-01-13
 - [rag-accept：一键验收入口](howto/rag_accept.md)
 - [建立“口语 vs 官方术语”检索回归（分桶）](howto/ORAL_OFFICIAL_RETRIEVAL_REGRESSION.md)
 - [PR/CI Lite 门禁（快速回归）](howto/ci_pr_gates.md)
+- [本地 pre-commit 使用指南](howto/pre_commit.md)
 - [在本项目执行审查（Review Workflow）](howto/review_workflow.md)
 - [完全离线运行 Policy Gate（Vendoring conftest / 内部镜像源）](howto/offline_conftest.md)
 - [Preflight Checklist（重构/换机/换环境后必跑）](howto/PREFLIGHT_CHECKLIST.md)

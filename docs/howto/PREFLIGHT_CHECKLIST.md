@@ -153,6 +153,8 @@ pytest -q
 
 > 目标：避免“本地跑 A、CI 跑 B、发布前又跑 C”导致口径漂移。入口应收敛为：**SSOT → gate →（schema/policy）→ 统一退出码**。
 
+参考：[本地 pre-commit 使用指南](pre_commit.md)。
+
 **命令（CMD）**
 ```cmd
 rem pre-commit 是否通过 rag_python 中转并调用 gate（如未使用 pre-commit，可跳过）

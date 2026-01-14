@@ -27,6 +27,8 @@ last_updated: "2026-01-14"
 3. **参数透传**：wrapper 自身不解析业务参数，直接把后续 argv 全量交给目标 python（含 pre-commit 追加的 filenames）。
 
 ## 使用方式
+完整的本地 pre-commit 使用流程见 [本地 pre-commit 使用指南](../docs/howto/pre_commit.md)。
+
 ### 直接运行
 ```bash
 python tools/rag_python.py tools/gate.py --profile fast --root .
