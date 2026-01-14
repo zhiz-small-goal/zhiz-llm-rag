@@ -118,6 +118,27 @@ python tools\verify_postmortems_and_troubleshooting.py --no-fix --strict
 - 再回到严格验证：  
   `python tools\verify_postmortems_and_troubleshooting.py --no-fix --strict`
 
+
+### 1.4c 审查规范一致性门禁（Review Spec：priority 覆盖 + 生成一致性）
+
+> 目标：保证审查规范的“优先级维度（priority_order）”与“清单域（checklists[].area）”不漂移，并保证 SSOT→生成文档链路是确定性的（避免门禁误报/漏报）。
+
+**命令（CMD）**
+```cmd
+python tools\validate_review_spec.py --root .
+```
+
+**PASS 条件**
+- `STATUS: PASS`（或输出含 `[PASS]`）且退出码为 0
+- 若你新增了 `priority_order` 维度但未新增同名 `area` 清单，则必须 FAIL（退出码为 2）并提示 missing areas
+
+**常见修复路径（本地）**
+- 若提示生成文档 out-of-date：  
+  `python tools\generate_review_spec_docs.py --root . --write`
+- 若提示 priority 覆盖缺口：  
+  修改 `docs/reference/review/review_spec.v1.json`，为新增维度补齐同名 `checklists[].area`；或临时归入“其它”并在 `extensions` 中记录迁移计划（含截止日期与拆分步骤）。
+
+
 ### 1.5 跑单元/轻量测试（若仓库包含 pytest）
 **命令（CMD）**
 ```cmd

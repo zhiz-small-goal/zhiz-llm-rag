@@ -95,6 +95,32 @@ owner: zhiz
 
 ## 5. 经验条目
 
+
+### 条目：Review Spec 的“优先级维度 ↔ 清单域覆盖关系”必须门禁化，并写回 HANDOFF（SSOT）
+- 标签（失败模式）：`契约漂移`、`入口不一致`、`门禁误报`
+- 适用场景：存在“优先级维度列表（priority_order）+ 多区域清单（checklists[].area）”的治理机制；需要长期演进且不希望靠人工记忆同步关系。
+- 不适用场景：临时一次性清单、无长期维护成本考量、或不存在“维度↔规则集”的覆盖约束（此时只需静态文档即可）。
+- 触发/现象：
+  - `priority_order` 新增维度后，审查清单没有对应 area，导致审查输出缺项；
+  - SSOT（JSON）与生成文档（MD）发生漂移，出现“文档看起来对，但门禁/脚本判断不一致”的返工。
+- 根因机制（简述）：
+  - 覆盖关系未被编码为不变量（只能靠人工同步）；
+  - 生成器/校验器存在双实现渲染逻辑，细节差异导致一致性误判；
+  - 接手 SSOT（HANDOFF）未记录门禁入口与修复命令，新会话需要重复推导。
+- 缺失控制点（应落为门禁/清单项）：
+  - 覆盖关系门禁：`priority_order` 必须被 `checklists[].area` 覆盖（缺口 → FAIL=2）；
+  - 生成一致性门禁：生成器与校验器必须共享确定性渲染口径（SSOT→MD 不允许隐式漂移）；
+  - SSOT 写回：在 `docs/explanation/HANDOFF.md` 固化入口、命令、修复路径与回滚策略。
+- 可执行动作：
+  - A1：把 Review Spec 定义为 SSOT：`docs/reference/review/review_spec.v1.json`，并由生成器写出 `REVIEW_SPEC.md`（禁止手改）。
+  - A2：在 gate profile 中加入 `validate_review_spec`（`docs/reference/reference.yaml`），并在 Preflight Quick Path 列出最小命令。
+  - A3：任何新增优先级维度时：要么新增同名 area 清单，要么先归入“其它”并在 `extensions` 记录迁移计划（含截止日期与拆分步骤）。
+- 验收方式（PASS 条件）：
+  - `python tools/validate_review_spec.py --root .` 退出码为 0；
+  - 在 `priority_order` 人为制造缺口时，退出码为 2，且提示 missing areas 与修复命令。
+- 回链证据：
+  - `docs/postmortems/2026-01-13_postmortem_review_spec_priority_coverage_gate_and_handoff.md`
+
 ### 条目：公开发布前置检查必须“数据面 + 控制面 + workflow 面”分层
 - 标签（失败模式）：`入口不一致`、`契约漂移`、`不可观测`
 - 适用场景：将私有项目改为 public、首次开源、对外发布“可复制运行”的仓库快照
@@ -215,4 +241,3 @@ owner: zhiz
   `python tools\verify_postmortems_and_troubleshooting.py --no-fix --strict`
 - Inventory 输入集合漂移 gate（需要时启用）：  
   `python tools\check_inventory_build.py --compare-snapshot <snapshot> --strict`
-

@@ -10,14 +10,18 @@
 - [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)
 
 <!-- AUTO-GENERATED:BEGIN postmortems-index -->
+## 2026-01-13
+- **Postmortem｜审查规范（Review Spec）优先级覆盖门禁 + 写回 HANDOFF（SSOT）**
+  - 文件：[`docs/postmortems/2026-01-13_postmortem_review_spec_priority_coverage_gate_and_handoff.md`](2026-01-13_postmortem_review_spec_priority_coverage_gate_and_handoff.md)
+  - 关键字：审查规范 / Review / Spec / 优先级覆盖门禁 / 写回 / HANDOFF / SSOT / review / spec / priority / coverage / gate
+
 ## 2026-01-11
 - **Postmortem｜check_public_release_hygiene：rc=2（FAIL）与 report_written 信号误读**
   - 文件：[`docs/postmortems/2026-01-11_postmortem_public_release_hygiene_rc2_and_report_written_signal.md`](2026-01-11_postmortem_public_release_hygiene_rc2_and_report_written_signal.md)
-  - 关键字：check_public_release_hygiene / rc=2 / FAIL / report_written / exitcode / Desktop / fallback / file-scope / respect-gitignore / public release hygiene
+  - 关键字：check / public / release / hygiene / rc / 2 / FAIL / report / written / 信号误读 / rc2 / signal
 - **Postmortem｜门禁治理架构：SSOT → Gate 单入口 → JSON Schema →（可选）Conftest Policy**
   - 文件：[`docs/postmortems/2026-01-11_postmortem_ssot_gate_schema_policy_single_entrypoint.md`](2026-01-11_postmortem_ssot_gate_schema_policy_single_entrypoint.md)
-  - 关键字：SSOT / gate / single entry / JSON Schema / conftest / rego / policy / CI only gate / drift guardrails
-
+  - 关键字：门禁治理架构 / SSOT / Gate / 单入口 / JSON / Schema / 可选 / Conftest / Policy / ssot / gate / schema
 
 ## 2026-01-09
 - **Postmortem：开源项目补齐仓库健康文件（CHANGELOG/CITATION/.editorconfig + CoC 联系方式）**
@@ -38,9 +42,9 @@
   - 关键字：2026 / 01 / 07 / code / 对齐 / 缺失脚本补齐 / 文档门禁增强 / 输出可读性优化 / alignment / gates
 
 ## 2026-01-05
-- **事故复盘：E2E 回归中 LLM HTTP POST 错误取证缺失与模型身份不准确 — 2026-01-05**
+- **E2E 回归中 LLM HTTP POST 错误取证缺失与模型身份不准确**
   - 文件：[`docs/postmortems/2026-01-05_postmortem_llm_http_observability_and_model_identity.md`](2026-01-05_postmortem_llm_http_observability_and_model_identity.md)
-  - 关键字：事故复盘 / E2E / 回归中 / LLM / HTTP / POST / 错误取证缺失与模型身份不准确 / 2026 / 01 / 05 / llm / http
+  - 关键字：E2E / 回归中 / LLM / HTTP / POST / 错误取证缺失与模型身份不准确 / llm / http / observability / model / identity
 
 ## 2026-01-03
 - **21h rag accept cli missing and doc encoding mismatch**

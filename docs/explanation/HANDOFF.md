@@ -206,11 +206,16 @@ next（最小改动优先）：
 满足后，将对应 warning 升级为 FAIL。
 
 ### 5.3 Repo Gate（PR/CI Lite：Schema + Policy + 可审计报告）
+
+- Review Spec（审查规范）门禁：
+  - SSOT：`docs/reference/review/review_spec.v1.json`
+  - 人类阅读产物：`docs/reference/review/REVIEW_SPEC.md`（由生成器写入；禁止手改）
+  - 校验：`python tools/validate_review_spec.py --root .`（PASS=0 / FAIL=2 / ERROR=3）
+  - 生成（本地修复）：`python tools/generate_review_spec_docs.py --root . --write`（然后重跑校验）
 - SSOT：`docs/reference/reference.yaml`（门禁顺序/产物路径/schema/policy 输入集）
 - 单入口：`python tools/gate.py --profile ci --root .`（或安装后 `rag-gate ...`）
 - 产物：`data_processed/build_reports/gate_report.json` + `gate_logs/`
 - `profile=ci/release` 默认包含 `check_ruff` / `check_mypy`（format/strict 默认关闭，可用 `RAG_RUFF_FORMAT=1`、`RAG_MYPY_STRICT=1` 收紧）
-- Review Spec 门禁：`validate_review_spec` 校验 `docs/reference/review/review_spec.v1.json` 与 `docs/reference/review/REVIEW_SPEC.md` 一致；刷新用 `tools/generate_review_spec_docs.py --write`
 - Policy：通过 conftest 执行 `policy/` 下 Rego 规则；CI/Linux 会安装并强制执行，本地缺 conftest 时默认 SKIP。
 
 ---
@@ -228,6 +233,11 @@ next（最小改动优先）：
 
 ## 7. 变更日志
 
+
+- 2026-01-13
+  - 新增复盘：`docs/postmortems/2026-01-13_postmortem_review_spec_priority_coverage_gate_and_handoff.md`
+  - HANDOFF 写回：新增 Review Spec 门禁入口与修复命令（SSOT/生成/校验）
+  - 修复：`tools/validate_review_spec.py` 渲染口径与生成器对齐，避免一致性误判
 - 2026-01-06
   - 新增 SSOT：`docs/explanation/HANDOFF.md`（本文件）
   - 引入 workstreams 分栏：检索回归 + 报告实时观测
