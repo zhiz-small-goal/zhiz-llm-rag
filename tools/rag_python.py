@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+"""REPO-ONLY TOOL
 rag_python.py
 
 A cross-platform launcher to run project scripts using a *project venv* Python,
