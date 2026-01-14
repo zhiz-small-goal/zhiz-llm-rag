@@ -93,11 +93,11 @@ def main(argv: list[str] | None = None) -> int:
 
         This tool intentionally stays single-purpose (preflight only) and communicates
         success/failure via exit code. To make the workflow harder to misuse in Windows
-        interactive CMD, recommend a fail-fast runner or '&&' chaining.
+        interactive CMD, recommend a fail-fast runner or "&&" chaining.
         """
         print(
-            "[HINT] Windows CMD 交互模式不会自动阻止你继续输入下一条命令。"
-            " 要做到 fail-fast，请使用 '&&' 串联，或直接运行 tools\\run_ci_gates.cmd。"
+            "[HINT] Windows CMD interactive mode does not stop after failures. "
+            'Use "&&" to chain commands, or run tools\\run_ci_gates.cmd.'
         )
 
     p = Path(args.path).resolve()
@@ -125,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
         for it in issues[:200]:
             line, col = _idx_to_line_col(text, int(it["index"]))
             # VS Code Ctrl+Click: ABS_PATH:LINE:COL: ...
+            # NOTE: f-string expressions cannot contain backslashes in older parsers
+            # (e.g., Python 3.11 grammar). Use single quotes in dict indexing.
             print(f"{p}:{line}:{col}: [FAIL] {it['kind']}  {it['codepoint']}  {it['name']}  repr={it['char']!r}")
         if len(issues) > 200:
             print(f"  ... ({len(issues) - 200} more)")
