@@ -13,7 +13,7 @@ repos:
         args: [tools\\rag_python.py, tools\\check_ruff.py, --root, ., --format]
         language: unsupported
         pass_filenames: true
-        types: [tools\\rag_python.py, python]
+        types: [python]
       - id: rag-mypy
         name: check_mypy --root .
         entry: python
