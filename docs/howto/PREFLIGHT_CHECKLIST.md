@@ -1,7 +1,7 @@
 ---
 title: Preflight Checklist（重构/换机/换环境后必跑）
 version: 0.5
-last_updated: 2026-01-11
+last_updated: 2026-01-14
 scope: "本地门禁序列：在变更入口/依赖/环境后，快速确认系统仍可用；并覆盖公开发布前的最小检查"
 owner: zhiz
 ---
@@ -134,8 +134,9 @@ pytest -q
 
 **命令（CMD）**
 ```cmd
-rem pre-commit 是否通过 gate 收敛入口（如未使用 pre-commit，可跳过）
-if exist .pre-commit-config.yaml findstr /I "tools/gate.py" .pre-commit-config.yaml
+rem pre-commit 是否通过 rag_python 中转并调用 gate（如未使用 pre-commit，可跳过）
+if exist .pre-commit-config.yaml findstr /I "tools\\rag_python.py" .pre-commit-config.yaml
+if exist .pre-commit-config.yaml findstr /I "tools\\gate.py" .pre-commit-config.yaml
 
 rem GitHub Actions/CI 是否只调用 gate（如未使用 Actions，可跳过）
 if exist .github\workflows findstr /S /I "tools/gate.py" .github\workflows\*.yml .github\workflows\*.yaml
@@ -145,7 +146,7 @@ if exist .github\workflows findstr /S /I "check_public_release_hygiene.py" .gith
 ```
 
 **PASS 条件**
-- 若存在 `.pre-commit-config.yaml`：能匹配到 `tools/gate.py`
+- 若存在 `.pre-commit-config.yaml`：能匹配到 `tools\\rag_python.py` 且能匹配到 `tools\\gate.py`
 - 若存在 `.github/workflows`：能匹配到 `tools/gate.py`
 - CI 工作流中不应直接调用 `check_public_release_hygiene.py`（该条应无输出）；如确需例外，必须在 SSOT/文档中显式说明原因与边界。
 

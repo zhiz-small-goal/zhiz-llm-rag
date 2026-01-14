@@ -121,22 +121,30 @@ repos:
     hooks:
       - id: rag-gate-fast
         name: rag-gate --profile fast
-        entry: tools\\rag_python.cmd
-        args: [tools\\gate.py, --profile, fast, --root, .]
-        language: system
+        entry: python
+        args: [tools\\rag_python.py, tools\\gate.py, --profile, fast, --root, .]
+        language: unsupported
         pass_filenames: false
       - id: rag-ruff
         name: check_ruff --format
-        entry: tools\\rag_python.cmd
-        args: [tools\\check_ruff.py, --root, ., --format]
-        language: system
+        entry: python
+        args: [tools\\rag_python.py, tools\\check_ruff.py, --root, ., --format]
+        language: unsupported
         pass_filenames: true
+        types: [tools\\rag_python.py, python]
       - id: rag-mypy
         name: check_mypy --root .
-        entry: tools\\rag_python.cmd
-        args: [tools\\check_mypy.py, --root, .]
-        language: system
+        entry: python
+        args: [tools\\rag_python.py, tools\\check_mypy.py, --root, .]
+        language: unsupported
         pass_filenames: false
+      - id: show-python
+        name: show python used bey entry
+        language: unsupported
+        entry: python
+        args: [tools\\rag_python.py, -c, "import sys; print(sys.executable); print(sys.version)"]
+        pass_filenames: false
+        always_run: true
 ```
 
 要点：
