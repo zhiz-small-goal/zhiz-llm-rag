@@ -7,7 +7,12 @@
       "command": "git pull --ff-only",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
-      "presentation": { "reveal": "silent" },
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "close": true
+      },
       "runOptions": { "runOn": "folderOpen" }
     }
   ]
