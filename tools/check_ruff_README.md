@@ -1,7 +1,7 @@
 ---
 title: check_ruff.py 使用说明
 version: v1.2
-last_updated: 2026-01-12
+last_updated: 2026-01-14
 ---
 
 # check_ruff.py 使用说明
@@ -28,6 +28,10 @@ last_updated: 2026-01-12
 python tools/check_ruff.py --root .
 python tools/check_ruff.py --root . --format
 python tools/check_ruff.py --root . --format src/mhy_ai_rag_data/rag_config.py
+
+# 需要自动修复格式时（会修改文件, 以下指令任选其一）
+python -m ruff format .
+ruff format .
 ```
 
 ## 参数说明
@@ -47,5 +51,6 @@ python tools/check_ruff.py --root . --format src/mhy_ai_rag_data/rag_config.py
 
 ## 备注与常见问题
 - 脚本不会修改文件，仅做检查。
+- 若需自动修复格式问题，使用 `python -m ruff format .` 或 `ruff format .`。
 - lint 输出使用 `file:line:col` 形式，便于 VS Code 跳转（Windows 路径会归一为 `/`）。
 - 默认使用 `pyproject.toml` 中的 Ruff 配置；如需覆盖，使用 `--config`。

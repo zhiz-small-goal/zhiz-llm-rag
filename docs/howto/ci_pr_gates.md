@@ -98,6 +98,7 @@ python tools\check_pyproject_preflight.py --ascii-only ^
 - `rag-* not found`：优先检查当前解释器与 Scripts 是否在 PATH；必要时重新 `pip install -e ...`
 - `tools layout FAIL`：通常是新增脚本缺 marker，或 tools↔src 出现同名但 tools 侧不是 wrapper；优先按 `check_tools_layout` 输出修复 marker/转发关系
 - `contract gate FAIL`：按输出定位违规调用点，改为 `md_path=.../md_text=...` 的关键字参数
+- `check_ruff FAIL`：若为 format 相关，先执行 `python -m ruff format .`（或 `ruff format .`）再重跑 `check_ruff`
 - `pytest FAIL`：查看失败的断言与临时目录产物，通常是路径/产物名/入口点问题
 
 ## 5) 可选：附加门禁与收紧策略
