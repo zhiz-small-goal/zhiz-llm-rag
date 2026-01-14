@@ -279,13 +279,24 @@ def main(argv: List[str]) -> int:
 
     start = Path(__file__).resolve().parent
     root = _repo_root(start)
-    py = _choose_python(root)
+    try:
+        py = _choose_python(root)
+    except RuntimeError as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 3
 
     # Pass-through: everything after this wrapper is given to target python.
     cmd = [str(py), *argv]
 
     _debug(f"exec: {cmd!r}")
-    proc = subprocess.run(cmd, cwd=str(root))
+    try:
+        proc = subprocess.run(cmd, cwd=str(root))
+    except Exception as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 3
     return int(proc.returncode)
 
 
