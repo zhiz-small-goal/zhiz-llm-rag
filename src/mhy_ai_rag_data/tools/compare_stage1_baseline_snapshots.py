@@ -29,6 +29,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 
 def now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -171,7 +173,7 @@ def main() -> int:
         out_path = pa.parent / f"baseline_diff_{int(time.time())}.json"
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(out_path, report)
 
     print(f"[baseline_diff] overall={report['overall']} out={out_path}")
     return 0 if report["overall"] == "PASS" else 2

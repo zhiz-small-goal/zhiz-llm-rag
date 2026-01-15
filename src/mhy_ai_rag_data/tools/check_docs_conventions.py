@@ -30,6 +30,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 
 def now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -100,7 +102,7 @@ DEFAULT_IGNORE = [
     "**/node_modules/**",
     "docs/postmortems/**",
     "**/archive/**",
-    "**/REFERENCE.md"
+    "**/REFERENCE.md",
 ]
 DEFAULT_GLOB = "**/*.md"
 DEFAULT_OUT = "data_processed/build_reports/docs_conventions_report.json"
@@ -146,9 +148,7 @@ def load_config(cfg_path: Path) -> Dict[str, Any]:
         return {}
 
 
-def _add_blank_lines_after_title(
-    raw: List[str], fm_len: int, title_body_idx: int, blank_count: int
-) -> bool:
+def _add_blank_lines_after_title(raw: List[str], fm_len: int, title_body_idx: int, blank_count: int) -> bool:
     """
     Ensure there are at least two blank lines after the title line.
 
@@ -291,7 +291,7 @@ def main() -> int:
             "reason": "target dirs not found",
             "files": [],
         }
-        out_path.write_text(json.dumps(missing_report, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_json_report(out_path, missing_report)
         print(f"[docs_check] FAIL: target dirs not found: {target_dirs}  out={out_path}")
         return 2
 
@@ -311,7 +311,7 @@ def main() -> int:
         "counts": {"files": len(results), "bad": len(bad)},
         "files": results,
     }
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(out_path, report)
 
     print(f"[docs_check] {report['overall']}  files={len(results)} bad={len(bad)}  out={out_path}")
     return 0 if not bad else 2

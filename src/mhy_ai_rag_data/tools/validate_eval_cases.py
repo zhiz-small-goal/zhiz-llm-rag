@@ -24,6 +24,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 
 def now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -94,7 +96,7 @@ def main() -> int:
         report["overall"] = "FAIL"
         report["errors"].append({"code": "cases_missing", "msg": f"cases file not found: {cases_path}"})
         report["counts"]["errors"] += 1
-        out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_json_report(out_path, report)
         print(f"[validate_cases] overall=FAIL out={out_path}")
         return 2
 
@@ -249,7 +251,7 @@ def main() -> int:
     if report["counts"]["errors"] > 0:
         report["overall"] = "FAIL"
 
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(out_path, report)
     print(f"[validate_cases] overall={report['overall']} out={out_path}")
     return 0 if report["overall"] == "PASS" else 2
 

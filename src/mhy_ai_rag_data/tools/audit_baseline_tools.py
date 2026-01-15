@@ -21,11 +21,12 @@ audit_baseline_tools.py
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import time
 from pathlib import Path
 from typing import Dict, List, Any
+
+from mhy_ai_rag_data.tools.report_order import write_json_report
 
 
 DEFAULT_PATTERNS = [
@@ -116,7 +117,7 @@ def main() -> int:
             results["counts"]["files_matched"] += 1
             results["counts"]["hit_lines"] += len(hits)
 
-    out_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(out_path, results)
 
     # stdout (human)
     print(

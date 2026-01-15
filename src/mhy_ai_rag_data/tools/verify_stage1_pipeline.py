@@ -25,6 +25,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 # 兼容两种运行方式：python -m tools.verify_stage1_pipeline 以及 python tools/verify_stage1_pipeline.py
 try:
     _llm_http_client = importlib.import_module("mhy_ai_rag_data.tools.llm_http_client")
@@ -265,8 +267,7 @@ def main() -> int:
     overall_ok = bool(ok_files and ok_chroma and ok_llm)
     report["overall"] = "PASS" if overall_ok else "FAIL"
 
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+    write_json_report(out_path, report)
 
     # human-readable stdout
     print(f"[stage1] overall={report['overall']}  report={out_path}")

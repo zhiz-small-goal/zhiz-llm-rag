@@ -35,6 +35,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 # Optional dependency (present in project deps, but keep tool usable in "no-install" mode)
 yaml: Optional[ModuleType]
 try:
@@ -444,7 +446,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             rep = build_report(status="FAIL", inputs={"root": str(repo_root)}, metrics={}, errors=report_errors)
             if args.json_out:
-                write_text(Path(args.json_out), json.dumps(rep, ensure_ascii=False, indent=2))
+                write_json_report(Path(args.json_out), rep)
             if args.json_stdout:
                 print(json.dumps(rep, ensure_ascii=False, indent=2))
             return _fail(msg)
@@ -552,7 +554,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             errors=report_errors,
         )
         if args.json_out:
-            write_text(Path(args.json_out), json.dumps(rep, ensure_ascii=False, indent=2))
+            write_json_report(Path(args.json_out), rep)
         if args.json_stdout:
             print(json.dumps(rep, ensure_ascii=False, indent=2))
 
@@ -569,7 +571,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         try:
             if "args" in locals() and getattr(args, "json_out", None):
                 rep = build_report(status="ERROR", inputs={}, metrics={}, errors=report_errors)
-                write_text(Path(args.json_out), json.dumps(rep, ensure_ascii=False, indent=2))
+                write_json_report(Path(args.json_out), rep)
         except Exception:
             pass
         return 3

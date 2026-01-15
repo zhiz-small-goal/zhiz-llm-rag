@@ -34,6 +34,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
+
 
 def _iso_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -59,7 +61,7 @@ def _write_text(p: Path, s: str) -> None:
 def _write_json(p: Path, obj: Any) -> None:
     _ensure_dir(p.parent)
     with p.open("w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
+        json.dump(prepare_report_for_file_output(obj), f, ensure_ascii=False, indent=2)
 
 
 def _norm_status(rc: int) -> str:

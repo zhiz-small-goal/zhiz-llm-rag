@@ -1,7 +1,7 @@
 ---
 title: 参考与契约（REFERENCE）
-version: v1.1
-last_updated: 2026-01-12
+version: v1.2
+last_updated: 2026-01-14
 ---
 
 > SSOT（机器可读）: `docs/reference/reference.yaml`。CI 与 gate runner 以此为准。
@@ -81,6 +81,11 @@ last_updated: 2026-01-12
 - 推荐把所有 JSON 报告落在 `data_processed/build_reports/`，并使用固定文件名作为“回归基线入口”。
 - `--json-stdout`：部分脚本支持将同一份 JSON 打印到 stdout（不落盘），适合把报告留在 CI 日志中。
 - `tools` 下脚本推荐用模块方式运行：`python -m tools.<module>`，避免 import 路径问题。
+
+补充：落盘顺序（人类可读约定）
+- **汇总块优先**：若报告包含 `summary/metrics/buckets/counts/totals`，这些字段在 JSON 文件顶部优先展示。
+- **明细按严重度排序**：常见明细列表（如 `results/cases/items`）在落盘时优先将 `ERROR/FAIL` 项放前、`PASS/OK` 放后。
+  - 说明：这只影响 JSON 序列化的 key/数组顺序，用于 VS Code/差异对比的人类阅读；字段语义不变。
 
 ### 3.4 当前已实现契约的脚本入口
 

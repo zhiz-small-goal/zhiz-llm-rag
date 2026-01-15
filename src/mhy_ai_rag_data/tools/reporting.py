@@ -30,6 +30,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
+
 
 SCHEMA_VERSION = 1
 
@@ -76,8 +78,9 @@ def write_report(report: Dict[str, Any], *, json_out: Optional[str], default_nam
     else:
         out_path = Path(default_name)
 
+    payload = prepare_report_for_file_output(report)
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+        json.dump(payload, f, ensure_ascii=False, indent=2)
 
     return out_path
 

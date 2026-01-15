@@ -64,13 +64,13 @@ from typing import Iterable, List, Optional
 
 
 DEFAULT_GLOBS = [
-    '**/venv_*/Scripts/python.exe',
-    '**/.venv/Scripts/python.exe',
-    '**/venv_*/bin/python',
-    '**/venv_*/bin/python3',
-    '**/.venv/bin/python',
-    '**/.venv/bin/python3',
-    '**/.venv_*/Scripst/python.exe',
+    "**/venv_*/Scripts/python.exe",
+    "**/.venv/Scripts/python.exe",
+    "**/venv_*/bin/python",
+    "**/venv_*/bin/python3",
+    "**/.venv/bin/python",
+    "**/.venv/bin/python3",
+    "**/.venv_*/Scripst/python.exe",
 ]
 
 
@@ -81,12 +81,12 @@ def _python_from_prefix(prefix: Path) -> Optional[Path]:
     """
     # Windows venv layout: <prefix>\Scripts\python.exe
     candidates = [
-        prefix / 'Scripts' / 'python.exe',
+        prefix / "Scripts" / "python.exe",
         # POSIX venv layout: <prefix>/bin/python
-        prefix / 'bin' / 'python',
-        prefix / 'bin' / 'python3',
+        prefix / "bin" / "python",
+        prefix / "bin" / "python3",
         # Conda (Windows) often uses <prefix>\python.exe
-        prefix / 'python.exe',
+        prefix / "python.exe",
     ]
     for p in candidates:
         if p.is_file():
@@ -100,43 +100,43 @@ def _python_from_active_terminal_env(root: Path) -> Optional[Path]:
     Primary signal: VIRTUAL_ENV (set by venv activation scripts).
     Secondary (best-effort): CONDA_PREFIX.
     """
-    venv = os.environ.get('VIRTUAL_ENV')
+    venv = os.environ.get("VIRTUAL_ENV")
     if venv:
         pref = Path(venv)
         if not pref.is_absolute():
             pref = (root / pref).resolve()
         py = _python_from_prefix(pref)
         if py:
-            _debug(f'python (VIRTUAL_ENV) = {py}')
+            _debug(f"python (VIRTUAL_ENV) = {py}")
             return py
 
         # Fallback: if PATH has a python under VIRTUAL_ENV, use it.
-        which_py = shutil.which('python')
+        which_py = shutil.which("python")
         if which_py:
             wp = Path(which_py).resolve()
             try:
                 if str(wp).lower().startswith(str(pref).lower()):
-                    _debug(f'python (PATH under VIRTUAL_ENV) = {wp}')
+                    _debug(f"python (PATH under VIRTUAL_ENV) = {wp}")
                     return wp
             except Exception:
                 pass
 
-    conda_pref = os.environ.get('CONDA_PREFIX')
+    conda_pref = os.environ.get("CONDA_PREFIX")
     if conda_pref:
         pref = Path(conda_pref)
         if not pref.is_absolute():
             pref = (root / pref).resolve()
         py = _python_from_prefix(pref)
         if py:
-            _debug(f'python (CONDA_PREFIX) = {py}')
+            _debug(f"python (CONDA_PREFIX) = {py}")
             return py
 
     return None
 
 
 def _debug(msg: str) -> None:
-    if os.environ.get('RAG_PY_DEBUG') == '1':
-        print(f'[rag_python] {msg}', file=sys.stderr)
+    if os.environ.get("RAG_PY_DEBUG") == "1":
+        print(f"[rag_python] {msg}", file=sys.stderr)
 
 
 def _repo_root(start: Path) -> Path:
@@ -147,26 +147,26 @@ def _repo_root(start: Path) -> Path:
     try:
         # Use git if available. This works even if invoked from subdir.
         out = subprocess.check_output(
-            ['git', 'rev-parse', '--show-toplevel'],
+            ["git", "rev-parse", "--show-toplevel"],
             cwd=str(start),
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
         if out:
             root = Path(out)
-            _debug(f'repo root (git) = {root}')
+            _debug(f"repo root (git) = {root}")
             return root
     except Exception:
         pass
 
     cur = start.resolve()
     for p in [cur, *cur.parents]:
-        if (p / '.git').exists():
-            _debug(f'repo root (.git) = {p}')
+        if (p / ".git").exists():
+            _debug(f"repo root (.git) = {p}")
             return p
 
     cwd = Path.cwd().resolve()
-    _debug(f'repo root (cwd) = {cwd}')
+    _debug(f"repo root (cwd) = {cwd}")
     return cwd
 
 
@@ -175,7 +175,7 @@ def _split_globs(raw: Optional[str]) -> List[str]:
         return DEFAULT_GLOBS.copy()
     # Allow both ';' and ':' as separators (Windows / POSIX friendly).
     parts: List[str] = []
-    for chunk in raw.replace(':', ';').split(';'):
+    for chunk in raw.replace(":", ";").split(";"):
         c = chunk.strip()
         if c:
             parts.append(c)
@@ -187,8 +187,8 @@ def _normalize_pattern(pat: str) -> str:
     pathlib.Path.rglob(pattern) is already recursive, so leading '**/' is redundant.
     Keep the rest as-is.
     """
-    pat = pat.strip().replace('\\', '/')
-    while pat.startswith('**/'):
+    pat = pat.strip().replace("\\", "/")
+    while pat.startswith("**/"):
         pat = pat[3:]
     return pat
 
@@ -216,12 +216,12 @@ def _resolve_explicit_python(root: Path, raw: str) -> Optional[Path]:
 
 
 def _choose_python(root: Path) -> Path:
-    explicit = os.environ.get('RAG_PYTHON')
+    explicit = os.environ.get("RAG_PYTHON")
     if explicit:
         resolved = _resolve_explicit_python(root, explicit)
         if resolved is None:
-            raise RuntimeError(f'RAG_PYTHON is set but not found: {explicit!r} (resolved under {root})')
-        _debug(f'python (RAG_PYTHON) = {resolved}')
+            raise RuntimeError(f"RAG_PYTHON is set but not found: {explicit!r} (resolved under {root})")
+        _debug(f"python (RAG_PYTHON) = {resolved}")
         return resolved
 
     # Prefer the interpreter from an already-activated terminal environment
@@ -230,50 +230,50 @@ def _choose_python(root: Path) -> Path:
     if active is not None:
         return active
 
-    globs = _split_globs(os.environ.get('RAG_VENV_GLOBS'))
+    globs = _split_globs(os.environ.get("RAG_VENV_GLOBS"))
     candidates = _candidate_interpreters(root, globs)
-    _debug(f'glob patterns = {globs}')
-    _debug(f'found {len(candidates)} candidates')
+    _debug(f"glob patterns = {globs}")
+    _debug(f"found {len(candidates)} candidates")
 
     if not candidates:
         raise RuntimeError(
-            'No venv python interpreter found.\n'
-            f'Searched under: {root}\n'
-            'Tried globs:\n  - ' + '\n  - '.join(globs) + '\n'
-            'You can set RAG_PYTHON to explicitly point to the interpreter.'
+            "No venv python interpreter found.\n"
+            f"Searched under: {root}\n"
+            "Tried globs:\n  - " + "\n  - ".join(globs) + "\n"
+            "You can set RAG_PYTHON to explicitly point to the interpreter."
         )
 
     if len(candidates) == 1:
-        _debug(f'python (unique) = {candidates[0]}')
+        _debug(f"python (unique) = {candidates[0]}")
         return candidates[0]
 
-    pick = (os.environ.get('RAG_VENV_PICK') or 'error').strip().lower()
-    if pick == 'first':
-        _debug(f'python (first) = {candidates[0]}')
+    pick = (os.environ.get("RAG_VENV_PICK") or "error").strip().lower()
+    if pick == "first":
+        _debug(f"python (first) = {candidates[0]}")
         return candidates[0]
 
     # default: error
-    listing = '\n'.join(f'  - {p}' for p in candidates)
+    listing = "\n".join(f"  - {p}" for p in candidates)
     raise RuntimeError(
-        'Multiple venv python interpreters found; selection is ambiguous.\n'
-        f'Searched under: {root}\n'
-        f'Candidates:\n{listing}\n'
-        'Set RAG_PYTHON to one of the paths above, or set RAG_VENV_PICK=first.'
+        "Multiple venv python interpreters found; selection is ambiguous.\n"
+        f"Searched under: {root}\n"
+        f"Candidates:\n{listing}\n"
+        "Set RAG_PYTHON to one of the paths above, or set RAG_VENV_PICK=first."
     )
 
 
 def _usage() -> str:
     return (
-        'Usage:\n'
-        '  python tools/rag_python.py <script.py | -m module> [args...] [filenames...]\n\n'
-        'Examples:\n'
-        '  python tools/rag_python.py tools/gate.py --profile fast --root .\n'
-        '  python tools/rag_python.py -m mypkg.cli --help\n'
+        "Usage:\n"
+        "  python tools/rag_python.py <script.py | -m module> [args...] [filenames...]\n\n"
+        "Examples:\n"
+        "  python tools/rag_python.py tools/gate.py --profile fast --root .\n"
+        "  python tools/rag_python.py -m mypkg.cli --help\n"
     )
 
 
 def main(argv: List[str]) -> int:
-    if not argv or argv[0] in {'-h', '--help'}:
+    if not argv or argv[0] in {"-h", "--help"}:
         print(_usage(), file=sys.stderr)
         return 2
 
@@ -282,23 +282,23 @@ def main(argv: List[str]) -> int:
     try:
         py = _choose_python(root)
     except RuntimeError as exc:
-        print(f'[ERROR] {exc}', file=sys.stderr)
+        print(f"[ERROR] {exc}", file=sys.stderr)
         return 2
     except Exception as exc:
-        print(f'[ERROR] {exc}', file=sys.stderr)
+        print(f"[ERROR] {exc}", file=sys.stderr)
         return 3
 
     # Pass-through: everything after this wrapper is given to target python.
     cmd = [str(py), *argv]
 
-    _debug(f'exec: {cmd!r}')
+    _debug(f"exec: {cmd!r}")
     try:
         proc = subprocess.run(cmd, cwd=str(root))
     except Exception as exc:
-        print(f'[ERROR] {exc}', file=sys.stderr)
+        print(f"[ERROR] {exc}", file=sys.stderr)
         return 3
     return int(proc.returncode)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))

@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from mhy_ai_rag_data.project_paths import find_project_root
+from mhy_ai_rag_data.tools.report_order import write_json_report
 
 
 SNAPSHOT_SCHEMA = "inventory_snapshot_v1"
@@ -156,8 +157,7 @@ def write_snapshot(out_path: Path, inventory_path: Path, rows: List[InvRow]) -> 
             for r in rows
         ],
     }
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(out_path, payload)
 
 
 def load_snapshot(path: Path) -> Dict[str, Any]:
@@ -246,8 +246,7 @@ def diff_inventory(
 
 
 def _write_json(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(path, payload)
 
 
 def _parse_args() -> argparse.Namespace:

@@ -9,7 +9,6 @@ Stdlib-only by design.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 import traceback
@@ -18,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from mhy_ai_rag_data.project_paths import find_project_root
+from mhy_ai_rag_data.tools.report_order import write_json_report
 
 
 DEFAULT_PLACEHOLDERS = [
@@ -210,7 +210,7 @@ def main() -> int:
     if args.out:
         out_path = resolve_out_path(repo, args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_json_report(out_path, report)
         print(f"report_written={out_path}")
 
     return result_to_rc(report["summary"]["result"])

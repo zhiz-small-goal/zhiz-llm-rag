@@ -22,13 +22,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import platform
 import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+from mhy_ai_rag_data.tools.report_order import write_json_report
 
 SMALL_FILE_SHA256_LIMIT = 50 * 1024 * 1024  # 50MB
 
@@ -150,8 +151,7 @@ def main() -> int:
     rc3, out3 = run_cmd([sys.executable, "-m", "pip", "freeze"])
     snap["pip_freeze"] = out3 if rc3 == 0 else f"ERROR: {out3}"
 
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(snap, f, ensure_ascii=False, indent=2)
+    write_json_report(out_path, snap)
 
     print(f"[snapshot] OK  out={out_path}")
     return 0

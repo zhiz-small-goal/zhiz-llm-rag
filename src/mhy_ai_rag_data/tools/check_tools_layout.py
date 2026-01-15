@@ -26,12 +26,13 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import time
 import sys
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+from mhy_ai_rag_data.tools.report_order import write_json_report
 
 MARK_WRAPPER = "AUTO-GENERATED WRAPPER"
 MARK_REPO_ONLY = "REPO-ONLY TOOL"
@@ -214,7 +215,7 @@ def main() -> int:
     if args.out:
         out_path = (repo / args.out).resolve()
         ensure_dir(out_path.parent)
-        out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_json_report(out_path, report)
         print(f"[check_tools_layout] report={out_path}")
 
     print(f"\nSTATUS: {status}")

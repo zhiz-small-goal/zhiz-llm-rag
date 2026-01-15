@@ -20,9 +20,10 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 from typing import Any, Dict
+
+from mhy_ai_rag_data.tools.report_order import write_json_report
 
 
 def _bool(s: str) -> bool:
@@ -112,7 +113,7 @@ def main() -> int:
         "type_breakdown": type_breakdown,
     }
 
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(out_path, report)
 
     print("=== CHUNK PLAN ===")
     print(f"units_read={units_read}")

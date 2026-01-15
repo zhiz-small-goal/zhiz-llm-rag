@@ -30,6 +30,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Sequence
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 
 def _run(cmd: Sequence[str], cwd: Path) -> Tuple[int, float]:
     t0 = time.perf_counter()
@@ -234,7 +236,7 @@ def main() -> int:
         "status": "PASS" if ok else "FAIL",
     }
 
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(report_path, report)
 
     # print summary
     print("\n=== TIME SUMMARY ===")

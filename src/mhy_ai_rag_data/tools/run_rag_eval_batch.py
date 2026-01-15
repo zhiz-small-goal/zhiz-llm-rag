@@ -22,6 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 
 def run_capture(cmd: List[str], cwd: Path) -> Tuple[int, float, str]:
     t0 = time.perf_counter()
@@ -129,7 +131,7 @@ def main() -> int:
         report["results"].append(one)
         print(f"[OK] {qid}: retriever rc={rc} ({dt:.2f}s)")
 
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(report_path, report)
     print(f"REPORT: {report_path}")
     return 0
 

@@ -21,16 +21,16 @@ from pathlib import Path
 def _ensure_src_on_path() -> None:
     # 保证在未 editable install 的情况下也能导入 src 侧实现
     repo = Path(__file__).resolve().parent
-    if repo.name == 'tools':
+    if repo.name == "tools":
         repo = repo.parent
-    src = repo / 'src'
+    src = repo / "src"
     if src.exists():
         sys.path.insert(0, str(src))
 
 
 def main() -> int:
     _ensure_src_on_path()
-    runpy.run_module('mhy_ai_rag_data.tools.check_tools_layout', run_name='__main__')
+    runpy.run_module("mhy_ai_rag_data.tools.check_tools_layout", run_name="__main__")
     return 0
 
 
@@ -38,7 +38,7 @@ def _entry() -> int:
     try:
         return main()
     except KeyboardInterrupt:
-        print('[ERROR] KeyboardInterrupt', file=sys.stderr)
+        print("[ERROR] KeyboardInterrupt", file=sys.stderr)
         return 3
     except SystemExit as e:
         code = e.code
@@ -46,13 +46,13 @@ def _entry() -> int:
             return 0
         if isinstance(code, int):
             return code
-        print(f'[ERROR] SystemExit: {code}', file=sys.stderr)
+        print(f"[ERROR] SystemExit: {code}", file=sys.stderr)
         return 3
     except Exception:
-        print('[ERROR] unhandled exception', file=sys.stderr)
+        print("[ERROR] unhandled exception", file=sys.stderr)
         traceback.print_exc()
         return 3
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(_entry())

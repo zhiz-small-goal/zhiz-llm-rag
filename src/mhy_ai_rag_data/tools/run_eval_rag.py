@@ -29,6 +29,8 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 from mhy_ai_rag_data.tools.report_stream import StreamWriter, default_run_id, safe_truncate
 
 # 兼容两种运行方式：python -m tools.run_eval_rag 以及 python tools/run_eval_rag.py
@@ -507,8 +509,7 @@ def main() -> int:
         "cases": per_case,
     }
 
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+    write_json_report(out_path, report)
 
     if stream_writer is not None:
         stream_writer.emit(

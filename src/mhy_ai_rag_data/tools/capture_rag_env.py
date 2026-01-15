@@ -25,7 +25,6 @@ python capture_rag_env.py --out data_processed/env_report.json
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import platform
 import subprocess
@@ -33,6 +32,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
+
+from mhy_ai_rag_data.tools.report_order import write_json_report
 
 
 KEY_PACKAGES = [
@@ -126,7 +127,7 @@ def main() -> int:
     except Exception as e:
         report["torch"] = {"error": str(e)}
 
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_report(out_path, report)
     print(f"Wrote: {out_path}")
     return 0
 

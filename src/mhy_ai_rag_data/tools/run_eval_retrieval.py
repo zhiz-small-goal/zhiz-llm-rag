@@ -34,6 +34,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Mapping, Sequence
 
+from mhy_ai_rag_data.tools.report_order import write_json_report
+
 import platform
 
 from mhy_ai_rag_data.tools.report_stream import StreamWriter, default_run_id
@@ -367,8 +369,7 @@ def main() -> int:
         "cases": per_case,
     }
 
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+    write_json_report(out_path, report)
 
     if stream_writer is not None:
         stream_writer.emit(
