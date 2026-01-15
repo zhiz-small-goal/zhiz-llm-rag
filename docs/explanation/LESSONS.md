@@ -1,7 +1,7 @@
 ---
 title: Lessons / 经验库（可迁移）
-version: 0.5
-last_updated: 2026-01-11
+version: 0.7
+last_updated: 2026-01-15
 scope: "跨 postmortem 的失败模式、控制点、门禁与清单"
 owner: zhiz
 ---
@@ -94,6 +94,38 @@ owner: zhiz
 ---
 
 ## 5. 经验条目
+
+
+### 条目：报告定位不要依赖 VS Code 的启发式 linkify，落盘报告应显式提供 loc_uri
+- 标签（失败模式）：`不可观测`、`契约漂移`
+- 适用场景：任何需要在“落盘报告（JSON/Markdown）”里给人类做点击跳转定位的输出（gate 报告、校验器报告、审查报告等）。
+- 触发/现象：报告里已经有 `file:line:col`，但在 VS Code 打开文件时并不总能点击跳转，导致排查路径变长。
+- 根因机制（简述）：`file:line:col` 的可点击性在 VS Code 中属于启发式（与文件类型/设置/渲染器有关），不应作为稳定契约。
+- 缺失控制点：缺少“协议化 URI”的字段/渲染规则，导致人类可用性依赖编辑器行为。
+- 可执行动作：
+  - A1：在落盘 JSON 报告中，为诊断项补充 `loc_uri`（`vscode://file/<abs_path>:line:col`），保留原 `loc` 作为展示串。
+  - A2：对 Markdown 报告，把定位渲染为 `[loc](loc_uri)`，保证在报告文件内可点击。
+  - A3：把此约定写入审查规范与相关 README，作为“报告可用性契约”的一部分。
+  - A4：对报告中的“路径展示串”做分隔符归一化（统一 `/`），用于跨 OS 展示一致与 diff 降噪，但不作为可点击保证。
+- 验收方式（PASS 条件）：打开任意含定位的报告文件，点击 `vscode://file...` 链接可跳转到对应行列；同时旧消费端仍能读取原 `loc` 文本。
+- 回链证据：
+  - `docs/postmortems/2026-01-15_postmortem_vscode_clickable_loc_uri.md`
+  - `docs/postmortems/2026-01-15_postmortem_report_output_contract_paths.md`
+
+### 条目：文件落盘报告的可读顺序应在“写入出口”统一归一化（汇总置顶 + 严重度排序）
+- 标签（失败模式）：`入口不一致`、`不可观测`
+- 适用场景：任何会“写入文件”（JSON/Markdown/其他结构化产物）的检查脚本/门禁脚本；读者需要快速定位 FAIL/ERROR 与关键汇总（summary/metrics）。
+- 触发/现象：同一类报告在不同脚本中出现“汇总位置漂移、FAIL/ERROR 被 PASS 夹在中间”，导致阅读与 diff 对比成本上升。
+- 根因机制（简述）：报告对象由不同脚本各自拼装 dict/list；序列化顺序与插入顺序强绑定，缺少统一的“人类可读顺序契约”。
+- 缺失控制点：缺少集中化的“落盘前归一化”步骤，导致规则漂移与漏改。
+- 可执行动作：
+  - A1：在公共写入器或统一落盘入口接入 `prepare_report_for_file_output()`（或同等归一化函数），确保汇总块置顶。
+  - A2：对明细列表按严重度稳定排序（ERROR/FAIL 在前，PASS 在后），并保持排序稳定（同严重度内保持原顺序或按 key 稳定排序）。
+  - A3：对绕过公共写入器自行 `json.dump` 的脚本做收敛（或至少加审计/门禁提示）。
+- 验收方式（PASS 条件）：打开任意落盘报告文件，首屏可见汇总；FAIL/ERROR 项集中在明细前部；字段语义与计数不变（仅顺序变化）。
+- 回链证据（至少 1 篇 postmortem）：
+  - `docs/postmortems/2026-01-15_postmortem_file_report_ordering.md`
+
 
 
 ### 条目：Review Spec 的“优先级维度 ↔ 清单域覆盖关系”必须门禁化，并写回 HANDOFF（SSOT）

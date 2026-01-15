@@ -10,6 +10,18 @@
 - [Preflight Checklist（重构/换机/换环境后必跑）](../howto/PREFLIGHT_CHECKLIST.md)
 
 <!-- AUTO-GENERATED:BEGIN postmortems-index -->
+## 2026-01-15
+- **Postmortem｜落盘报告顺序契约：汇总置顶 + 严重度排序（FAIL/ERROR 优先）**
+  - 文件：[`docs/postmortems/2026-01-15_postmortem_file_report_ordering.md`](2026-01-15_postmortem_file_report_ordering.md)
+  - 关键字：report / json / ordering / summary-first / severity / ERROR / FAIL / PASS / report_order / reporting
+
+- **Postmortem｜报告输出契约：落盘报告路径分隔符统一为 "/"**
+  - 文件：[`docs/postmortems/2026-01-15_postmortem_report_output_contract_paths.md`](2026-01-15_postmortem_report_output_contract_paths.md)
+  - 关键字：report / path / separator / as_posix / backslash / windows / markdown / json / normalize
+
+- **Postmortem｜落盘报告中的 DIAG_LOC 在 VS Code 中不可点击：引入 loc_uri（vscode://file）**
+  - 文件：[`docs/postmortems/2026-01-15_postmortem_vscode_clickable_loc_uri.md`](2026-01-15_postmortem_vscode_clickable_loc_uri.md)
+  - 关键字：VS Code / clickable / linkify / DIAG_LOC / file:line:col / loc_uri / vscode://file / report / markdown / json
 ## 2026-01-13
 - **Postmortem｜审查规范（Review Spec）优先级覆盖门禁 + 写回 HANDOFF（SSOT）**
   - 文件：[`docs/postmortems/2026-01-13_postmortem_review_spec_priority_coverage_gate_and_handoff.md`](2026-01-13_postmortem_review_spec_priority_coverage_gate_and_handoff.md)

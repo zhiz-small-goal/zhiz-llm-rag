@@ -1,7 +1,7 @@
 ---
 title: Preflight Checklist（重构/换机/换环境后必跑）
-version: 0.5
-last_updated: 2026-01-14
+version: 0.6
+last_updated: 2026-01-15
 scope: "本地门禁序列：在变更入口/依赖/环境后，快速确认系统仍可用；并覆盖公开发布前的最小检查"
 owner: zhiz
 ---
@@ -203,6 +203,34 @@ python tools\verify_reports_schema.py
 - 退出码为 0；schema 校验无错误
 
 ---
+
+### 2.4 报告输出可用性契约自检（路径分隔符 + vscode://file 链接）
+
+> 目标：在不依赖 VS Code 启发式 linkify 的情况下，确保“落盘报告”对人类阅读可直接点击定位；同时统一路径展示分隔符以降低跨 OS diff 噪声。回链：  
+> - `docs/postmortems/2026-01-15_postmortem_report_output_contract_paths.md`  
+> - `docs/postmortems/2026-01-15_postmortem_vscode_clickable_loc_uri.md`
+
+**前置条件**
+- 已生成 `data_processed/build_reports/gate_report.json`（可通过 1.1a 的 gate runner 生成）。
+
+**命令（CMD）**
+```cmd
+rem 1) 生成 gate_report.md（参数以脚本 --help 为准；此处给出常用示例）
+python -m src.mhy_ai_rag_data.tools.view_gate_report ^
+  --report data_processed/build_reports/gate_report.json ^
+  --md-out data_processed/build_reports/gate_report.md
+
+rem 2) 扫描 build_reports 下的 .json/.md：不应出现反斜杠（展示一致性）
+python -c "import pathlib,sys; p=pathlib.Path('data_processed/build_reports'); bad=[x for x in p.rglob('*') if x.suffix in ('.json','.md') and '\\' in x.read_text(encoding='utf-8', errors='ignore')]; print('bad=', [str(x) for x in bad]); sys.exit(2 if bad else 0)"
+
+rem 3) gate_report.md 必须包含显式 vscode://file 链接（点击能力的先决条件）
+python -c "import pathlib,sys; t=pathlib.Path('data_processed/build_reports/gate_report.md').read_text(encoding='utf-8', errors='ignore'); ok=('](vscode://file/' in t) or ('vscode://file/' in t); print('has_vscode_link=', ok); sys.exit(2 if not ok else 0)"
+```
+
+**PASS 条件**
+- 第 2 条扫描退出码为 0（`bad=[]`）。
+- 第 3 条检测退出码为 0（`has_vscode_link=True`）。
+- 在 VS Code 中打开 `gate_report.md`，点击链接可打开对应文件；若链接包含 `:line:col`，应定位到行/列。
 
 ## 3. Public Release Preflight：公开发布前最小检查（推荐）
 

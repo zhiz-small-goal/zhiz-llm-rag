@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - zhiz-llm-rag
-version: 5
-last_updated: 2026-01-13
+version: 7
+last_updated: 2026-01-15
 timezone: America/Los_Angeles
 ssot: true
 ---
@@ -215,6 +215,9 @@ next（最小改动优先）：
 - SSOT：`docs/reference/reference.yaml`（门禁顺序/产物路径/schema/policy 输入集）
 - 单入口：`python tools/gate.py --profile ci --root .`（或安装后 `rag-gate ...`）
 - 产物：`data_processed/build_reports/gate_report.json` + `gate_logs/`
+- 文件落盘报告顺序（人类可读）：对“写入文件”的报告在落盘入口做归一化：汇总块置顶；明细按严重度稳定排序（ERROR/FAIL 在前，PASS 在后）。回链：`docs/postmortems/2026-01-15_postmortem_file_report_ordering.md`。
+- 路径展示一致性（跨 OS diff 降噪）：落盘报告内的路径展示串统一使用 `/`（`Path.as_posix()`）；但“可点击跳转”不依赖该启发式，仍以 `loc_uri`/Markdown 链接为准。回链：`docs/postmortems/2026-01-15_postmortem_report_output_contract_paths.md`。
+- 诊断定位可点击：落盘报告中若包含 `DIAG_LOC_FILE_LINE_COL`，应补充 `loc_uri`（`vscode://file/<abs_path>:line:col`）或用 Markdown 链接渲染，避免依赖 VS Code 的启发式 linkify。
 - `profile=ci/release` 默认包含 `check_ruff` / `check_mypy`（format/strict 默认关闭，可用 `RAG_RUFF_FORMAT=1`、`RAG_MYPY_STRICT=1` 收紧）
 - Policy：通过 conftest 执行 `policy/` 下 Rego 规则；CI/Linux 会安装并强制执行，本地缺 conftest 时默认 SKIP。
 
@@ -232,6 +235,11 @@ next（最小改动优先）：
 ---
 
 ## 7. 变更日志
+
+
+- 2026-01-15
+  - 报告可用性契约：落盘报告中的诊断定位新增 `loc_uri`（`vscode://file/...`），并更新渲染脚本/文档
+  - 新增复盘：`docs/postmortems/2026-01-15_postmortem_vscode_clickable_loc_uri.md`
 
 
 - 2026-01-13

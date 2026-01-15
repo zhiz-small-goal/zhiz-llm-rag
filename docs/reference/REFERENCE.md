@@ -1,7 +1,7 @@
 ---
 title: 参考与契约（REFERENCE）
 version: v1.2
-last_updated: 2026-01-14
+last_updated: 2026-01-15
 ---
 
 > SSOT（机器可读）: `docs/reference/reference.yaml`。CI 与 gate runner 以此为准。
@@ -86,6 +86,7 @@ last_updated: 2026-01-14
 - **汇总块优先**：若报告包含 `summary/metrics/buckets/counts/totals`，这些字段在 JSON 文件顶部优先展示。
 - **明细按严重度排序**：常见明细列表（如 `results/cases/items`）在落盘时优先将 `ERROR/FAIL` 项放前、`PASS/OK` 放后。
   - 说明：这只影响 JSON 序列化的 key/数组顺序，用于 VS Code/差异对比的人类阅读；字段语义不变。
+  - **路径分隔符**：所有落盘报告（JSON/MD）内出现的文件路径字符串，一律使用 `/`（Windows 盘符写作 `C:/...`），以便 VSCode 点击跳转；建议在落盘入口（`reporting.write_report()`）统一归一化。
 
 ### 3.4 当前已实现契约的脚本入口
 
