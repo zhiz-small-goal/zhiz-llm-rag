@@ -68,12 +68,14 @@ def fmt_list(xs: List[str], max_n: int = 6) -> str:
     return "[" + ", ".join(ys) + "]"
 
 
-def vscode_loc(path: Path, line: Optional[int] = None) -> str:
+def vscode_loc(path: Path, line: Optional[int] = None, *, root: Optional[Path] = None) -> str:
     """
     生成 VSCode 终端常见可点击的定位格式：
     - file:line
     说明：Windows 下会出现盘符 "<REPO_ROOT>" 的 ":"，VSCode 仍能识别 `<REPO_ROOT>
     """
+    if root is not None and not path.is_absolute():
+        path = (root / path).resolve()
     if line is None:
         return str(path)
     return f"{path}:{line}"

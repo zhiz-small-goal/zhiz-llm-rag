@@ -101,7 +101,9 @@ python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-
   - CI workflow 启发式提示
   - 正则编译失败导致的扫描降级提示
 
-定位格式统一为 `file:line:col`（`DIAG_LOC_FILE_LINE_COL`），便于 VS Code 直接跳转。
+定位展示统一为 `file:line:col`（`DIAG_LOC_FILE_LINE_COL`）。
+为保证在 VS Code 的“报告文件（Markdown）”中可点击跳转，该工具会把 Locations 渲染为
+`[file:line:col](vscode://file/<abs_path>:line:col)` 的形式（保留原显示串，新增可点击 URI）。
 
 ## 9. 输出报告结构
 报告为 Markdown，包含：

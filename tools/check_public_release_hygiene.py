@@ -17,11 +17,72 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
+import os
 import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
+from urllib.parse import quote
+
+
+_LOC_WITH_MSG = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+):")
+_LOC_BARE = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+)$")
+
+
+def _vscode_scheme() -> str:
+    """VS Code URL scheme.
+
+    - stable: vscode
+    - insiders: vscode-insiders
+    """
+
+    s = (os.getenv("RAG_VSCODE_SCHEME") or "vscode").strip()
+    return s or "vscode"
+
+
+def _parse_diag_loc(loc: str) -> Optional[Tuple[str, int, int]]:
+    s = (loc or "").strip()
+    if not s:
+        return None
+    m = _LOC_WITH_MSG.match(s)
+    if m:
+        return (m.group("file"), int(m.group("line")), int(m.group("col")))
+    m = _LOC_BARE.match(s)
+    if m:
+        return (m.group("file"), int(m.group("line")), int(m.group("col")))
+    return None
+
+
+def _vscode_file_uri(repo_root: Path, file_str: str, line: int, col: int) -> str:
+    s = (file_str or "").strip().replace("\\", "/")
+    if not s:
+        return ""
+    if s.startswith("vscode://"):
+        return s
+    if "//" in s and "://" in s:
+        return ""
+    # relative -> absolute
+    p = Path(s)
+    if not p.is_absolute():
+        p = (repo_root / s).resolve()
+    abs_posix = p.resolve().as_posix()
+    encoded = quote(abs_posix, safe="/:")
+    return f"{_vscode_scheme()}://file/{encoded}:{int(line)}:{int(col)}"
+
+
+def _fmt_loc_md(repo_root: Path, loc: str) -> str:
+    """Format DIAG_LOC as a clickable Markdown link (vscode://file/...)."""
+
+    parsed = _parse_diag_loc(loc)
+    if not parsed:
+        return loc
+    f, line, col = parsed
+    uri = _vscode_file_uri(repo_root, f, line, col)
+    if not uri:
+        return loc
+    # keep display as-is (it is already DIAG_LOC form)
+    return f"[{loc}]({uri})"
 
 
 def _now_tag() -> str:
@@ -783,7 +844,7 @@ def render_report(
             if f.locations:
                 lines.append("### Locations（DIAG_LOC_FILE_LINE_COL）")
                 for x in f.locations[:200]:
-                    lines.append(f"- {x}")
+                    lines.append(f"- {_fmt_loc_md(repo, x)}")
                 if len(f.locations) > 200:
                     lines.append(f"- ...（截断，原始命中数={len(f.locations)}）")
                 lines.append("")
