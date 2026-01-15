@@ -1,3 +1,4 @@
+default_language_version: {python: python 3.12}
 repos:
   - repo: local
     hooks:
@@ -27,3 +28,12 @@ repos:
         args: [tools\\rag_python.py, -c, "import sys; print(sys.executable); print(sys.version)"]
         pass_filenames: false
         always_run: true
+
+      - id: debug-env
+        name: debug env (cwd/python/path)
+        entry: python -c "import os,sys; print('cwd='+os.getcwd()); print('sys.executable='+sys.executable); print('PATH='+os.environ.get('PATH','')); print('VIRTUAL_ENV='+os.environ.get('VIRTUAL_ENV','')); print('RAG_PYTHON='+os.environ.get('RAG_PYTHON',''))"
+        language: unsupported
+        pass_filenames: false
+        stages: [pre-commit]
+        verbose: true
+        log_file: data_processed/build_reports/precommit_debug.log
