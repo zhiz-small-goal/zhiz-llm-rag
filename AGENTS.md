@@ -55,7 +55,9 @@ last_updated: 2026-01-03
 - 设计从一开始就以稳定、可维护为前提，优先成熟方案，避免引入不必要的实验性依赖。
 
 ## 7. 诊断输出格式
-- 所有诊断必须满足 `DIAG_LOC_FILE_LINE_COL`，使用 `file:line:col` 行首格式（VS Code 可点击）。
+- 所有诊断必须满足 `DIAG_LOC_FILE_LINE_COL`，展示为 `file:line:col` 行首格式（便于 grep/复制）。
+- 由于 VS Code 对“文件内容中的 path:line:col”的自动识别属于启发式行为，项目的“落盘报告”应补充
+  `loc_uri`（`vscode://file/<abs_path>:line:col`），以保证在报告文件里可点击跳转。
 
 ## 8. 问题复盘
 - 问题复盘请看[复盘模板](docs/reference/postmortem_prompt_template.md)
