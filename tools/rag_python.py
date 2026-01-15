@@ -22,7 +22,7 @@ Environment variables:
 - RAG_PYTHON:
     Explicit interpreter path to use. Highest priority.
     Example (Windows):
-      set RAG_PYTHON=r"D:\、repo\\venv_embed\\Scripts\\python.exe"
+      set RAG_PYTHON=r"D:\\repo\\venv_embed\\Scripts\\python.exe"
 - VIRTUAL_ENV:
     If your shell has activated a venv, this points to the environment prefix.
     The wrapper will try <prefix>/Scripts/python.exe (Windows) or <prefix>/bin/python (POSIX).
