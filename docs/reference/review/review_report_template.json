@@ -25,7 +25,8 @@
   "evidence": {
     "commands": [],
     "artifacts": [],
-    "diag_loc": []
+    "diag_loc": [],
+    "diag_loc_uri": []
   },
   "risks": [],
   "alternatives": [],

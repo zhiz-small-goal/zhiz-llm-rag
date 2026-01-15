@@ -1,7 +1,7 @@
 ---
 title: 审查报告模板（Review Report Template）
-version: v1.0
-last_updated: 2026-01-12
+version: v1.0.1
+last_updated: 2026-01-15
 ---
 
 # 审查报告模板（Review Report Template）
@@ -45,7 +45,7 @@ last_updated: 2026-01-12
 
 ### 4.2 代码质量
 - 退出码：0/2/3 契约是否遵循
-- 诊断定位：是否使用 file:line:col
+- 诊断定位：是否使用 file:line:col；落盘报告（JSON/Markdown）是否提供 loc_uri 或可点击 Markdown 链接
 - 测试/门禁：关键不变量是否覆盖
 
 ### 4.3 可复用性
@@ -70,6 +70,7 @@ last_updated: 2026-01-12
 - 关键命令：……
 - 产物路径：……
 - 定位（DIAG_LOC）：`path/to/file:line:col: ...`
+- 定位（落盘报告，推荐）：[path/to/file.py:12:5](vscode://file/<abs_path>:12:5): [FAIL] ...（Markdown）；或 `loc_uri=vscode://file/<abs_path>:12:5`（JSON）
 
 ## 7. 失败分支
 - 现象：……

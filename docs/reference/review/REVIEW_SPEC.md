@@ -1,7 +1,7 @@
 ---
 title: 项目审查规范（Review Spec）
-version: v1.0.0
-last_updated: 2026-01-12
+version: v1.0.1
+last_updated: 2026-01-15
 timezone: America/Los_Angeles
 source: docs/reference/review/review_spec.v1.json
 generated_artifact: docs/reference/review/REVIEW_SPEC.md
@@ -99,10 +99,10 @@ generated_artifact: docs/reference/review/REVIEW_SPEC.md
     - tools/check_exit_code_contract.py PASS
     - 新脚本在 docstring 中声明退出码语义
   - Automation：`tools/check_exit_code_contract.py`（mode=fail）
-- **CODE-LOC-002** `[SHOULD]`：诊断输出使用 file:line:col 格式，便于编辑器跳转定位。
+- **CODE-LOC-002** `[SHOULD]`：诊断展示使用 `file:line:col`；若输出为“落盘报告”（JSON/Markdown），应额外提供 `loc_uri`（`vscode://file/<abs_path>:line:col`）或把定位渲染为 Markdown 链接，以保证在报告文件内可点击跳转。
   - Why：缩短问题定位路径，提升审查与排障效率。
   - Evidence：
-    - 失败输出包含可点击定位，例如: path/to/file.py:12:5: [FAIL] ...
+    - 失败输出包含可点击定位，例如: [path/to/file.py:12:5](vscode://file/...:12:5): [FAIL] ...
 - **CODE-TEST-003** `[MUST]`：关键不变量（高频回归点）必须在 tests/ 或 gate step 中有自动化覆盖。
   - Why：人工审查对隐藏回归不具备稳定性。
   - Evidence：

@@ -2,8 +2,8 @@
   "meta": {
     "id": "review_spec",
     "title": "项目审查规范（Review Spec）",
-    "version": "1.0.0",
-    "last_updated": "2026-01-12",
+    "version": "1.0.1",
+    "last_updated": "2026-01-15",
     "timezone": "America/Los_Angeles",
     "ssot": true,
     "generated_artifact": "docs/reference/review/REVIEW_SPEC.md",
@@ -119,10 +119,10 @@
         {
           "id": "CODE-LOC-002",
           "level": "SHOULD",
-          "statement": "诊断输出使用 file:line:col 格式，便于编辑器跳转定位。",
+          "statement": "诊断展示使用 `file:line:col`；若输出为“落盘报告”（JSON/Markdown），应额外提供 `loc_uri`（`vscode://file/<abs_path>:line:col`）或把定位渲染为 Markdown 链接，以保证在报告文件内可点击跳转。",
           "rationale": "缩短问题定位路径，提升审查与排障效率。",
           "evidence": [
-            "失败输出包含可点击定位，例如: path/to/file.py:12:5: [FAIL] ..."
+            "失败输出包含可点击定位，例如: [path/to/file.py:12:5](vscode://file/...:12:5): [FAIL] ..."
           ]
         },
         {
