@@ -40,6 +40,7 @@ import argparse
 import json
 import os
 import sys
+import tomllib
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
@@ -150,18 +151,29 @@ def _discover_managed_wrappers(cfg: Config) -> Tuple[str, List[Path]]:
     return "scan", managed
 
 
-def _expected_wrapper_text(cfg: Config, name: str) -> str:
-    # name: "foo.py"
-    stem = Path(name).stem
-    target_mod = f"{cfg.src_module_prefix}.{stem}"
-    rel_gen = "tools/gen_tools_wrappers.py"
-    rel_src = os.path.relpath(cfg.src_tools_dir / f"{stem}.py", cfg.tools_dir.parent).replace("\\", "/")
+def _quote_style_from_pyproject(repo: Path) -> str:
+    """Return ruff.format.quote-style from pyproject.toml; fallback to double."""
+    pyproj = repo / "pyproject.toml"
+    if not pyproj.exists():
+        return "double"
+    try:
+        data = tomllib.loads(pyproj.read_text(encoding="utf-8"))
+        fmt_cfg = ((data.get("tool") or {}).get("ruff") or {}).get("format") or {}
+        style = (fmt_cfg.get("quote-style") or fmt_cfg.get("quote_style") or "").strip().lower()
+        if style in {"single", "double"}:
+            return style
+    except Exception:
+        return "double"
+    return "double"
 
-    # NOTE: content is deterministic; keep edits minimal and stable.
+
+def _render_wrapper_template(wrapper_marker: str, rel_gen: str, target_mod: str, rel_src: str, quote: str) -> str:
+    """Render wrapper content using the requested quote style (single/double)."""
+    q = quote
     return (
         "#!/usr/bin/env python3\n"
         "# -*- coding: utf-8 -*-\n"
-        f'"""{cfg.wrapper_marker}\n\n'
+        f'"""{wrapper_marker}\n\n'
         f"Generated-By: {rel_gen}\n"
         f"Target-Module: {target_mod}\n"
         f"SSOT: {rel_src}\n\n"
@@ -176,20 +188,20 @@ def _expected_wrapper_text(cfg: Config, name: str) -> str:
         "def _ensure_src_on_path() -> None:\n"
         "    # 保证在未 editable install 的情况下也能导入 src 侧实现\n"
         "    repo = Path(__file__).resolve().parent\n"
-        "    if repo.name == 'tools':\n"
+        f"    if repo.name == {q}tools{q}:\n"
         "        repo = repo.parent\n"
-        "    src = repo / 'src'\n"
+        f"    src = repo / {q}src{q}\n"
         "    if src.exists():\n"
         "        sys.path.insert(0, str(src))\n\n\n"
         "def main() -> int:\n"
         "    _ensure_src_on_path()\n"
-        f"    runpy.run_module('{target_mod}', run_name='__main__')\n"
+        f"    runpy.run_module({q}{target_mod}{q}, run_name={q}__main__{q})\n"
         "    return 0\n\n\n"
         "def _entry() -> int:\n"
         "    try:\n"
         "        return main()\n"
         "    except KeyboardInterrupt:\n"
-        "        print('[ERROR] KeyboardInterrupt', file=sys.stderr)\n"
+        f"        print({q}[ERROR] KeyboardInterrupt{q}, file=sys.stderr)\n"
         "        return 3\n"
         "    except SystemExit as e:\n"
         "        code = e.code\n"
@@ -197,15 +209,28 @@ def _expected_wrapper_text(cfg: Config, name: str) -> str:
         "            return 0\n"
         "        if isinstance(code, int):\n"
         "            return code\n"
-        "        print(f'[ERROR] SystemExit: {code}', file=sys.stderr)\n"
+        f"        print(f{q}[ERROR] SystemExit: {{code}}{q}, file=sys.stderr)\n"
         "        return 3\n"
         "    except Exception:\n"
-        "        print('[ERROR] unhandled exception', file=sys.stderr)\n"
+        f"        print({q}[ERROR] unhandled exception{q}, file=sys.stderr)\n"
         "        traceback.print_exc()\n"
         "        return 3\n\n\n"
-        "if __name__ == '__main__':\n"
+        f"if __name__ == {q}__main__{q}:\n"
         "    raise SystemExit(_entry())\n"
     )
+
+
+def _expected_wrapper_text(cfg: Config, name: str) -> str:
+    # name: "foo.py"
+    stem = Path(name).stem
+    target_mod = f"{cfg.src_module_prefix}.{stem}"
+    rel_gen = "tools/gen_tools_wrappers.py"
+    rel_src = os.path.relpath(cfg.src_tools_dir / f"{stem}.py", cfg.tools_dir.parent).replace("\\", "/")
+    style = _quote_style_from_pyproject(cfg.tools_dir.parent)
+    quote = "'" if style == "single" else '"'
+
+    # NOTE: content is deterministic; keep edits minimal and stable.
+    return _render_wrapper_template(cfg.wrapper_marker, rel_gen, target_mod, rel_src, quote)
 
 
 def _validate_src_exists(cfg: Config, stem: str) -> Tuple[bool, str]:
