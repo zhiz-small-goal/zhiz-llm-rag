@@ -59,8 +59,10 @@ def main() -> int:
         print(f"STATUS: FAIL (cannot get embeddings) - {e}")
         return 2
 
-    embs = res.get("embeddings") or []
-    if not embs:
+    embs = res.get("embeddings")
+    if embs is None:
+        embs = []
+    if len(embs) == 0:
         print("STATUS: WARN (no embeddings returned; collection empty or backend disabled embeddings)")
         return 0
 
