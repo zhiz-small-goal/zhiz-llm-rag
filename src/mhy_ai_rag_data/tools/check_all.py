@@ -57,7 +57,7 @@ def _pass(msg: str) -> Tuple[bool, str]:
 def _check_exists(repo: Path, rel: str) -> Tuple[bool, str]:
     p = repo / rel
     if p.exists():
-        return _pass(f"OK: exists {rel}")
+        return _pass(f"exists {rel}")
     return _fail(f"MISSING: {rel}")
 
 
@@ -65,8 +65,8 @@ def _compile_src(src_dir: Path) -> Tuple[bool, str]:
     # quiet=1 仅输出错误；force=True 避免缓存误判
     ok = bool(compileall.compile_dir(str(src_dir), quiet=1, force=True))
     if ok:
-        return _pass("OK: compileall src")
-    return _fail("FAIL: compileall src (see output above)")
+        return _pass("compileall src")
+    return _fail("compileall src (see output above)")
 
 
 def _run_help(repo: Path, module: str) -> Tuple[bool, str]:
@@ -82,10 +82,10 @@ def _run_help(repo: Path, module: str) -> Tuple[bool, str]:
 
     p = subprocess.run(cmd, cwd=str(repo), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if p.returncode == 0:
-        return _pass(f"OK: python -m {module} -h")
+        return _pass(f"python -m {module} -h")
     # argparse 会返回 0；如果是 import-time 崩溃通常非 0，stderr 有栈
     tail = (p.stderr or p.stdout or "").strip().splitlines()[-6:]
-    return _fail(f"FAIL: python -m {module} -h (rc={p.returncode})\n" + "\n".join(tail))
+    return _fail(f"python -m {module} -h (rc={p.returncode})\n" + "\n".join(tail))
 
 
 def _toc_header(filename: str) -> str:
@@ -97,23 +97,25 @@ def _toc_header(filename: str) -> str:
     return f"# {stem}目录："
 
 
-def _check_toc(md_path: Path) -> Tuple[bool, str]:
+def _check_toc(md_path: Path, skip: bool = False) -> Tuple[bool, str]:
+    if skip:
+        return _pass(f"TOC check skipped for {md_path}")
     if not md_path.exists():
         return _fail(f"MISSING: {md_path}")
     lines = md_path.read_text(encoding="utf-8").splitlines()
     if not lines:
-        return _fail(f"FAIL: empty file {md_path}")
+        return _fail(f"empty file {md_path}")
 
     want = _toc_header(md_path.name)
     if lines[0].strip() != want:
-        return _fail(f"FAIL: TOC header mismatch in {md_path}.\n  want: {want}\n  got:  {lines[0].strip()}")
+        return _fail(f"TOC header mismatch in {md_path}.\n  want: {want}\n  got:  {lines[0].strip()}")
 
     # 至少包含一条目录链接（- [..](#...)）
     toc_ok = any(re.match(r"^\s*-\s+\[[^\]]+\]\(#[^)]+\)", ln) for ln in lines[1:120])
     if not toc_ok:
-        return _fail(f"FAIL: TOC links not found near top of {md_path}")
+        return _fail(f"TOC links not found near top of {md_path}")
 
-    return _pass(f"OK: TOC present in {md_path}")
+    return _pass(f"TOC present in {md_path}")
 
 
 def main() -> int:
@@ -125,10 +127,23 @@ def main() -> int:
         choices=["fast"],
         help="Check mode (currently only fast).",
     )
+    ap.add_argument(
+        "--ignore-toc",
+        nargs="+",
+        default=[],
+        help="List of filenames to ignore during TOC check (e.g. README.md)",
+    )
     args = ap.parse_args()
 
     repo = Path(args.root).resolve()
     src_dir = repo / "src"
+
+    # 代码内忽略列表
+    CODE_IGNORE_LIST: list[str] = [
+        # "README.md",
+        # "docs/OPERATION_GUIDE.md",
+    ]
+    ignore_toc = set(args.ignore_toc) | set(CODE_IGNORE_LIST)
 
     checks: List[Tuple[bool, str]] = []
 
@@ -146,8 +161,13 @@ def main() -> int:
         checks.append(_run_help(repo, m))
 
     # 4) docs TOC
-    checks.append(_check_toc(repo / "README.md"))
-    checks.append(_check_toc(repo / "docs/OPERATION_GUIDE.md"))
+    doc_paths = [
+        "README.md",
+        "docs/OPERATION_GUIDE.md",
+    ]
+    for rel_path in doc_paths:
+        should_skip = any(rel_path.endswith(ig) for ig in ignore_toc)
+        checks.append(_check_toc(repo / rel_path, skip=should_skip))
 
     # report
     failed = [msg for ok, msg in checks if not ok]
