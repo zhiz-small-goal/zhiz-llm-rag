@@ -12,9 +12,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl ^
-  --chunk-chars 1200 --overlap-chars 120 --min-chunk-chars 200 ^
-  --include-media-stub true --out data_processed\chunk_plan.json
+python tools\plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl --chunk-chars 1200 --overlap-chars 120 --min-chunk-chars 200 --include-media-stub true --out data_processed\chunk_plan.json
 ```
 
 输出：
@@ -74,17 +72,12 @@ python tools/plan_chunks_from_units.py小
 
 ### 2) 包含媒体 stub
 ```cmd
-python tools\plan_chunks_from_units.py ^
-  --root . ^
-  --include-media-stub true
+python tools\plan_chunks_from_units.py --root . --include-media-stub true
 ```
 
 ### 3) 自定义分块参数
 ```cmd
-python tools\plan_chunks_from_units.py ^
-  --chunk-chars 800 ^
-  --overlap-chars 80 ^
-  --min-chunk-chars 100
+python tools\plan_chunks_from_units.py --chunk-chars 800 --overlap-chars 80 --min-chunk-chars 100
 ```
 
 ---

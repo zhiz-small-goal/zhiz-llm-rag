@@ -54,26 +54,17 @@ last_updated: 2026-01-16
 
 ### 1) 仅检索评估
 ```cmd
-python tools\run_rag_eval_batch.py ^
-  --queries tests\rag_queries_v1.json ^
-  --k 5
+python tools\run_rag_eval_batch.py --queries tests\rag_queries_v1.json --k 5
 ```
 
 ### 2) 检索 + 管道检查
 ```cmd
-python tools\run_rag_eval_batch.py ^
-  --queries tests\rag_queries_v1.json ^
-  --k 5 ^
-  --pipeline
+python tools\run_rag_eval_batch.py --queries tests\rag_queries_v1.json --k 5 --pipeline
 ```
 
 ### 3) 完整评估（包含答案生成）
 ```cmd
-python tools\run_rag_eval_batch.py ^
-  --queries tests\rag_queries_v1.json ^
-  --k 5 ^
-  --pipeline ^
-  --answer
+python tools\run_rag_eval_batch.py --queries tests\rag_queries_v1.json --k 5 --pipeline --answer
 ```
 
 ## 参数说明
@@ -231,11 +222,7 @@ rem 对比两份报告，查看检索召回差异
 ### 示例 3：完整端到端评估
 
 ```cmd
-python tools\run_rag_eval_batch.py ^
-  --queries tests\rag_queries_comprehensive.json ^
-  --k 5 ^
-  --pipeline ^
-  --answer
+python tools\run_rag_eval_batch.py --queries tests\rag_queries_comprehensive.json --k 5 --pipeline --answer
 ```
 
 ## 评估维度

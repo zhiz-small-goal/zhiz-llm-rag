@@ -11,12 +11,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\write_db_build_stamp.py ^
-  --root . ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --plan data_processed\chunk_plan.json ^
-  --writer manual
+python tools\write_db_build_stamp.py --root . --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json --writer manual
 ```
 
 ## 参数说明
@@ -41,11 +36,7 @@ python tools\write_db_build_stamp.py ^
 
 ```cmd
 rem 手动补写构建戳
-python tools\write_db_build_stamp.py ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --plan data_processed\chunk_plan.json ^
-  --writer manual
+python tools\write_db_build_stamp.py --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json --writer manual
 ```
 
 ## 输出

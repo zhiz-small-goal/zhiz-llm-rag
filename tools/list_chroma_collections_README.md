@@ -12,9 +12,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\list_chroma_collections.py ^
-  --db chroma_db ^
-  --expect rag_chunks
+python tools\list_chroma_collections.py --db chroma_db --expect rag_chunks
 ```
 
 期望输出：

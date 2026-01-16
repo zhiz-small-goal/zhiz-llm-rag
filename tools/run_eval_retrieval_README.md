@@ -62,16 +62,7 @@
 ## 3. 用法（命令行）
 
 ```bash
-python tools/run_eval_retrieval.py ^
-  --root . ^
-  --cases data_processed/eval/eval_cases.jsonl ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --k 20 ^
-  --embed-backend auto ^
-  --embed-model BAAI/bge-m3 ^
-  --device cpu ^
-  --out data_processed/build_reports/eval_retrieval_report.json
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --embed-backend auto --embed-model BAAI/bge-m3 --device cpu --out data_processed/build_reports/eval_retrieval_report.json
 ```
 
 ---
@@ -124,24 +115,14 @@ python tools/run_eval_retrieval.py ^
 推荐 JSONL（最易观察）：
 
 ```bash
-python tools/run_eval_retrieval.py ^
-  --root . ^
-  --cases data_processed/eval/eval_cases.jsonl ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --k 5 ^
-  --out data_processed/build_reports/eval_retrieval_report.json ^
-  --stream-out data_processed/build_reports/eval_retrieval_report.events.jsonl ^
-  --stream-format jsonl
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --out data_processed/build_reports/eval_retrieval_report.json --stream-out data_processed/build_reports/eval_retrieval_report.events.jsonl --stream-format jsonl
   --progress-every-seconds 10
 ```
 
 可选 RFC 7464（json-seq）：
 
 ```bash
-python tools/run_eval_retrieval.py ... ^
-  --stream-out data_processed/build_reports/eval_retrieval_report.events.json-seq ^
-  --stream-format json-seq
+python tools/run_eval_retrieval.py ... --stream-out data_processed/build_reports/eval_retrieval_report.events.json-seq --stream-format json-seq
 ```
 
 ### 7.2 Windows 下实时观察（PowerShell / CMD）
@@ -156,7 +137,8 @@ Get-Content -Path data_processed\build_reports\eval_retrieval_report.events.json
 json-seq（含 RS 分隔符，先移除 RS 再看）：
 
 ```powershell
-Get-Content -Path data_processed\build_reports\eval_retrieval_report.events.json-seq -Wait | ForEach-Object { $_ -replace "", "" }
+Get-Content -Path data_processed\build_reports\eval_retrieval_report.events.json-seq -Wait | ForEach-Object { $_ -replace "
+", "" }
 ```
 
 ### 7.3 控制台节流进度（不刷屏）

@@ -50,16 +50,7 @@ timezone: America/Los_Angeles
 ## 3. run_eval_retrieval：实时观测示例
 
 ```bash
-python tools/run_eval_retrieval.py ^
-  --root . ^
-  --cases data_processed/eval/eval_cases.jsonl ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --k 5 ^
-  --out data_processed/build_reports/eval_retrieval_report.json ^
-  --stream-out data_processed/build_reports/eval_retrieval_report.events.jsonl ^
-  --stream-format jsonl ^
-  --progress-every-seconds 10
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --out data_processed/build_reports/eval_retrieval_report.json --stream-out data_processed/build_reports/eval_retrieval_report.events.jsonl --stream-format jsonl --progress-every-seconds 10
 ```
 
 你会得到两类信号：
@@ -71,18 +62,7 @@ python tools/run_eval_retrieval.py ^
 ## 4. run_eval_rag：实时观测示例
 
 ```bash
-python tools/run_eval_rag.py ^
-  --root . ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --base-url http://127.0.0.1:8000/v1 ^
-  --k 5 ^
-  --out data_processed/build_reports/eval_rag_report.json ^
-  --stream-out data_processed/build_reports/eval_rag_report.events.jsonl ^
-  --stream-format jsonl ^
-  --progress-every-seconds 10 ^
-  --print-case-errors ^
-  --stream-answer-chars 200
+python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --base-url http://127.0.0.1:8000/v1 --k 5 --out data_processed/build_reports/eval_rag_report.json --stream-out data_processed/build_reports/eval_rag_report.events.jsonl --stream-format jsonl --progress-every-seconds 10 --print-case-errors --stream-answer-chars 200
 ```
 
 说明：

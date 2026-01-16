@@ -30,22 +30,13 @@
 仅打印建议的 JSON（不写文件）：
 
 ```bash
-python tools/suggest_eval_case.py ^
-  --root . ^
-  --query "如何检查 Chroma 向量库是否构建完整？" ^
-  --k 5
+python tools/suggest_eval_case.py --root . --query "如何检查 Chroma 向量库是否构建完整？" --k 5
 ```
 
 为“口语桶”生成用例（同时写入文件）：
 
 ```bash
-python tools/suggest_eval_case.py ^
-  --root . ^
-  --query "如何设定地图边界？" ^
-  --bucket oral ^
-  --pair-id map_boundary ^
-  --concept-id map_boundary ^
-  --append-to data_processed/eval/eval_cases.jsonl
+python tools/suggest_eval_case.py --root . --query "如何设定地图边界？" --bucket oral --pair-id map_boundary --concept-id map_boundary --append-to data_processed/eval/eval_cases.jsonl
 ```
 
 ---
@@ -75,10 +66,7 @@ python tools/suggest_eval_case.py ^
 ## 5. 追加到 eval_cases.jsonl
 
 ```bash
-python tools/suggest_eval_case.py ^
-  --root . ^
-  --query "..." ^
-  --append-to data_processed/eval/eval_cases.jsonl
+python tools/suggest_eval_case.py --root . --query "..." --append-to data_processed/eval/eval_cases.jsonl
 ```
 
 建议你在追加后立刻跑一次：

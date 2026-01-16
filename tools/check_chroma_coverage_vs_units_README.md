@@ -52,11 +52,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\check_chroma_coverage_vs_units.py ^
-  --root . ^
-  --units data_processed\text_units.jsonl ^
-  --db chroma_db ^
-  --collection rag_chunks
+python tools\check_chroma_coverage_vs_units.py --root . --units data_processed\text_units.jsonl --db chroma_db --collection rag_chunks
 ```
 
 期望输出：
@@ -99,18 +95,12 @@ python tools\check_chroma_coverage_vs_units.py --root .
 
 ### 2) 不包含媒体 stub
 ```cmd
-python tools\check_chroma_coverage_vs_units.py ^
-  --root . ^
-  --include-media-stub false
+python tools\check_chroma_coverage_vs_units.py --root . --include-media-stub false
 ```
 
 ### 3) 自定义 chunk 配置
 ```cmd
-python tools\check_chroma_coverage_vs_units.py ^
-  --root . ^
-  --chunk-chars 800 ^
-  --overlap-chars 80 ^
-  --min-chunk-chars 100
+python tools\check_chroma_coverage_vs_units.py --root . --chunk-chars 800 --overlap-chars 80 --min-chunk-chars 100
 ```
 
 ### 4) 决策示例
@@ -141,10 +131,7 @@ python tools/check_chroma_coverage_vs_units.py --root .
 
 2. 使用相同参数检查：
    ```cmd
-   python tools\check_chroma_coverage_vs_units.py ^
-     --root . ^
-     --chunk-chars <构建时的值> ^
-     --include-media-stub <构建时的值>
+   python tools\check_chroma_coverage_vs_units.py --root . --chunk-chars <构建时的值> --include-media-stub <构建时的值>
    ```
 
 ### 2) 报错：`[FATAL] collection not found`
@@ -164,9 +151,7 @@ python tools/list_chroma_collections.py --db chroma_db
 ### 4) 批量查询很慢
 调大 `--batch`：
 ```cmd
-python tools\check_chroma_coverage_vs_units.py ^
-  --root . ^
-  --batch 1000
+python tools\check_chroma_coverage_vs_units.py --root . --batch 1000
 ```
 
 ## 相关文档

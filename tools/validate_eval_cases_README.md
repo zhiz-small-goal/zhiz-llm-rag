@@ -55,10 +55,7 @@
 ## 3. 用法（命令行）
 
 ```bash
-python tools/validate_eval_cases.py ^
-  --root . ^
-  --cases data_processed/eval/eval_cases.jsonl ^
-  --out data_processed/build_reports/eval_cases_validation.json
+python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl --out data_processed/build_reports/eval_cases_validation.json
 ```
 
 ---

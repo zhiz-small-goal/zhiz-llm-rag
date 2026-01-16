@@ -12,10 +12,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\probe_llm_server.py ^
-  --base http://localhost:8000\v1 ^
-  --timeout 10 ^
-  --json-out data_processed\build_reports\llm_probe.json
+python tools\probe_llm_server.py --base http://localhost:8000\v1 --timeout 10 --json-out data_processed\build_reports\llm_probe.json
 ```
 
 ## 参数说明
@@ -58,17 +55,12 @@ python tools\probe_llm_server.py --base http://localhost:8000\v1
 
 ### 2) 调大超时（慢速服务）
 ```cmd
-python tools\probe_llm_server.py ^
-  --base http://localhost:8000\v1 ^
-  --connect-timeout 30 ^
-  --timeout 60
+python tools\probe_llm_server.py --base http://localhost:8000\v1 --connect-timeout 30 --timeout 60
 ```
 
 ### 3) 强制不走代理
 ```cmd
-python tools\probe_llm_server.py ^
-  --base http://127.0.0.1:8000\v1 ^
-  --trust-env false
+python tools\probe_llm_server.py --base http://127.0.0.1:8000\v1 --trust-env false
 ```
 
 ---

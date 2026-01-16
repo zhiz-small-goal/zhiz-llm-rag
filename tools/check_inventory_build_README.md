@@ -22,8 +22,7 @@ python tools\check_inventory_build.py --snapshot-out data_processed\build_report
 
 ### 2) 对比当前 inventory 与历史快照
 ```cmd
-python tools\check_inventory_build.py --compare-snapshot data_processed\build_reports\inventory_snapshot.json ^
-  --diff-out data_processed\build_reports\inventory_diff.json
+python tools\check_inventory_build.py --compare-snapshot data_processed\build_reports\inventory_snapshot.json --diff-out data_processed\build_reports\inventory_diff.json
 ```
 
 ### 3) 严格模式（用于 CI/门禁）

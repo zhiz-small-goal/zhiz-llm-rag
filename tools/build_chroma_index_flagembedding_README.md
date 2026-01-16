@@ -54,23 +54,12 @@ pip install -e ".[embed]"
 
 ### 1) 首次构建（增量模式）
 ```cmd
-python tools\build_chroma_index_flagembedding.py build ^
-  --root . ^
-  --units data_processed\text_units.jsonl ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --embed-model BAAI/bge-m3 ^
-  --device cpu ^
-  --sync-mode incremental
+python tools\build_chroma_index_flagembedding.py build --root . --units data_processed\text_units.jsonl --db chroma_db --collection rag_chunks --embed-model BAAI/bge-m3 --device cpu --sync-mode incremental
 ```
 
 ### 2) 使用 CUDA 加速
 ```cmd
-python tools\build_chroma_index_flagembedding.py build ^
-  --root . ^
-  --embed-model BAAI/bge-m3 ^
-  --device cuda ^
-  --embed-batch 64
+python tools\build_chroma_index_flagembedding.py build --root . --embed-model BAAI/bge-m3 --device cuda --embed-batch 64
 ```
 
 ## 参数说明
@@ -161,18 +150,13 @@ python tools\build_chroma_index_flagembedding.py build --root .
 
 ### 3) 包含媒体 stub
 ```cmd
-python tools\build_chroma_index_flagembedding.py build ^
-  --root . ^
-  --include-media-stub
+python tools\build_chroma_index_flagembedding.py build --root . --include-media-stub
 ```
 
 ### 4) Schema 变更（切换 embedding 模型）
 ```cmd
 rem schema_hash 会变化，自动重置 collection 后重建
-python tools\build_chroma_index_flagembedding.py build ^
-  --root . ^
-  --embed-model BAAI/bge-large-zh-v1.5 ^
-  --schema-change reset
+python tools\build_chroma_index_flagembedding.py build --root . --embed-model BAAI/bge-large-zh-v1.5 --schema-change reset
 ```
 
 ## 常见问题
@@ -182,9 +166,7 @@ python tools\build_chroma_index_flagembedding.py build ^
 
 **处理**：
 ```cmd
-python tools\build_chroma_index_flagembedding.py build ^
-  --root . ^
-  --on-missing-state reset
+python tools\build_chroma_index_flagembedding.py build --root . --on-missing-state reset
 ```
 
 ### 2) FlagEmbedding 找不到模型
@@ -200,11 +182,7 @@ python tools\build_chroma_index_flagembedding.py build --root .
 ### 4) CUDA out of memory
 降低 `--embed-batch` 和 `--upsert-batch`：
 ```cmd
-python tools\build_chroma_index_flagembedding.py build ^
-  --root . ^
-  --device cuda ^
-  --embed-batch 16 ^
-  --upsert-batch 128
+python tools\build_chroma_index_flagembedding.py build --root . --device cuda --embed-batch 16 --upsert-batch 128
 ```
 
 ## 相关文档

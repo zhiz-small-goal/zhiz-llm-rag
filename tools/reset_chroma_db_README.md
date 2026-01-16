@@ -12,10 +12,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\reset_chroma_db.py ^
-  --root . ^
-  --db chroma_db ^
-  --backup-dir data_processed\db_backups
+python tools\reset_chroma_db.py --root . --db chroma_db --backup-dir data_processed\db_backups
 ```
 
 输出：
@@ -53,9 +50,7 @@ python tools\reset_chroma_db.py
 
 ### 2) 自定义备份目录
 ```cmd
-python tools\reset_chroma_db.py ^
-  --db chroma_db ^
-  --backup-dir backups\db
+python tools\reset_chroma_db.py --db chroma_db --backup-dir backups\db
 ```
 
 ## 常见问题

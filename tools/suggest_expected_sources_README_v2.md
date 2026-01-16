@@ -32,15 +32,7 @@
 ## 3) 快速开始（最常用命令）
 
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "存档导入与导出怎么做？" ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --k 8 ^
-  --pick 2 ^
-  --embed-model BAAI/bge-m3 ^
-  --device cpu
+python tools/suggest_expected_sources.py --root . --query "存档导入与导出怎么做？" --db chroma_db --collection rag_chunks --k 8 --pick 2 --embed-model BAAI/bge-m3 --device cpu
 ```
 
 输出包括：
@@ -84,64 +76,37 @@ python tools/suggest_expected_sources.py --root . --query "如何检查 Chroma �
 
 ### 5.2 强制使用 GPU（仅影响 embedding；需要你环境支持）
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "LLM 超时如何排查？" ^
-  --embed-backend flagembedding ^
-  --embed-model BAAI/bge-m3 ^
-  --device cuda
+python tools/suggest_expected_sources.py --root . --query "LLM 超时如何排查？" --embed-backend flagembedding --embed-model BAAI/bge-m3 --device cuda
 ```
 
 ### 5.3 强制 sentence-transformers 后端（当你没装 FlagEmbedding 或想对齐 ST）
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "如何检查 docs 目录格式约定？" ^
-  --embed-backend sentence-transformers ^
-  --embed-model BAAI/bge-m3 ^
-  --device cpu
+python tools/suggest_expected_sources.py --root . --query "如何检查 docs 目录格式约定？" --embed-backend sentence-transformers --embed-model BAAI/bge-m3 --device cpu
 ```
 
 ### 5.4 meta 字段名不一致时（例如你的 metadata 用的是 `src`）
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "存档导入与导出怎么做？" ^
-  --meta-field "src|source_uri|source|path|file"
+python tools/suggest_expected_sources.py --root . --query "存档导入与导出怎么做？" --meta-field "src|source_uri|source|path|file"
 ```
 
 ### 5.5 证据分散时：扩大 topK，并多取一个 expected_sources
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "向量库落盘与回滚怎么做？" ^
-  --k 12 ^
-  --pick 3
+python tools/suggest_expected_sources.py --root . --query "向量库落盘与回滚怎么做？" --k 12 --pick 3
 ```
 
 ### 5.6 打印更长的片段（便于你肉眼确认归属）
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "verify_stage1_pipeline.py 通过后下一步做什么？" ^
-  --show-snippet-chars 800
+python tools/suggest_expected_sources.py --root . --query "verify_stage1_pipeline.py 通过后下一步做什么？" --show-snippet-chars 800
 ```
 
 ### 5.7 把证据写到 JSON（可归档）
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "如何访问本地模型的 OpenAI 兼容端点？" ^
-  --out data_processed/build_reports/sources_probe_local_llm.json
+python tools/suggest_expected_sources.py --root . --query "如何访问本地模型的 OpenAI 兼容端点？" --out data_processed/build_reports/sources_probe_local_llm.json
 ```
 
 ### 5.8 直接追加用例骨架到 eval_cases.jsonl
 ```bash
-python tools/suggest_expected_sources.py ^
-  --root . ^
-  --query "如何检查 Chroma 向量库是否构建完整？" ^
-  --append-to data_processed/eval/eval_cases.jsonl ^
-  --tags "retrieval,stage2"
+python tools/suggest_expected_sources.py --root . --query "如何检查 Chroma 向量库是否构建完整？" --append-to data_processed/eval/eval_cases.jsonl --tags "retrieval,stage2"
 ```
 
 补充：`--append-to` 会生成建议的 `must_include`；可用 `--must-pick` 调整数量，或用 `--auto-must-include` 强制不写 TODO。

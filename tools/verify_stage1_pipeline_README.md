@@ -88,12 +88,7 @@
 > 关键点：`--root .` 代表“以当前目录作为项目根目录”。
 
 ```bash
-python tools/verify_stage1_pipeline.py ^
-  --root . ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --base-url http://localhost:8000/v1 ^
-  --timeout 10
+python tools/verify_stage1_pipeline.py --root . --db chroma_db --collection rag_chunks --base-url http://localhost:8000/v1 --timeout 10
 ```
 
 **为什么这样做**：  

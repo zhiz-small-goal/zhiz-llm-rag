@@ -216,9 +216,7 @@ python tools\verify_reports_schema.py
 **命令（CMD）**
 ```cmd
 rem 1) 生成 gate_report.md（参数以脚本 --help 为准；此处给出常用示例）
-python -m src.mhy_ai_rag_data.tools.view_gate_report ^
-  --report data_processed/build_reports/gate_report.json ^
-  --md-out data_processed/build_reports/gate_report.md
+python -m src.mhy_ai_rag_data.tools.view_gate_report --report data_processed/build_reports/gate_report.json --md-out data_processed/build_reports/gate_report.md
 
 rem 2) 扫描 build_reports 下的 .json/.md：不应出现反斜杠（展示一致性）
 python -c "import pathlib,sys; p=pathlib.Path('data_processed/build_reports'); bad=[x for x in p.rglob('*') if x.suffix in ('.json','.md') and '\\' in x.read_text(encoding='utf-8', errors='ignore')]; print('bad=', [str(x) for x in bad]); sys.exit(2 if bad else 0)"

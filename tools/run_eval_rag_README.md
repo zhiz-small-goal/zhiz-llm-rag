@@ -155,17 +155,7 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --b
 示例：
 
 ```bash
-python tools/run_eval_rag.py ^
-  --root . ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --k 5 ^
-  --base-url http://127.0.0.1:8000/v1 ^
-  --out data_processed/build_reports/eval_rag_report.json ^
-  --stream-out data_processed/build_reports/eval_rag_report.events.jsonl ^
-  --stream-format jsonl ^
-  --progress-every-seconds 5 ^
-  --stream-answer-chars 200
+python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k 5 --base-url http://127.0.0.1:8000/v1 --out data_processed/build_reports/eval_rag_report.json --stream-out data_processed/build_reports/eval_rag_report.events.jsonl --stream-format jsonl --progress-every-seconds 5 --stream-answer-chars 200
 ```
 
 Windows PowerShell 观测（实时刷新）：

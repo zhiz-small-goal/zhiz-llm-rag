@@ -40,25 +40,13 @@ last_updated: 2026-01-13
 口语桶（示例）：
 
 ```bash
-python tools/suggest_eval_case.py ^
-  --root . ^
-  --query "如何设定地图边界？" ^
-  --bucket oral ^
-  --pair-id map_boundary ^
-  --concept-id map_boundary ^
-  --append-to data_processed/eval/eval_cases.jsonl
+python tools/suggest_eval_case.py --root . --query "如何设定地图边界？" --bucket oral --pair-id map_boundary --concept-id map_boundary --append-to data_processed/eval/eval_cases.jsonl
 ```
 
 然后再为同一概念补一条 official 用例（对照组）：
 
 ```bash
-python tools/suggest_eval_case.py ^
-  --root . ^
-  --query "如何设置场景生效范围？" ^
-  --bucket official ^
-  --pair-id map_boundary ^
-  --concept-id map_boundary ^
-  --append-to data_processed/eval/eval_cases.jsonl
+python tools/suggest_eval_case.py --root . --query "如何设置场景生效范围？" --bucket official --pair-id map_boundary --concept-id map_boundary --append-to data_processed/eval/eval_cases.jsonl
 ```
 
 ### 2.2 人工补齐 expected_sources 与 must_include
@@ -71,10 +59,7 @@ python tools/suggest_eval_case.py ^
 **相关文档**: [使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）](../../tools/validate_eval_cases_README.md)
 
 ```bash
-python tools/validate_eval_cases.py ^
-  --root . ^
-  --cases data_processed/eval/eval_cases.jsonl ^
-  --out data_processed/build_reports/eval_cases_validation.json
+python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl --out data_processed/build_reports/eval_cases_validation.json
 ```
 
 关注：
@@ -88,16 +73,7 @@ python tools/validate_eval_cases.py ^
 **相关文档**: [使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）](../../tools/run_eval_retrieval_README.md)
 
 ```bash
-python tools/run_eval_retrieval.py ^
-  --root . ^
-  --cases data_processed/eval/eval_cases.jsonl ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --k 20 ^
-  --embed-backend auto ^
-  --embed-model BAAI/bge-m3 ^
-  --device cpu ^
-  --out data_processed/build_reports/eval_retrieval_report.json
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --embed-backend auto --embed-model BAAI/bge-m3 --device cpu --out data_processed/build_reports/eval_retrieval_report.json
 ```
 
 输出重点：

@@ -78,10 +78,7 @@
 ### 4.1 最常见：对比“当前基线”与“上一次基线”
 
 ```bash
-python tools/compare_stage1_baseline_snapshots.py ^
-  --a data_processed/build_reports/stage1_baseline_snapshot.json ^
-  --b data_processed/build_reports/stage1_baseline_snapshot_prev.json ^
-  --out data_processed/build_reports/baseline_diff.json
+python tools/compare_stage1_baseline_snapshots.py --a data_processed/build_reports/stage1_baseline_snapshot.json --b data_processed/build_reports/stage1_baseline_snapshot_prev.json --out data_processed/build_reports/baseline_diff.json
 ```
 
 运行结果：
@@ -92,9 +89,7 @@ python tools/compare_stage1_baseline_snapshots.py ^
 ### 4.2 也对比 pip_freeze（只比 hash）
 
 ```bash
-python tools/compare_stage1_baseline_snapshots.py ^
-  --a a.json --b b.json ^
-  --compare-pip-freeze
+python tools/compare_stage1_baseline_snapshots.py --a a.json --b b.json --compare-pip-freeze
 ```
 
 ---

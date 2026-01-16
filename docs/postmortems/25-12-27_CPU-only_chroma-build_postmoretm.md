@@ -19,8 +19,7 @@ python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_
 
 [验收] 
 ``` cmd
-python build_chroma_index.py build --root . --units data_processed\text_units.jsonl --db chroma_db --collection rag_chunks ^
-  --device cuda:0 --embed-model BAAI/bge-m3 --embed-batch 32 --upsert-batch 256 --include-media-stub
+python build_chroma_index.py build --root . --units data_processed\text_units.jsonl --db chroma_db --collection rag_chunks --device cuda:0 --embed-model BAAI/bge-m3 --embed-batch 32 --upsert-batch 256 --include-media-stub
 
 python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json
 ```
@@ -79,8 +78,7 @@ python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_
 
   - 用“plan 同口径参数”重新 build，并用 check 作为最终验收
   ``` cmd
-  python build_chroma_index.py build --root . --units data_processed\text_units.jsonl --db chroma_db --collection rag_chunks ^
-  --device cuda:0 --embed-model BAAI/bge-m3 --embed-batch 32 --upsert-batch 256 --include-media-stub
+  python build_chroma_index.py build --root . --units data_processed\text_units.jsonl --db chroma_db --collection rag_chunks --device cuda:0 --embed-model BAAI/bge-m3 --embed-batch 32 --upsert-batch 256 --include-media-stub
 
   python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json
   ```

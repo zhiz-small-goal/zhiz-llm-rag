@@ -37,10 +37,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\check_chroma_embeddings_sample.py ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --limit 50
+python tools\check_chroma_embeddings_sample.py --db chroma_db --collection rag_chunks --limit 50
 ```
 
 期望输出：
@@ -94,10 +91,7 @@ python tools\check_chroma_embeddings_sample.py --db chroma_db --collection rag_c
 
 ### 2) 增大抽样数量
 ```cmd
-python tools\check_chroma_embeddings_sample.py ^
-  --db chroma_db ^
-  --collection rag_chunks ^
-  --limit 200
+python tools\check_chroma_embeddings_sample.py --db chroma_db --collection rag_chunks --limit 200
 ```
 
 ### 3) 检查是否归一化

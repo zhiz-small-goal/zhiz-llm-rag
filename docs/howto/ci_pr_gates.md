@@ -66,17 +66,7 @@ tools\run_ci_gates.cmd --with-embed
 
 ### 2.2 如果你坚持手动逐条跑（务必用 && 串联实现 fail-fast）
 ```cmd
-python tools\check_pyproject_preflight.py --ascii-only ^
-  && pip install -e ".[ci]" ^
-  && python tools\gen_tools_wrappers.py --check ^
-  && python tools\check_tools_layout.py --mode fail ^
-  && python tools\check_exit_code_contract.py --root . ^
-  && python tools\check_cli_entrypoints.py ^
-  && python tools\check_md_refs_contract.py ^
-  && python tools\check_ruff.py --root . ^
-  && python tools\check_mypy.py --root . ^
-  && python tools\validate_review_spec.py --root . ^
-  && pytest -q
+python tools\check_pyproject_preflight.py --ascii-only && pip install -e ".[ci]" && python tools\gen_tools_wrappers.py --check && python tools\check_tools_layout.py --mode fail && python tools\check_exit_code_contract.py --root . && python tools\check_cli_entrypoints.py && python tools\check_md_refs_contract.py && python tools\check_ruff.py --root . && python tools\check_mypy.py --root . && python tools\validate_review_spec.py --root . && pytest -q
 ```
 
 ## 3) 每个门禁到底在检查什么

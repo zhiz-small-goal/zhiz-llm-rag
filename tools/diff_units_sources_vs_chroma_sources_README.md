@@ -20,11 +20,7 @@ last_updated: 2026-01-16
 ## 快速开始
 
 ```cmd
-python tools\diff_units_sources_vs_chroma_sources.py ^
-  --root . ^
-  --units data_processed\text_units.jsonl ^
-  --db chroma_db ^
-  --collection rag_chunks
+python tools\diff_units_sources_vs_chroma_sources.py --root . --units data_processed\text_units.jsonl --db chroma_db --collection rag_chunks
 ```
 
 期望输出：
@@ -69,9 +65,7 @@ python tools\diff_units_sources_vs_chroma_sources.py --root .
 
 ### 2) 查看更多样本
 ```cmd
-python tools\diff_units_sources_vs_chroma_sources.py ^
-  --root . ^
-  --max-sample 50
+python tools\diff_units_sources_vs_chroma_sources.py --root . --max-sample 50
 ```
 
 ## 常见现象解释
@@ -81,9 +75,7 @@ python tools\diff_units_sources_vs_chroma_sources.py ^
 
 **处理**：重建时加上 `--include-media-stub`
 ```cmd
-python tools\build_chroma_index_flagembedding.py build ^
-  --root . ^
-  --include-media-stub
+python tools\build_chroma_index_flagembedding.py build --root . --include-media-stub
 ```
 
 ### 2) added_sources 不为 0
