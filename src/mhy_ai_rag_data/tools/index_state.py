@@ -86,7 +86,10 @@ def atomic_write_text(path: Path, text: str, encoding: str = "utf-8") -> None:
 
 
 def load_json(path: Path) -> Dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    result = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(result, dict):
+        raise ValueError(f"Expected dict, got {type(result).__name__}")
+    return result
 
 
 def save_json_atomic(path: Path, obj: Dict[str, Any]) -> None:

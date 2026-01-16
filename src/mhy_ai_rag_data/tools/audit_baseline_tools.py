@@ -66,7 +66,7 @@ def iter_text_files(root: Path) -> List[Path]:
     return out
 
 
-def scan_file(path: Path, regexes: List[re.Pattern]) -> List[Dict[str, Any]]:
+def scan_file(path: Path, regexes: List[re.Pattern[str]]) -> List[Dict[str, Any]]:
     hits: List[Dict[str, Any]] = []
     try:
         text = path.read_text(encoding="utf-8", errors="replace")

@@ -41,7 +41,10 @@ def sha256_text(s: str) -> str:
 
 
 def load_json(path: Path) -> Dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    result = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(result, dict):
+        raise ValueError(f"Expected dict, got {type(result).__name__}")
+    return result
 
 
 def index_files(manifest: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:

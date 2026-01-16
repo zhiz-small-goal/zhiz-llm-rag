@@ -81,7 +81,7 @@ def _load_inventory(inv_path: Path) -> List[Dict[str, str]]:
     return rows
 
 
-def _iter_units(units_path: Path):
+def _iter_units(units_path: Path) -> Any:
     with units_path.open("r", encoding="utf-8") as f:
         for i, line in enumerate(f, 1):
             line = line.strip()
@@ -116,7 +116,7 @@ def _collect(root: Path, inv_path: Path, units_path: Path, max_samples: int) -> 
     inv_uris = [((r.get("source_uri") or "").strip()) for r in inv_rows if (r.get("source_uri") or "").strip()]
 
     unit_by_uri: Dict[str, List[Dict[str, Any]]] = {}
-    docid_by_uri: Dict[str, set] = {}
+    docid_by_uri: Dict[str, set[str]] = {}
 
     # ---- 1) JSONL structural checks ----
     for line_no, line in _iter_units(units_path):

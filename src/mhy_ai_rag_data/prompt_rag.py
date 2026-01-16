@@ -35,7 +35,7 @@ def build_context(sources: List[SourceChunk]) -> str:
     return "\n\n".join(parts)
 
 
-def build_messages(question: str, sources: List[SourceChunk]) -> list[dict]:
+def build_messages(question: str, sources: List[SourceChunk]) -> list[dict[str, str]]:
     """构造 ChatCompletion 所需的 messages 列表。"""
     context = build_context(sources)
 

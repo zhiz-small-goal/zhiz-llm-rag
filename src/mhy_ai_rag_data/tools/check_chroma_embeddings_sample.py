@@ -24,11 +24,12 @@ from __future__ import annotations
 import argparse
 import math
 from pathlib import Path
+from typing import Any
 
 from chromadb import PersistentClient
 
 
-def _norm2(v):
+def _norm2(v: Any) -> float:
     s = 0.0
     for x in v:
         fx = float(x)

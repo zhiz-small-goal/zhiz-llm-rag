@@ -140,13 +140,29 @@ def call_chat(
     temperature: float,
 ) -> Dict[str, Any]:
     payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}
-    return chat_completions(
+    result = chat_completions(
         base_url,
         payload,
         connect_timeout=connect_timeout,
         read_timeout=read_timeout,
         trust_env_mode=trust_env_mode,
     )
+    # Runtime type check to satisfy mypy strict mode
+    if not isinstance(result, dict):
+        raise TypeError(f"Expected dict from chat_completions, got {type(result).__name__}")
+    return result
+
+
+def _safe_load_json(s: str | None) -> dict[str, Any]:
+    if not s:
+        return {}
+    try:
+        result = json.loads(s)
+        if not isinstance(result, dict):
+            return {}
+        return result
+    except json.JSONDecodeError:
+        return {}
 
 
 def main() -> int:

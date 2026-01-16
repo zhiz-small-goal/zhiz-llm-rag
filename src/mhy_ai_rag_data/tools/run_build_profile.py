@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 
-def _run(cmd, cwd: Path) -> int:
+def _run(cmd: list[str], cwd: Path) -> int:
     print("\n$ " + " ".join(map(str, cmd)))
     p = subprocess.run(cmd, cwd=str(cwd), text=True)
     return p.returncode

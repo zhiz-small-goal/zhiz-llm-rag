@@ -178,7 +178,10 @@ def get_json(
     try:
         r = sess.get(url, headers=headers, timeout=timeout)
         r.raise_for_status()
-        return r.json()
+        result = r.json()
+        if not isinstance(result, dict):
+            raise ValueError("Expected dict response")
+        return result
     except requests.RequestException as exc:
         status, ctype, snippet = _extract_response_info(exc)
         raise LLMHTTPError(
@@ -220,7 +223,10 @@ def post_json(
     try:
         r = sess.post(url, json=payload, headers=headers, timeout=timeout)
         r.raise_for_status()
-        return r.json()
+        result = r.json()
+        if not isinstance(result, dict):
+            raise ValueError("Expected dict response")
+        return result
     except requests.RequestException as exc:
         status, ctype, snippet = _extract_response_info(exc)
         raise LLMHTTPError(
@@ -267,7 +273,8 @@ def chat_completions(
 
 def extract_chat_content(resp_json: Dict[str, Any]) -> str:
     try:
-        return resp_json["choices"][0]["message"]["content"]
+        content = resp_json["choices"][0]["message"]["content"]
+        return str(content)
     except Exception as exc:
         raise ValueError(f"unexpected chat completion response format: keys={list(resp_json.keys())}") from exc
 

@@ -48,7 +48,7 @@ KEY_PACKAGES = [
 ]
 
 
-def _run(cmd):
+def _run(cmd: list[str]) -> tuple[int, str, str]:
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, check=False, shell=False)
         return p.returncode, (p.stdout or ""), (p.stderr or "")
@@ -56,11 +56,11 @@ def _run(cmd):
         return 1, "", str(e)
 
 
-def _pip_show(name: str):
+def _pip_show(name: str) -> Dict[str, str] | None:
     rc, out, err = _run([sys.executable, "-m", "pip", "show", name])
     if rc != 0 or not out.strip():
         return None
-    info = {}
+    info: Dict[str, str] = {}
     for line in out.splitlines():
         if ":" not in line:
             continue

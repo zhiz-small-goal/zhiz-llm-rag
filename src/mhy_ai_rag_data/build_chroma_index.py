@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
-def _require_chromadb():
+def _require_chromadb() -> Any:
     """Import chromadb only when needed.
 
     Rationale: Stage-1 workflows (inventory/units/validate/plan) must be able to import
@@ -45,10 +45,11 @@ def _require_chromadb():
 
         return chromadb
     except Exception as e:  # pragma: no cover
+        print("Failed to import chromadb. Please install chromadb: pip install chromadb")
         raise ImportError("chromadb not installed. Install Stage-2 deps via: pip install -e .[embed]") from e
 
 
-def _require_sentence_transformers():
+def _require_sentence_transformers() -> Any:
     """Import sentence-transformers only when needed."""
 
     try:
@@ -56,6 +57,9 @@ def _require_sentence_transformers():
 
         return SentenceTransformer
     except Exception as e:  # pragma: no cover
+        print(
+            "Failed to import sentence_transformers. Please install sentence-transformers: pip install sentence-transformers"
+        )
         raise ImportError(
             "sentence-transformers not installed. Install Stage-2 deps via: pip install -e .[embed]"
         ) from e
@@ -118,7 +122,7 @@ def pack_paragraphs_to_chunks(paras: List[str], conf: ChunkConf) -> List[str]:
     cur: List[str] = []
     cur_len = 0
 
-    def flush():
+    def flush() -> None:
         nonlocal cur, cur_len
         if not cur:
             return
@@ -242,7 +246,7 @@ def build_chunks_from_unit(unit: Dict[str, Any], conf: ChunkConf) -> Tuple[List[
 # ---------------------------
 
 
-def get_chroma_collection(db_path: Path, name: str):
+def get_chroma_collection(db_path: Path, name: str) -> Any:
     # PersistentClient: data is stored on disk and loaded automatically.
     chromadb = _require_chromadb()
     client = chromadb.PersistentClient(path=str(db_path))

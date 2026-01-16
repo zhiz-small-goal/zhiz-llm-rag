@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from typing import Any
 from urllib.parse import urljoin
 
 try:
@@ -46,7 +47,7 @@ POST_CANDIDATES = [
 ]
 
 
-def _get(url: str, connect_timeout: float, read_timeout: float, trust_env: bool) -> dict:
+def _get(url: str, connect_timeout: float, read_timeout: float, trust_env: bool) -> dict[str, Any]:
     t0 = time.time()
     try:
         sess = get_session(trust_env=trust_env)
@@ -58,7 +59,9 @@ def _get(url: str, connect_timeout: float, read_timeout: float, trust_env: bool)
         return {"ok": False, "error": repr(e), "seconds": round(dt, 4)}
 
 
-def _post(url: str, payload: dict, connect_timeout: float, read_timeout: float, trust_env: bool) -> dict:
+def _post(
+    url: str, payload: dict[str, Any], connect_timeout: float, read_timeout: float, trust_env: bool
+) -> dict[str, Any]:
     t0 = time.time()
     try:
         sess = get_session(trust_env=trust_env)

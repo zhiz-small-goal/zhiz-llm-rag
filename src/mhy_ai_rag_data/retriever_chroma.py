@@ -25,7 +25,7 @@ class SourceChunk:
     text: str
 
 
-def _get_collection():
+def _get_collection() -> Any:
     global _CLIENT, _COLLECTION
     if _COLLECTION is None:
         from chromadb import PersistentClient

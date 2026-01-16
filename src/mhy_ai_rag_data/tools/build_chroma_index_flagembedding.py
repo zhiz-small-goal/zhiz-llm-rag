@@ -37,7 +37,7 @@ MetaValue = Any
 # -------- shared loader --------
 
 
-def _load_build_logic():
+def _load_build_logic() -> Any:
     """Import shared chunking/indexing logic from the installed package.
 
     Why: repo root/build_chroma_index.py is a compatibility wrapper after the src-layout refactor;
@@ -52,7 +52,7 @@ def _chunk_id(doc_id: str, idx: int) -> str:
     return f"{doc_id}:{idx}"
 
 
-def _batched(seq: List[str], batch_size: int):
+def _batched(seq: List[str], batch_size: int) -> Any:
     for i in range(0, len(seq), batch_size):
         yield seq[i : i + batch_size]
 
@@ -160,10 +160,21 @@ def main() -> int:
             f"[WARN] BGEM3FlagModel() 不支持 device=，已回退为默认 device；你指定的 --device={args.device} 可能未生效。"
         )
 
+    def _require_chromadb() -> Any:
+        """Import chromadb only when needed."""
+        try:
+            import chromadb
+
+            return chromadb
+        except ImportError as e:
+            print("Failed to import chromadb. Please install chromadb: pip install chromadb")
+            raise ImportError("chromadb not installed. Install: pip install chromadb") from e
+
     # 3) init chroma
     try:
-        import chromadb
-        from chromadb.config import Settings
+        chromadb_mod = _require_chromadb()
+        chromadb = chromadb_mod
+        Settings = chromadb_mod.config.Settings
     except Exception as e:
         print('[FATAL] chromadb not installed. Install: pip install -e .[embed]  (or pip install ".[embed]" on bash)')
         print(str(e))
@@ -364,11 +375,11 @@ def main() -> int:
     metas_buf: List[Dict[str, MetaValue]] = []
     embeds_buf: List[List[float]] = []
 
-    def l2_normalize(dense):
+    def l2_normalize(embs: Any) -> Any:
         import math
 
         out = []
-        for v in dense:
+        for v in embs:
             n = math.sqrt(sum((x * x for x in v))) or 1.0
             out.append([float(x) / n for x in v])
         return out

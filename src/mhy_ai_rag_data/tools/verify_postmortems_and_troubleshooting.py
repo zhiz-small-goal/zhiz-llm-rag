@@ -24,7 +24,7 @@ import re
 import argparse
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Callable
+from typing import Callable, Any
 
 from mhy_ai_rag_data.project_paths import find_project_root
 import os
@@ -127,7 +127,7 @@ def _normalize_exts(exts: list[str]) -> set[str]:
     return normalized
 
 
-def _load_config(path: Path) -> dict:
+def _load_config(path: Path) -> dict[str, Any]:
     """
     配置文件示例（JSON）：
       {
@@ -215,7 +215,7 @@ def _normalize_for_ignore(path_text: str) -> str:
     return s.lstrip("/")
 
 
-def _is_ignored_ref(path_text: str, config: dict) -> bool:
+def _is_ignored_ref(path_text: str, config: dict[str, Any]) -> bool:
     if not path_text:
         return True
     raw = path_text.replace("\\", "/").strip()
@@ -256,7 +256,7 @@ def _is_ignored_ref(path_text: str, config: dict) -> bool:
     return False
 
 
-def _should_check_path(path_text: str, allowed_exts: set[str], any_local: bool, config: dict) -> bool:
+def _should_check_path(path_text: str, allowed_exts: set[str], any_local: bool, config: dict[str, Any]) -> bool:
     if _is_ignored_ref(path_text, config):
         return False
     if not _looks_path_like(path_text):
@@ -591,7 +591,7 @@ def main() -> int:
 
     def _print_grouped_section(
         title: str,
-        rows: list[tuple],
+        rows: list[tuple[Any, ...]],
         render: Callable[[tuple[object, ...]], str],
     ) -> None:
         """Human-friendly console output.
@@ -633,7 +633,7 @@ def main() -> int:
         if printed_any_section:
             print()
 
-        def _render_amb(r: tuple) -> str:
+        def _render_amb(r: tuple[Any, ...]) -> str:
             src, lineno, old, candidates = r
             sample = ", ".join(candidates[:5])
             more = " ..." if len(candidates) > 5 else ""

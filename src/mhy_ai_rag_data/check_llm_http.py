@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import time
+from typing import Any
 
 from mhy_ai_rag_data.tools.llm_http_client import resolve_trust_env, get_session
 from urllib.parse import urljoin
@@ -29,13 +30,13 @@ from urllib.parse import urljoin
 import requests
 
 
-def _print_kv(title: str, kv: dict):
+def _print_kv(title: str, kv: dict[str, Any]) -> None:
     print(f"\n[{title}]")
     for k, v in kv.items():
         print(f"- {k}: {v}")
 
 
-def _try_get(sess, url: str, connect_timeout: float, read_timeout: float):
+def _try_get(sess: requests.Session, url: str, connect_timeout: float, read_timeout: float) -> dict[str, Any]:
     t0 = time.time()
     try:
         r = sess.get(url, timeout=(connect_timeout, read_timeout))
@@ -46,7 +47,14 @@ def _try_get(sess, url: str, connect_timeout: float, read_timeout: float):
         return {"ok": False, "error": repr(e), "ms": int(dt * 1000)}
 
 
-def _try_post(sess, url: str, payload: dict, headers: dict, connect_timeout: float, read_timeout: float):
+def _try_post(
+    sess: requests.Session,
+    url: str,
+    payload: dict[str, Any],
+    headers: dict[str, str],
+    connect_timeout: float,
+    read_timeout: float,
+) -> dict[str, Any]:
     t0 = time.time()
     try:
         r = sess.post(url, json=payload, headers=headers, timeout=(connect_timeout, read_timeout))
@@ -58,7 +66,7 @@ def _try_post(sess, url: str, payload: dict, headers: dict, connect_timeout: flo
         return {"ok": False, "error": repr(e), "ms": int(dt * 1000)}
 
 
-def main():
+def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base-url", required=True, help="例如 http://127.0.0.1:1234 或 http://127.0.0.1:11434")
     ap.add_argument("--mode", choices=["openai", "ollama"], required=True)
@@ -117,11 +125,11 @@ def main():
         url_root = base
         url_tags = urljoin(base, "api/tags")
         _print_kv("Ollama: GET / (or base)", {"url": url_root})
-        res0 = _try_get(url_root, timeout=min(args.timeout, 10.0))
+        res0 = _try_get(sess, url_root, args.connect_timeout, min(args.timeout, 10.0))
         _print_kv("result", res0)
 
         _print_kv("Ollama: GET /api/tags", {"url": url_tags})
-        res1 = _try_get(url_tags, timeout=min(args.timeout, 10.0))
+        res1 = _try_get(sess, url_tags, args.connect_timeout, min(args.timeout, 10.0))
         _print_kv("result", res1)
 
         model = args.model or "qwen2.5:7b"
@@ -134,7 +142,9 @@ def main():
                 "options": {"temperature": 0.0, "num_predict": 16},
             }
             _print_kv("Ollama: POST /api/chat", {"url": url_chat, "model": model})
-            res2 = _try_post(url_chat, payload, headers={"Content-Type": "application/json"}, timeout=args.timeout)
+            res2 = _try_post(
+                sess, url_chat, payload, {"Content-Type": "application/json"}, args.connect_timeout, args.timeout
+            )
             _print_kv("result", res2)
         else:
             url_gen = urljoin(base, "api/generate")

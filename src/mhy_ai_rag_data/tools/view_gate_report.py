@@ -19,7 +19,8 @@ def read_json(path: Path) -> Optional[Dict[str, Any]]:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        result = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        return result if isinstance(result, dict) else None
     except Exception:
         return None
 

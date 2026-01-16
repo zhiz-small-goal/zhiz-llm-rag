@@ -1,11 +1,13 @@
 import argparse
-from typing import List
+from typing import Any, List, Optional
 
 from chromadb import PersistentClient
 from FlagEmbedding import BGEM3FlagModel
 
 
-def build_embedder(model_name: str = "BAAI/bge-m3", device: str = "cpu", batch_size: int = 32):
+def build_embedder(
+    model_name: str = "BAAI/bge-m3", device: str = "cpu", batch_size: int = 32
+) -> tuple[BGEM3FlagModel, int]:
     """
     Create a BGEM3FlagModel embedder consistent with the index build step.
     """
@@ -13,7 +15,7 @@ def build_embedder(model_name: str = "BAAI/bge-m3", device: str = "cpu", batch_s
     return model, batch_size
 
 
-def embed_queries(model: BGEM3FlagModel, queries: List[str], batch_size: int = 32):
+def embed_queries(model: BGEM3FlagModel, queries: List[str], batch_size: int = 32) -> Any:
     """
     Encode queries into dense embeddings using bge-m3.
     """
@@ -22,7 +24,7 @@ def embed_queries(model: BGEM3FlagModel, queries: List[str], batch_size: int = 3
     return dense_vecs
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Minimal Chroma RAG query CLI for manual inspection.")
     parser.add_argument("--db", default="chroma_db", help="Path to Chroma persistent directory")
     parser.add_argument("--collection", default="rag_chunks", help="Collection name")
@@ -71,31 +73,40 @@ def main():
         return
 
     # 3) Query Chroma
-    where = None
+    where_filter: Optional[dict[str, Any]] = None
     if args.where:
-        where = {}
+        where_filter = {}
         for kv in str(args.where).split(","):
             kv = kv.strip()
             if not kv or "=" not in kv:
                 continue
             k, v = kv.split("=", 1)
-            where[k.strip()] = v.strip()
+            where_filter[k.strip()] = v.strip()
 
     try:
         results = coll.query(
             query_embeddings=[q_vec],
             n_results=args.k,
-            where=where,
+            where=where_filter,
             include=["documents", "metadatas", "distances"],
         )
     except Exception as e:
         print(f"STATUS: FAIL (chroma query failed) - {e}")
         return
 
-    ids = results.get("ids", [[]])[0]
-    docs = results.get("documents", [[]])[0]
-    metas = results.get("metadatas", [[]])[0]
-    dists = results.get("distances", [[]])[0]
+    ids_list = results.get("ids")
+    docs_list = results.get("documents")
+    metas_list = results.get("metadatas")
+    dists_list = results.get("distances")
+
+    if not ids_list or not docs_list or not metas_list or not dists_list:
+        print("STATUS: INFO (no results)")
+        return
+
+    ids = ids_list[0]
+    docs = docs_list[0]
+    metas = metas_list[0]
+    dists = dists_list[0]
 
     print(f"retrieved={len(ids)}")
     if not ids:

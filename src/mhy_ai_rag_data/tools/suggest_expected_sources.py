@@ -118,7 +118,7 @@ def suggest_must_include(
 
     picked: List[str] = []
 
-    def add_term(t: str):
+    def add_term(t: str) -> None:
         t = t.strip()
         if not t or t in stop:
             return

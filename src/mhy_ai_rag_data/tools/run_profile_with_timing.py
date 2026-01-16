@@ -42,13 +42,16 @@ def _run(cmd: Sequence[str], cwd: Path) -> Tuple[int, float]:
 
 def _load_profile(profile_path: Path) -> Dict[str, Any]:
     try:
-        return json.loads(profile_path.read_text(encoding="utf-8"))
+        result = json.loads(profile_path.read_text(encoding="utf-8"))
+        if not isinstance(result, dict):
+            raise ValueError("Profile must be a JSON object")
+        return result
     except Exception as e:
         raise RuntimeError(f"Cannot read profile json: {profile_path} :: {e}") from e
 
 
-def _get(d: Dict[str, Any], *keys, default=None):
-    cur = d
+def _get(d: Dict[str, Any], *keys: str, default: Any = None) -> Any:
+    cur: Any = d
     for k in keys:
         if not isinstance(cur, dict) or k not in cur:
             return default
@@ -109,7 +112,7 @@ def main() -> int:
     steps = []
     started_at = datetime.now().isoformat(timespec="seconds")
 
-    def add_step(name: str, cmd: List[str]):
+    def add_step(name: str, cmd: List[str]) -> None:
         steps.append({"name": name, "cmd": cmd})
 
     # capture env is optional; you already have it, but keep for completeness
