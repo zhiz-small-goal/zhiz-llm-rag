@@ -46,7 +46,29 @@ pip install -e ".[ci]"
 python tools\check_ruff.py --root . --format
 ```
 
-自动修复 lint 与格式（会改文件）：
+**自动修复 lint 与格式（会改文件）**：
+1. `python -m ruff check --fix .`
+作用：检查并自动修复代码质量问题（linting issues）
+
+修复内容示例：
+- ❌ 移除未使用的导入 import os
+- ❌ 移除未使用的变量
+- ❌ 自动排序导入语句
+- ❌ 修复简单的语法问题（如 == None → is None）
+- ❌ 移除重复的导入
+不会改变：代码的格式（空格、换行、缩进等）
+
+2. `python -m ruff format .`
+作用：自动格式化代码外观（formatting）
+
+修复内容示例：
+- ✨ 统一缩进（4 个空格）
+- ✨ 调整行长度（自动换行）
+- ✨ 统一引号风格（单引号/双引号）
+- ✨ 调整空行数量
+- ✨ 格式化括号、逗号后的空格
+不会改变：代码逻辑或移除/添加任何语句
+
 ```cmd
 python -m ruff check --fix .
 python -m ruff format .
