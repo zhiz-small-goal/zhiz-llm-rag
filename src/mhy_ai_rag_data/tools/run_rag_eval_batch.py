@@ -88,7 +88,11 @@ def main() -> int:
         return 2
 
     qobj = json.loads(qpath.read_text(encoding="utf-8"))
-    items = qobj.get("items", [])
+    # Support both formats: direct array or {"items": [...]}
+    if isinstance(qobj, list):
+        items = qobj
+    else:
+        items = qobj.get("items", [])
 
     out_dir = cwd / "data_processed" / "build_reports"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -106,7 +110,8 @@ def main() -> int:
 
     for it in items:
         qid = it.get("id")
-        q = it.get("query")
+        # Support both 'q' and 'query' field names
+        q = it.get("query") or it.get("q")
         kws = it.get("expect_keywords", []) or []
         if not q:
             continue
