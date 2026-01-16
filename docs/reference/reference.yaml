@@ -1,7 +1,7 @@
 # Machine-readable SSOT for repo gates + schema + policy.
 # Keep this file stable: consumers must treat it as the single source of truth (SSOT).
-version: 1
-last_updated: "2026-01-12"
+version: 2
+last_updated: "2026-01-16"
 timezone: "America/Los_Angeles"
 
 exit_codes:
@@ -16,8 +16,8 @@ paths:
 
 schemas:
   draft: "2020-12"
-  gate_report: "schemas/gate_report_v1.schema.json"
-  build_report_v1: "schemas/build_report_v1.schema.json"
+  gate_report: "schemas/gate_report_v2.schema.json"
+  build_report: "schemas/build_report_v2.schema.json"
 
 policy:
   # Policy is executed via conftest when available.

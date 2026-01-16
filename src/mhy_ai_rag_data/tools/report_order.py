@@ -2,40 +2,31 @@
 # -*- coding: utf-8 -*-
 """mhy_ai_rag_data.tools.report_order
 
-目标
-----
-为“落盘报告（JSON）”提供统一的**人类可读顺序**与**可点击定位**：
+用途
+- 为“落盘 JSON 报告”提供统一的**人类可读顺序**与**可点击定位**。
 
-1) 报告顶部优先出现“汇总块”（如 summary/metrics/counts/totals）。
-2) 明细列表（如 results/cases/items）在落盘时优先把 FAIL/ERROR 放前、PASS 放后。
-3) 对诊断定位（DIAG_LOC_FILE_LINE_COL）补充 `loc_uri`（`vscode://file/...:line:col`），
-   让报告在 VS Code 里可直接点击跳转到文件行列。
+文件输出排序（本模块负责）
+- 顶部字段：schema_version/generated_at/tool/root/summary 优先。
+- 明细列表：按 severity_level 从大到小排序（最严重在前），同级稳定。
+- 仅当列表元素可判定 severity_level 时才排序；否则保持原顺序。
 
-说明
-----
-- 该模块只做**序列化顺序/展示辅助字段**调整：不改变字段语义；JSON 仍是合法对象。
-- 仅用于“写文件”的 report（控制台输出的排序策略在另一个需求中处理）。
-
-与 VS Code 的关系
------------------
-- `file:line:col` 在“终端输出”中常被自动识别，但在普通文本/JSON/Markdown 中并不稳定。
-- 为了把行为从“启发式识别”升级为“确定的点击跳转”，本模块在落盘阶段生成：
-  - `loc`（保留原显示串，便于 grep/复制）
-  - `loc_uri`（`vscode://file/<abs_path>:line:col`，便于点击）
+定位字段
+- `loc` 展示保持为 `file:line:col` 便于 grep/复制。
+- `loc_uri` 生成 `vscode://file/<abs_path>:line:col`，用于 VS Code 可点击跳转。
 
 环境变量
---------
-- `RAG_VSCODE_SCHEME`：默认 `vscode`；若用户用 VS Code Insiders，可设为 `vscode-insiders`。
+- RAG_VSCODE_SCHEME: 默认 `vscode`；VS Code Insiders 可设为 `vscode-insiders`。
 """
 
 from __future__ import annotations
 
 import json
-import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
-from urllib.parse import quote
+
+from mhy_ai_rag_data.tools.report_contract import ensure_report_v2, status_label_to_severity_level
+from mhy_ai_rag_data.tools.vscode_links import to_vscode_file_uri, normalize_abs_path_posix
 
 
 # --- ordering knobs (file output) ---
@@ -49,32 +40,13 @@ SUMMARY_KEYS: Tuple[str, ...] = (
     "totals",
 )
 
-# 常见明细列表 key：这些 key 下的 list（若元素可判定 PASS/FAIL/ERROR）会被排序
+# 常见明细列表 key：这些 key 下的 list（若元素可判定 severity）会被排序
 DETAIL_LIST_KEYS: Tuple[str, ...] = (
+    "items",
     "results",
     "cases",
-    "items",
     "checks",
 )
-
-
-STATUS_RANK_FILE: Dict[str, int] = {
-    # 最严重放最前
-    "ERROR": 0,
-    "ERR": 0,
-    "EXCEPTION": 0,
-    "FAIL": 1,
-    "FAILED": 1,
-    "MISS": 1,
-    "STALE": 1,
-    "WARN": 2,
-    "WARNING": 2,
-    "SKIP": 3,
-    "SKIPPED": 3,
-    "PASS": 4,
-    "OK": 4,
-    "INFO": 5,
-}
 
 
 # --- path / loc helpers (file output) ---
@@ -88,6 +60,7 @@ PATH_KEY_HINTS: Tuple[str, ...] = (
     "ssot_path",
     "report_path",
     "log_path",
+    "db_path",
     "path",
     "file",
 )
@@ -99,68 +72,85 @@ _LOC_WITH_MSG = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+):")
 _LOC_BARE = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+)$")
 
 
-def _norm_status(s: Any) -> str:
-    return str(s or "").strip().upper()
-
-
-def _rank_from_status(d: Mapping[str, Any]) -> Optional[int]:
-    if "status" in d:
-        return STATUS_RANK_FILE.get(_norm_status(d.get("status")))
+def _safe_int(v: Any) -> Optional[int]:
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        if s.isdigit():
+            try:
+                return int(s)
+            except Exception:
+                return None
     return None
 
 
-def _rank_from_common_bools(d: Mapping[str, Any]) -> Optional[int]:
+def _severity_from_mapping(d: Mapping[str, Any]) -> Optional[int]:
+    sev = _safe_int(d.get("severity_level"))
+    if sev is not None:
+        return int(sev)
+
+    # fallback (compat only)
+    for k in ("status_label", "status", "overall_status", "overall"):
+        if k in d:
+            s = d.get(k)
+            if isinstance(s, str) and s.strip():
+                return status_label_to_severity_level(s)
+    return None
+
+
+def _severity_from_common_bools(d: Mapping[str, Any]) -> Optional[int]:
     """Heuristics for case-like entries.
 
     - eval_rag: passed / error / error_detail / llm_call_ok
     - eval_retrieval: hit_at_k
+    - generic: ok
     """
 
     if "passed" in d:
-        # error first
         if d.get("error") or d.get("error_detail") or (d.get("llm_call_ok") is False):
-            return STATUS_RANK_FILE["ERROR"]
+            return 4
         if d.get("passed") is False:
-            return STATUS_RANK_FILE["FAIL"]
+            return 3
         if d.get("passed") is True:
-            return STATUS_RANK_FILE["PASS"]
+            return 0
         return None
 
     if "hit_at_k" in d:
         v = d.get("hit_at_k")
         if v is False:
-            return STATUS_RANK_FILE["FAIL"]
+            return 3
         if v is True:
-            return STATUS_RANK_FILE["PASS"]
+            return 0
         return None
 
     if "ok" in d:
         v = d.get("ok")
         if v is False:
-            return STATUS_RANK_FILE["FAIL"]
+            return 3
         if v is True:
-            return STATUS_RANK_FILE["PASS"]
+            return 0
         return None
 
     return None
 
 
-def _rank_item(d: Mapping[str, Any]) -> Optional[int]:
-    r = _rank_from_status(d)
-    if r is not None:
-        return r
-    return _rank_from_common_bools(d)
+def _severity_item(d: Mapping[str, Any]) -> Optional[int]:
+    sev = _severity_from_mapping(d)
+    if sev is not None:
+        return sev
+    return _severity_from_common_bools(d)
 
 
 def _should_sort_list(xs: List[Any]) -> bool:
     if not xs:
         return False
-    # only attempt when most elements are dict-like
     ds = [x for x in xs if isinstance(x, Mapping)]
     if not ds:
         return False
-    ranked = [d for d in ds if _rank_item(d) is not None]
-    # allow partial lists but require strong signal
+    ranked = [d for d in ds if _severity_item(d) is not None]
     return len(ranked) >= max(3, int(0.6 * len(ds)))
 
 
@@ -168,14 +158,19 @@ def _sort_list_for_file(xs: List[Any]) -> List[Any]:
     if not _should_sort_list(xs):
         return xs
 
-    # stable sort: keep original order for same rank / unranked
+    # stable sort: severity desc; keep original order for same severity / unranked
     decorated: List[Tuple[int, int, Any]] = []
     for i, x in enumerate(xs):
+        sev: Optional[int] = None
         if isinstance(x, Mapping):
-            r = _rank_item(x)
-        else:
-            r = None
-        decorated.append(((r if r is not None else 999), i, x))
+            sev = _severity_item(x)
+        # unranked goes last
+        sort_key = -(sev if sev is not None else -10_000)
+        # Explanation: sev None => sort_key very large (goes last) by using --10000 => 10000.
+        if sev is None:
+            sort_key = 10_000
+        decorated.append((sort_key, i, x))
+
     decorated.sort(key=lambda t: (t[0], t[1]))
     return [t[2] for t in decorated]
 
@@ -185,17 +180,27 @@ def _reorder_dict_keys_for_file(d: Dict[str, Any]) -> Dict[str, Any]:
 
     out: Dict[str, Any] = {}
 
-    # 1) summary-like blocks first
-    for k in SUMMARY_KEYS:
+    # 0) v2 envelope top keys
+    for k in ("schema_version", "generated_at", "tool", "root"):
         if k in d:
             out[k] = d[k]
 
-    # 2) top-level status/errors early if present
-    for k in ("status", "overall_status", "errors"):
+    # 1) summary-like blocks
+    for k in SUMMARY_KEYS:
         if k in d and k not in out:
             out[k] = d[k]
 
-    # 3) rest preserve original insertion order
+    # 2) common status/errors keys
+    for k in ("status", "overall_status", "errors", "warnings"):
+        if k in d and k not in out:
+            out[k] = d[k]
+
+    # 3) items before data when present
+    for k in ("items", "results", "cases"):
+        if k in d and k not in out:
+            out[k] = d[k]
+
+    # 4) rest preserve original insertion order
     for k, v in d.items():
         if k in out:
             continue
@@ -203,33 +208,17 @@ def _reorder_dict_keys_for_file(d: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _rank_mapping_value(v: Any) -> Optional[int]:
-    """Rank a mapping entry by severity (lower is more severe).
-
-    This is used for dicts that behave like a set of check items, e.g.
-    {"check_a": {"status": "FAIL"}, "check_b": {"status": "PASS"}}.
-    """
-
+def _severity_mapping_value(v: Any) -> Optional[int]:
     if not isinstance(v, Mapping):
         return None
-
-    # 1) explicit status fields
-    for key in ("status", "overall", "overall_status"):
-        s = v.get(key)
-        if isinstance(s, str):
-            return STATUS_RANK_FILE.get(s.upper(), 500)
-
-    # 2) boolean ok / passed / hit_at_k
-    b = _rank_from_common_bools(v)
-    if b is not None:
-        return b
-    return None
+    sev = _severity_item(v)
+    return sev
 
 
 def _should_sort_mapping(d: Dict[str, Any]) -> bool:
     if len(d) < 3:
         return False
-    ranked = [1 for v in d.values() if _rank_mapping_value(v) is not None]
+    ranked = [1 for v in d.values() if _severity_mapping_value(v) is not None]
     return len(ranked) >= max(2, int(0.6 * len(d)))
 
 
@@ -241,10 +230,13 @@ def _sort_mapping_by_value_severity(d: Dict[str, Any]) -> Dict[str, Any]:
 
     decorated: List[Tuple[int, int, str, Any]] = []
     for i, (k, v) in enumerate(d.items()):
-        r = _rank_mapping_value(v)
-        decorated.append(((r if r is not None else 999), i, k, v))
-    decorated.sort(key=lambda t: (t[0], t[1]))
+        sev = _severity_mapping_value(v)
+        sort_key = -(sev if sev is not None else -10_000)
+        if sev is None:
+            sort_key = 10_000
+        decorated.append((sort_key, i, k, v))
 
+    decorated.sort(key=lambda t: (t[0], t[1]))
     out: Dict[str, Any] = {}
     for _, _, k, v in decorated:
         out[k] = v
@@ -254,12 +246,17 @@ def _sort_mapping_by_value_severity(d: Dict[str, Any]) -> Dict[str, Any]:
 def prepare_report_for_file_output(obj: Any) -> Any:
     """Normalize an object for file report output.
 
-    - Reorder dict keys (summary-like first)
-    - Sort known detail lists when items are rankable
+    - v2 envelope conversion (top-level only)
+    - Reorder dict keys
+    - Sort known detail lists/mappings when items are rankable
     - Normalize path strings (for known path-keys)
     - Add `loc_uri` for clickable VS Code navigation
     - Recurse into nested dict/list
     """
+
+    # Only convert when obj looks like a report dict; keep non-dict as-is
+    if isinstance(obj, Mapping):
+        obj = ensure_report_v2(obj)
 
     repo_root = _extract_repo_root(obj)
     return _prepare_any(obj, repo_root)
@@ -278,7 +275,7 @@ def _prepare_any(x: Any, repo_root: Optional[Path]) -> Any:
         for k, v in x.items():
             d2[k] = _prepare_any(v, repo_root)
 
-        # normalize strings for known path keys (do not touch arbitrary strings)
+        # normalize strings for known path keys
         for pk in PATH_KEY_HINTS:
             if pk not in d2:
                 continue
@@ -289,31 +286,18 @@ def _prepare_any(x: Any, repo_root: Optional[Path]) -> Any:
             if lk in d2 and isinstance(d2[lk], list):
                 d2[lk] = _sort_list_for_file(d2[lk])
 
-        # For dicts that behave like a set of checks, order by value severity.
         d3 = _sort_mapping_by_value_severity(d2)
-
-        # add loc_uri when possible
         _augment_loc_uri_in_place(d3, repo_root)
-
         return _reorder_dict_keys_for_file(d3)
 
     return x
 
 
 def _normalize_path_value(v: Any) -> Any:
-    """Normalize known-path values for file output.
-
-    - str: convert "\\" -> "/" (exclude URLs)
-    - list[str]: normalize each
-    """
-
     if isinstance(v, str):
         return _normalize_path_str(v)
     if isinstance(v, list):
-        out: List[Any] = []
-        for it in v:
-            out.append(_normalize_path_value(it))
-        return out
+        return [_normalize_path_value(it) for it in v]
     return v
 
 
@@ -321,12 +305,11 @@ def _normalize_path_str(s: str) -> str:
     s = str(s)
     if "://" in s:
         return s
-    return s.replace("\\", "/")
+    # posix separators + windows drive lowercasing when possible
+    return normalize_abs_path_posix(s)
 
 
 def _extract_repo_root(obj: Any) -> Optional[Path]:
-    """Try to extract a repo root from the top-level report."""
-
     if not isinstance(obj, dict):
         return None
 
@@ -337,29 +320,19 @@ def _extract_repo_root(obj: Any) -> Optional[Path]:
         s = v.strip()
         if not s:
             continue
-        # keep original separator for Path parsing; only normalize when building URI.
         try:
-            p = Path(s)
+            p = Path(s.replace("\\", "/"))
         except Exception:
             continue
-        if p.is_absolute():
+        # Windows drive path on posix: treat as absolute for joining.
+        if p.is_absolute() or _WIN_DRIVE_ABS.match(s.replace("\\", "/")):
             return p
-        # Windows drive on non-Windows host: Path("C:/x") is not absolute on posix.
-        if _WIN_DRIVE_ABS.match(s.replace("\\", "/")):
-            return Path(s.replace("\\", "/"))
 
     return None
 
 
 def _augment_loc_uri_in_place(d: Dict[str, Any], repo_root: Optional[Path]) -> None:
-    """Add `loc_uri` to dicts that look like diagnostics entries.
-
-    Supported patterns:
-    - dict has file/line/col
-    - dict has loc string or loc list (DIAG_LOC_FILE_LINE_COL)
-
-    The function mutates `d` in-place.
-    """
+    """Add `loc_uri` to dicts that look like diagnostics entries."""
 
     # recurse first
     for v in d.values():
@@ -376,12 +349,12 @@ def _augment_loc_uri_in_place(d: Dict[str, Any], repo_root: Optional[Path]) -> N
     # pattern A: explicit file/line/col
     if isinstance(d.get("file"), str) and ("line" in d or "col" in d):
         file_str = str(d.get("file") or "")
-        line = _to_int_or_none(d.get("line"))
-        col = _to_int_or_none(d.get("col"))
-        uri = _build_vscode_file_uri(file_str, line, col, repo_root)
+        line = _safe_int(d.get("line"))
+        col = _safe_int(d.get("col"))
+        uri = _build_vscode_file_uri(file_str, line=line, col=col, repo_root=repo_root)
         if uri:
             d["loc_uri"] = uri
-            d.update(_diag_key_order_hint(d))
+            _diag_key_order_hint_in_place(d)
         return
 
     # pattern B: loc string/list
@@ -391,45 +364,42 @@ def _augment_loc_uri_in_place(d: Dict[str, Any], repo_root: Optional[Path]) -> N
         if parsed is None:
             return
         file_str, line, col = parsed
-        uri = _build_vscode_file_uri(file_str, line, col, repo_root)
+        uri = _build_vscode_file_uri(file_str, line=line, col=col, repo_root=repo_root)
         if uri:
             d["loc_uri"] = uri
-            d.update(_diag_key_order_hint(d))
+            _diag_key_order_hint_in_place(d)
         return
 
     if isinstance(loc_v, list):
-        locs = [str(x) for x in loc_v]
         uris: List[str] = []
-        for s in locs:
+        any_ok = False
+        for s in [str(x) for x in loc_v]:
             parsed = _parse_diag_loc(s)
             if parsed is None:
                 uris.append("")
                 continue
             file_str, line, col = parsed
-            uris.append(_build_vscode_file_uri(file_str, line, col, repo_root))
-        if any(u for u in uris):
+            u = _build_vscode_file_uri(file_str, line=line, col=col, repo_root=repo_root)
+            uris.append(u)
+            if u:
+                any_ok = True
+        if any_ok:
             d["loc_uri"] = uris
-            d.update(_diag_key_order_hint(d))
+            _diag_key_order_hint_in_place(d)
         return
 
 
-def _diag_key_order_hint(d: Dict[str, Any]) -> Dict[str, Any]:
-    """Ensure `loc_uri` appears near `loc` when dict is later re-serialized.
-
-    Python dict preserves insertion order. This helper re-inserts `loc_uri` right after `loc`.
-    It returns an empty dict if no re-ordering is needed.
-    """
+def _diag_key_order_hint_in_place(d: Dict[str, Any]) -> None:
+    """Ensure `loc_uri` appears right after `loc` when possible."""
 
     if "loc" not in d or "loc_uri" not in d:
-        return {}
+        return
 
-    # Only reorder when loc_uri was appended at end.
     keys = list(d.keys())
-    if keys and keys[-1] != "loc_uri":
-        return {}
+    if not keys or keys[-1] != "loc_uri":
+        return
 
     loc_uri = d.pop("loc_uri")
-    # rebuild preserving earlier keys, then insert after loc
     out: Dict[str, Any] = {}
     for k in keys:
         if k == "loc_uri":
@@ -439,35 +409,9 @@ def _diag_key_order_hint(d: Dict[str, Any]) -> Dict[str, Any]:
             out["loc_uri"] = loc_uri
     d.clear()
     d.update(out)
-    return {}
-
-
-def _to_int_or_none(v: Any) -> Optional[int]:
-    if isinstance(v, bool):
-        return None
-    if isinstance(v, int):
-        return v
-    if isinstance(v, str):
-        s = v.strip()
-        if s.isdigit():
-            try:
-                return int(s)
-            except Exception:
-                return None
-    return None
 
 
 def _parse_diag_loc(loc: str) -> Optional[Tuple[str, int, int]]:
-    """Parse DIAG_LOC style string.
-
-    Accept both:
-    - "file:line:col: message"
-    - "file:line:col"
-
-    Notes:
-    - Use greedy match for `file` to support Windows drive prefix `C:`.
-    """
-
     s = (loc or "").strip()
     if not s:
         return None
@@ -493,13 +437,7 @@ def _looks_like_abs_path(p: str) -> bool:
     return False
 
 
-def _build_vscode_file_uri(file_str: str, line: Optional[int], col: Optional[int], repo_root: Optional[Path]) -> str:
-    """Build a clickable VS Code URL: vscode://file/<abs_path>:line:col
-
-    - abs_path uses posix separators
-    - spaces are URL-encoded
-    """
-
+def _build_vscode_file_uri(file_str: str, *, line: Optional[int], col: Optional[int], repo_root: Optional[Path]) -> str:
     s = (file_str or "").strip()
     if not s:
         return ""
@@ -508,13 +446,10 @@ def _build_vscode_file_uri(file_str: str, line: Optional[int], col: Optional[int
     if "://" in s:
         return ""
 
-    scheme = (os.getenv("RAG_VSCODE_SCHEME") or "vscode").strip() or "vscode"
-
-    # normalize separators for detection/assembly
     s2 = s.replace("\\", "/")
 
     if _looks_like_abs_path(s2):
-        abs_posix = s2
+        abs_posix = normalize_abs_path_posix(s2)
     else:
         if repo_root is None:
             return ""
@@ -523,16 +458,7 @@ def _build_vscode_file_uri(file_str: str, line: Optional[int], col: Optional[int
         except Exception:
             return ""
 
-    # encode only what must be encoded (keep / and :)
-    encoded = quote(abs_posix, safe="/:")
-
-    suffix = ""
-    if isinstance(line, int) and line > 0:
-        suffix = f":{line}"
-        if isinstance(col, int) and col > 0:
-            suffix += f":{col}"
-
-    return f"{scheme}://file/{encoded}{suffix}"
+    return to_vscode_file_uri(abs_posix, line=line, col=col)
 
 
 def write_json_report(path: Path, report: Any) -> None:

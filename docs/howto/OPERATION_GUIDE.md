@@ -79,7 +79,9 @@ python -m pip install -e ".[embed]"
 ```
 **常见依赖冲突（pip resolver 提示）**：若出现 `datasets ... requires fsspec[http]<=2025.10.0` 之类警告，通常是 CUDA 版 torch 的依赖链把 `fsspec` 升到 `2025.12.0` 导致上限不满足。推荐用**单指令**一次性装齐并锁住 `fsspec` 上限（避免冲突）：
 ```cmd
-python -m pip install --upgrade --force-reinstall --no-cache-dir torch torchvision torchaudio "fsspec[http]<=2025.10.0,>=2023.1.0" --index-url https://download.pytorch.org/whl/cu130 --extra-index-url https://pypi.org/simple
+python -m pip install --upgrade --force-reinstall --no-cache-dir ^
+  torch torchvision torchaudio "fsspec[http]<=2025.10.0,>=2023.1.0" ^
+  --index-url https://download.pytorch.org/whl/cu130 --extra-index-url https://pypi.org/simple
 python -m pip check
 ```
 若你确认 `datasets` 已升级并允许更高版本，也可以改为升级 `datasets`；否则以限制 `fsspec` 为准更稳。
@@ -137,7 +139,9 @@ python validate_rag_units.py --max-samples 50 --json-stdout
 **关键参数/注意**：plan 与 build 的 chunk 参数必须完全一致；如果你只改了 build 的参数而没改 plan，那么 check 将必然 FAIL，这种 FAIL 是健康的（它在提醒你口径漂移）。  
 **推荐命令**：
 ```cmd
-python tools\plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl --chunk-chars 1200 --overlap-chars 120 --min-chunk-chars 200 --include-media-stub true --out data_processed\chunk_plan.json
+python tools\plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl ^
+  --chunk-chars 1200 --overlap-chars 120 --min-chunk-chars 200 ^
+  --include-media-stub true --out data_processed\chunk_plan.json
 ```
 
 ---
@@ -286,7 +290,10 @@ python tools\verify_stage1_pipeline.py --root . --skip-llm
 python tools\snapshot_stage1_baseline.py --root . --db chroma_db
 
 :: 对比“新旧快照”（门禁：有差异则 exit code=2）
-python tools\compare_stage1_baseline_snapshots.py --a data_processed\build_reports\stage1_baseline_snapshot.json --b data_processed\build_reports\stage1_baseline_snapshot_prev.json --out data_processed\build_reports\baseline_diff.json
+python tools\compare_stage1_baseline_snapshots.py ^
+  --a data_processed\build_reports\stage1_baseline_snapshot.json ^
+  --b data_processed\build_reports\stage1_baseline_snapshot_prev.json ^
+  --out data_processed\build_reports\baseline_diff.json
 ```
 **进一步说明**：详见：[`tools/snapshot_stage1_baseline_README.md`](../../tools/snapshot_stage1_baseline_README.md) 与 [`tools/compare_stage1_baseline_snapshots_README.md`](../../tools/compare_stage1_baseline_snapshots_README.md)
 
@@ -353,13 +360,16 @@ python tools\verify_postmortems_and_troubleshooting.py --strict
 
 ### Step 13：JSON 报告 schema 自检（用于回归/CI）
 **做什么**：当你把 `validate_rag_units.py`、`check_chroma_build.py`、`tools/probe_llm_server.py` 的 `--json-out` 固定落盘用于回归时，建议在 CI 或批处理脚本中增加 `tools/verify_reports_schema.py` 作为最小 schema 校验，避免“报告格式变化导致下游聚合脚本崩溃”。  
-**为何（因果）**：你当前已采用“固定路径只写一份 JSON”的报告契约；但如果某次改动意外破坏 JSON 结构（例如缺字段、status 非法），下游脚本将产生“静默误判或崩溃”。schema 自检把这类问题提前收敛为明确 FAIL。  
-**关键参数/注意**：该脚本只做最小键与类型检查，不评价指标；对 step 名可选强校验。  
+**为何（因果）**：你当前报告采用 `schema_version=2` 的 item 模型；若某次改动意外破坏 JSON 结构（例如缺少 `items/summary`、某条结果缺 `severity_level`、或顶层字段名漂移），下游渲染/聚合将出现误判或崩溃。schema 自检把这类问题提前收敛为明确 FAIL。  
+**关键参数/注意**：该脚本默认做 v2 的最小键与类型检查（不评价指标）；`--step` 用于校验期望的 `tool` 名称；如需更严格可用 `--schema` 指定 v2 JSON Schema。  
 **推荐命令**：
 ```cmd
 python tools\verify_reports_schema.py --report data_processed\build_reports\units.json --step units
 python tools\verify_reports_schema.py --report data_processed\build_reports\check.json --step check
 python tools\verify_reports_schema.py --report data_processed\build_reports\llm_probe.json --step llm_probe
+
+:: 更严格（需要安装 jsonschema）
+python tools\verify_reports_schema.py --report data_processed\build_reports\units.json --schema schemas\build_report_v2.schema.json
 ```
 
 

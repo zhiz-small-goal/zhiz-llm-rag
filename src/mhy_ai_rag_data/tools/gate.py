@@ -34,7 +34,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
+from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_contract import compute_summary
 
 
 def _iso_now() -> str:
@@ -60,8 +61,7 @@ def _write_text(p: Path, s: str) -> None:
 
 def _write_json(p: Path, obj: Any) -> None:
     _ensure_dir(p.parent)
-    with p.open("w", encoding="utf-8") as f:
-        json.dump(prepare_report_for_file_output(obj), f, ensure_ascii=False, indent=2)
+    write_json_report(p, obj)
 
 
 def _norm_status(rc: int) -> str:
@@ -320,7 +320,7 @@ def _validate_self_schema(repo: Path, ssot: Dict[str, Any], gate_report_path: Pa
             "detail": repr(e),
         }
 
-    schema_rel = ((ssot.get("schemas") or {}).get("gate_report")) or "schemas/gate_report_v1.schema.json"
+    schema_rel = ((ssot.get("schemas") or {}).get("gate_report")) or "schemas/gate_report_v2.schema.json"
     schema_path = repo / str(schema_rel)
 
     try:
@@ -402,32 +402,96 @@ def main() -> int:
         "skip": sum(1 for r in results if r.status == "SKIP"),
         "total": len(results),
     }
+    # --- build v2 report (item model) ---
+
+    items: List[Dict[str, Any]] = []
+    for r in results:
+        items.append(
+            {
+                "tool": "rag-gate",
+                "title": str(r.id),
+                "status_label": str(r.status),
+                "severity_level": int(
+                    {"PASS": 0, "SKIP": 1, "INFO": 1, "WARN": 2, "FAIL": 3, "ERROR": 4}.get(str(r.status).upper(), 1)
+                ),
+                "message": f"rc={r.rc} elapsed_ms={r.elapsed_ms}",
+                "detail": _step_result_to_dict(r),
+            }
+        )
+
+    # profile/unknown-step warnings from SSOT parsing
+    for w in warnings:
+        items.append(
+            {
+                "tool": "rag-gate",
+                "title": str(w.get("code") or "warning"),
+                "status_label": "WARN",
+                "severity_level": 2,
+                "message": str(w.get("message") or ""),
+                "detail": dict(w),
+            }
+        )
+
+    def _counts_by_label(xs: List[Dict[str, Any]]) -> Dict[str, int]:
+        out: Dict[str, int] = {}
+        for it in xs:
+            lab = str(it.get("status_label") or "INFO").upper()
+            out[lab] = out.get(lab, 0) + 1
+        return out
+
+    max_sev = max([int(it.get("severity_level", 0)) for it in items], default=0)
 
     report: Dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": _iso_now(),
         "tool": "rag-gate",
         "root": str(repo),
-        "profile": args.profile,
-        "ssot_path": str(ssot_path.relative_to(repo)) if ssot_path.is_relative_to(repo) else str(ssot_path),
-        "summary": {"overall_status": overall_status, "overall_rc": overall_rc, "counts": counts},
-        "results": [_step_result_to_dict(r) for r in results],
+        "summary": {
+            "overall_status_label": overall_status,
+            "overall_rc": overall_rc,
+            "max_severity_level": max_sev,
+            "counts": _counts_by_label(items),
+            "total_items": len(items),
+            "step_counts": counts,
+        },
+        "items": items,
+        "data": {
+            "profile": args.profile,
+            "ssot_path": str(ssot_path.relative_to(repo)) if ssot_path.is_relative_to(repo) else str(ssot_path),
+            "results": [_step_result_to_dict(r) for r in results],
+            "warnings": warnings,
+            "gate_logs_dir": str(gate_logs_dir.as_posix()),
+        },
     }
-    if warnings:
-        report["warnings"] = warnings
 
     _write_json(out_path, report)
 
-    # Self schema validation (adds warning, but does not change PASS->FAIL unless already failing)
+    # Self schema validation
+    # 规则：
+    # - schema 校验器缺失：属于环境能力不足，进入 items（WARN/2），但不强制 overall 失败。
+    # - schema 不匹配：属于契约破坏，进入 items（ERROR/4），并强制 overall=ERROR。
     warn = _validate_self_schema(repo, ssot, out_path)
     if warn:
-        report.setdefault("warnings", []).append(warn)
-        _write_json(out_path, report)
-        # if schema is broken, treat as ERROR (this is a contract failure)
-        overall_rc = 3
-        overall_status = "ERROR"
-        report["summary"]["overall_status"] = overall_status
-        report["summary"]["overall_rc"] = overall_rc
+        code = str(warn.get("code") or "")
+        is_validator_missing = code == "schema_validator_missing"
+        report.setdefault("items", []).append(
+            {
+                "tool": "rag-gate",
+                "title": str(code or "gate_report_schema"),
+                "status_label": "WARN" if is_validator_missing else "ERROR",
+                "severity_level": 2 if is_validator_missing else 4,
+                "message": str(warn.get("message") or ""),
+                "detail": dict(warn),
+            }
+        )
+        step_counts = (report.get("summary") or {}).get("step_counts")
+        report["summary"] = compute_summary(report["items"]).to_dict()
+        if step_counts is not None:
+            report["summary"]["step_counts"] = step_counts
+        overall_status = str(
+            report["summary"].get("overall_status_label") or ("PASS" if is_validator_missing else "ERROR")
+        )
+        overall_rc = int(report["summary"].get("overall_rc") or (0 if is_validator_missing else 3))
         _write_json(out_path, report)
 
     print(f"[gate] profile={args.profile} status={overall_status} rc={overall_rc} report={out_path}")
