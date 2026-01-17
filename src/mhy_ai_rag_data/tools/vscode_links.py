@@ -78,6 +78,26 @@ def to_vscode_file_uri(abs_path: str, *, line: Optional[int] = None, col: Option
     return f"{scheme}://file/{encoded}{suffix}"
 
 
+def to_vscode_file_uri_strict(
+    abs_path: str,
+    *,
+    line: Optional[int] = None,
+    col: Optional[int] = None,
+    default_line: int = 1,
+    default_col: int = 1,
+) -> str:
+    """Build a VS Code URL with an explicit :line:col suffix.
+
+    Contract usage:
+    - loc (text) may omit line/col.
+    - loc_uri should still be clickable; when line/col is missing, we default to 1:1.
+    """
+
+    resolved_line = line if isinstance(line, int) and line > 0 else int(default_line)
+    resolved_col = col if isinstance(col, int) and col > 0 else int(default_col)
+    return to_vscode_file_uri(abs_path, line=resolved_line, col=resolved_col)
+
+
 def to_vscode_file_uri_from_path(p: Path, *, line: Optional[int] = None, col: Optional[int] = None) -> str:
     try:
         abs_posix = p.resolve().as_posix()

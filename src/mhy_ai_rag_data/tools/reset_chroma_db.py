@@ -16,7 +16,7 @@
   3：ERROR（脚本异常）
 
 用法：
-  python tools\reset_chroma_db.py --root . --db chroma_db --backup-dir data_processed\db_backups
+  python tools\reset_chroma_db.py --root . --db chroma_db --backup-dir data_processed\\db_backups
 """
 
 from __future__ import annotations

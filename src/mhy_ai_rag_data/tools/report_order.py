@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_contract import ensure_report_v2, status_label_to_severity_level
-from mhy_ai_rag_data.tools.vscode_links import to_vscode_file_uri, normalize_abs_path_posix
+from mhy_ai_rag_data.tools.vscode_links import normalize_abs_path_posix, to_vscode_file_uri_strict
 
 
 # --- ordering knobs (file output) ---
@@ -68,8 +68,10 @@ PATH_KEY_HINTS: Tuple[str, ...] = (
 _WIN_DRIVE_ABS = re.compile(r"^[A-Za-z]:[\\/]")
 
 # greedy: support Windows drive prefix `C:`
-_LOC_WITH_MSG = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+):")
-_LOC_BARE = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+)$")
+_LOC_LINE_COL_WITH_MSG = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+):")
+_LOC_LINE_COL_BARE = re.compile(r"^(?P<file>.+):(?P<line>\d+):(?P<col>\d+)$")
+_LOC_LINE_WITH_MSG = re.compile(r"^(?P<file>.+):(?P<line>\d+):")
+_LOC_LINE_BARE = re.compile(r"^(?P<file>.+):(?P<line>\d+)$")
 
 
 def _safe_int(v: Any) -> Optional[int]:
@@ -431,19 +433,45 @@ def _diag_key_order_hint_in_place(d: Dict[str, Any]) -> None:
 
 
 def _parse_diag_loc(loc: str) -> Optional[Tuple[str, int, int]]:
+    """Parse a diagnostic location.
+
+    Accepted forms (loc is pure text; separators normalized elsewhere):
+    - path
+    - path:line
+    - path:line:col
+    Also tolerates trailing ': ...' message after the col/line.
+
+    Returns:
+      (file, line, col) where line/col are always positive ints.
+      When missing, we default to 1:1 so loc_uri remains clickable.
+    """
+
     s = (loc or "").strip()
     if not s:
         return None
+    if "://" in s:
+        return None
 
-    m = _LOC_WITH_MSG.match(s)
+    # 1) full form: path:line:col[:message]
+    m = _LOC_LINE_COL_WITH_MSG.match(s)
     if m:
         return (m.group("file"), int(m.group("line")), int(m.group("col")))
 
-    m = _LOC_BARE.match(s)
+    m = _LOC_LINE_COL_BARE.match(s)
     if m:
         return (m.group("file"), int(m.group("line")), int(m.group("col")))
 
-    return None
+    # 2) line-only: path:line[:message]
+    m = _LOC_LINE_WITH_MSG.match(s)
+    if m:
+        return (m.group("file"), int(m.group("line")), 1)
+
+    m = _LOC_LINE_BARE.match(s)
+    if m:
+        return (m.group("file"), int(m.group("line")), 1)
+
+    # 3) path-only
+    return (s, 1, 1)
 
 
 def _looks_like_abs_path(p: str) -> bool:
@@ -477,7 +505,8 @@ def _build_vscode_file_uri(file_str: str, *, line: Optional[int], col: Optional[
         except Exception:
             return ""
 
-    return to_vscode_file_uri(abs_posix, line=line, col=col)
+    # loc_uri contract: always include :line:col. When missing, default to 1:1.
+    return to_vscode_file_uri_strict(abs_posix, line=line, col=col)
 
 
 def write_json_report(path: Path, report: Any) -> None:

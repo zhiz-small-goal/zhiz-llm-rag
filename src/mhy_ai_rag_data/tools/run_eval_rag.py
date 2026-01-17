@@ -11,11 +11,17 @@ run_eval_rag.py
 - 必需：chromadb, requests
 - 可选：FlagEmbedding 或 sentence_transformers（用于 query embedding）
 
-输出：
+输出（默认）：
 - <root>/data_processed/build_reports/eval_rag_report.json
+- <root>/data_processed/build_reports/eval_rag_report.md
+- <root>/data_processed/build_reports/eval_rag_report.events.jsonl  (用于中断恢复/重建)
 
 用法：
   python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --base-url http://localhost:8000/v1 --k 5 --embed-model BAAI/bge-m3
+
+说明：
+- 控制台输出（stdout）为最终报告（detail 从轻到重，summary 在末尾，整体以 \n\n 结束）。
+- 运行时进度（stderr）不写入 items/events。
 """
 
 from __future__ import annotations
@@ -29,10 +35,22 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
-from mhy_ai_rag_data.tools.report_contract import compute_summary
+from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_report_bundle
+from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
+from mhy_ai_rag_data.tools.report_events import ItemEventsWriter
+from mhy_ai_rag_data.tools.runtime_feedback import Progress
 
-from mhy_ai_rag_data.tools.report_stream import StreamWriter, default_run_id, safe_truncate
+
+def safe_truncate(s: Any, n: int) -> str:
+    """Best-effort truncate for debug/error payloads."""
+
+    if n <= 0:
+        return ""
+    t = str(s or "")
+    if len(t) <= n:
+        return t
+    return t[: max(0, n - 1)] + "…"
+
 
 # 兼容两种运行方式：python -m tools.run_eval_rag 以及 python tools/run_eval_rag.py
 try:
@@ -44,23 +62,30 @@ resolve_model_id = _llm_http_client.resolve_model_id
 LLMHTTPError = _llm_http_client.LLMHTTPError
 
 
-def now_iso() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+def read_jsonl_cases(path: Path) -> List[Tuple[int, Dict[str, Any]]]:
+    """Load jsonl as (line_no, dict). Skips blank lines."""
 
-
-def read_jsonl(path: Path) -> List[Dict[str, Any]]:
-    out = []
+    out: List[Tuple[int, Dict[str, Any]]] = []
     with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
+        for line_no, raw in enumerate(f, start=1):
+            s = (raw or "").strip()
+            if not s:
                 continue
-            out.append(json.loads(line))
+            obj = json.loads(s)
+            if isinstance(obj, dict):
+                out.append((line_no, obj))
     return out
 
 
 def ensure_dir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
+
+
+def _events_path_for_out_json(out_json: Path) -> Path:
+    base = out_json
+    if base.suffix:
+        base = base.with_suffix("")
+    return Path(str(base) + ".events.jsonl")
 
 
 def load_embedder(backend: str, model_name: str, device: str) -> Any:
@@ -154,20 +179,8 @@ def call_chat(
     return result
 
 
-def _safe_load_json(s: str | None) -> dict[str, Any]:
-    if not s:
-        return {}
-    try:
-        result = json.loads(s)
-        if not isinstance(result, dict):
-            return {}
-        return result
-    except json.JSONDecodeError:
-        return {}
-
-
 def main() -> int:
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description="Evaluate RAG pipeline and emit schema_version=2 report bundle")
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument("--db", default="chroma_db", help="chroma db dir (relative to root)")
     ap.add_argument("--collection", default="rag_chunks", help="collection name")
@@ -201,31 +214,40 @@ def main() -> int:
     ap.add_argument(
         "--out", default="data_processed/build_reports/eval_rag_report.json", help="output json (relative to root)"
     )
-    # real-time observability (optional)
+    ap.add_argument("--md-out", default="", help="optional report.md path (relative to root); default: <out>.md")
     ap.add_argument(
-        "--stream-out",
-        default="",
-        help="optional streaming events output (relative to root), e.g. data_processed/build_reports/eval_rag_report.events.jsonl",
+        "--events-out",
+        default="auto",
+        help="item events output (jsonl): auto|off|<path> (relative to root). Used for recovery/rebuild.",
     )
     ap.add_argument(
-        "--stream-format",
-        default="jsonl",
-        choices=["jsonl", "json-seq"],
-        help="stream file format: jsonl or json-seq (RFC 7464)",
+        "--durability-mode",
+        default="flush",
+        choices=["none", "flush", "fsync"],
+        help="events durability: none|flush|fsync (fsync is throttled by --fsync-interval-ms)",
     )
     ap.add_argument(
-        "--stream-answer-chars", type=int, default=0, help="if >0, include truncated answer snippet in stream records"
+        "--fsync-interval-ms",
+        type=int,
+        default=1000,
+        help="fsync throttle interval in ms when durability_mode=fsync",
     )
     ap.add_argument(
-        "--progress-every-seconds",
-        type=float,
-        default=10.0,
-        help="print progress summary every N seconds; 0 to disable",
+        "--progress",
+        default="auto",
+        choices=["auto", "on", "off"],
+        help="runtime progress feedback to stderr: auto|on|off",
+    )
+    ap.add_argument(
+        "--progress-min-interval-ms",
+        type=int,
+        default=200,
+        help="min progress update interval in ms (throttling)",
     )
     ap.add_argument(
         "--print-case-errors",
         action="store_true",
-        help="print a one-line error per failed case to console (for live debugging)",
+        help="print a one-line error per failed case to stderr (for live debugging)",
     )
     args = ap.parse_args()
 
@@ -235,124 +257,161 @@ def main() -> int:
     out_path = (root / args.out).resolve()
     ensure_dir(out_path.parent)
 
-    # stream events: optional旁路工件，用于实时观测（不改变最终 JSON 结构/写入时机）
-    run_id = default_run_id("eval_rag")
-    stream_path: Optional[Path] = None
-    stream_writer: Optional[StreamWriter] = None
-    stream_closed = False
-    if args.stream_out:
-        stream_path = (root / args.stream_out).resolve()
-        ensure_dir(stream_path.parent)
-        stream_writer = StreamWriter(stream_path, fmt=args.stream_format, flush_per_record=True).open()
-        stream_writer.emit(
-            {
-                "record_type": "meta",
-                "run_id": run_id,
-                "tool": "run_eval_rag",
-                "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_rag.py",
-                "argv": sys.argv,
-                "root": str(root),
-                "out_final": str(out_path),
-                "stream_out": str(stream_path),
-            }
-        )
+    md_path = (root / args.md_out).resolve() if args.md_out else default_md_path_for_json(out_path)
 
-    def _close_stream() -> None:
-        nonlocal stream_closed
-        if stream_writer is not None and not stream_closed:
-            try:
-                stream_writer.close()
-            finally:
-                stream_closed = True
+    # runtime feedback (stderr only)
+    progress = Progress(total=None, mode=args.progress, min_interval_ms=int(args.progress_min_interval_ms)).start()
+    progress.update(stage="init")
 
-    def _emit_error_record(message: str, exc: Optional[BaseException] = None) -> None:
-        """Emit a structured error record to stream (if enabled).
+    # events stream (items only; for recovery)
+    events_writer: Optional[ItemEventsWriter] = None
+    events_path: Optional[Path] = None
+    events_mode = str(args.events_out or "auto").strip().lower()
+    if events_mode not in ("", "off", "none", "false", "0"):
+        if events_mode == "auto":
+            events_path = _events_path_for_out_json(out_path)
+        else:
+            events_path = (root / str(args.events_out)).resolve()
+        events_writer = ItemEventsWriter(
+            path=events_path,
+            durability_mode=str(args.durability_mode),
+            fsync_interval_ms=int(args.fsync_interval_ms),
+        ).open(truncate=True)
 
-        This ensures the stream contract is truthful: failures are visible during long runs.
-        """
-        if stream_writer is None:
-            return
+    items: List[Dict[str, Any]] = []
+    per_case: List[Dict[str, Any]] = []
+    pass_count = 0
+    t0 = time.time()
+
+    def _emit_item(it: Dict[str, Any]) -> None:
+        # Ensure required fields exist (explicit severity_level; no string ordering).
+        it.setdefault("tool", "run_eval_rag")
+        it.setdefault("title", "")
+        it.setdefault("status_label", "INFO")
+        it.setdefault("severity_level", 1)
+        it.setdefault("message", "")
+        if events_writer is not None:
+            events_writer.emit_item(it)
+
+    def _termination_item(*, message: str, exc: Optional[BaseException] = None) -> Dict[str, Any]:
         tb = ""
         if exc is not None:
             tb = traceback.format_exc()
-        stream_writer.emit(
-            {
-                "record_type": "error",
-                "run_id": run_id,
-                "ts_ms": int(time.time() * 1000),
-                "message": safe_truncate(message, 2000),
+        return {
+            "tool": "run_eval_rag",
+            "title": "TERMINATED",
+            "status_label": "ERROR",
+            "severity_level": 4,
+            "message": message,
+            "loc": "src/mhy_ai_rag_data/tools/run_eval_rag.py:1:1",
+            "duration_ms": int((time.time() - t0) * 1000),
+            "detail": {
+                "exception": f"{type(exc).__name__}: {exc}" if exc is not None else "",
                 "traceback": safe_truncate(tb, 8000) if tb else "",
-            }
+            },
+        }
+
+    def _finalize_and_write() -> int:
+        summary = compute_summary(items)
+        report: Dict[str, Any] = {
+            "schema_version": 2,
+            "generated_at": iso_now(),
+            "tool": "run_eval_rag",
+            "root": str(root.resolve().as_posix()),
+            "summary": summary.to_dict(),
+            "items": items,
+            "data": {
+                "db_path": str(db_path.resolve().as_posix()),
+                "collection": str(args.collection),
+                "k": int(args.k),
+                "cases_path": str(cases_path.resolve().as_posix()),
+                "metrics": {
+                    "cases": len(per_case),
+                    "passed_cases": int(pass_count),
+                    "pass_rate": (float(pass_count) / float(len(per_case))) if per_case else 0.0,
+                    "elapsed_ms": int((time.time() - t0) * 1000),
+                },
+                "cases": per_case,
+            },
+        }
+        if events_path is not None:
+            report["data"]["events_path"] = str(events_path.resolve().as_posix())
+
+        # Ensure progress line is cleaned before final stdout report.
+        progress.close()
+        if events_writer is not None:
+            events_writer.close()
+
+        write_report_bundle(
+            report=report,
+            report_json=out_path,
+            report_md=md_path,
+            repo_root=root,
+            console_title="eval_rag",
+            emit_console=True,
         )
-
-    def _fail(rc: int, message: str, exc: Optional[BaseException] = None) -> int:
-        print(f"[eval_rag] FAIL: {message}")
-        _emit_error_record(message, exc=exc)
-        _close_stream()
-        return rc
-
-    if not cases_path.exists():
-        return _fail(2, f"cases not found: {cases_path}")
-    if not db_path.exists():
-        return _fail(2, f"db not found: {db_path}")
+        return int(summary.overall_rc)
 
     try:
-        import chromadb
-    except Exception as e:
-        return _fail(2, f"chromadb import failed: {type(e).__name__}: {e}", exc=e)
+        if not cases_path.exists():
+            it = _termination_item(message=f"cases not found: {cases_path.as_posix()}")
+            items.append(it)
+            _emit_item(it)
+            return _finalize_and_write()
 
-    try:
-        import requests  # noqa: F401
-    except Exception as e:
-        return _fail(2, f"requests import failed: {type(e).__name__}: {e}", exc=e)
+        if not db_path.exists():
+            it = _termination_item(message=f"db not found: {db_path.as_posix()}")
+            items.append(it)
+            _emit_item(it)
+            return _finalize_and_write()
 
-    try:
-        backend, embedder = load_embedder(args.embed_backend, args.embed_model, args.device)
+        try:
+            import chromadb
+        except Exception as e:
+            it = _termination_item(message=f"chromadb import failed: {type(e).__name__}: {e}", exc=e)
+            items.append(it)
+            _emit_item(it)
+            return _finalize_and_write()
 
-        # Resolve model id (avoid placeholder like 'gpt-3.5-turbo' when server exposes real ids)
-        resolved_model, model_resolve = resolve_model_id(
-            args.base_url,
-            args.llm_model,
-            connect_timeout=args.connect_timeout,
-            read_timeout=args.timeout,
-            trust_env_mode=args.trust_env,
-            fallback_model="gpt-3.5-turbo",
-        )
-        if stream_writer is not None:
-            # 追加一条 meta 记录：把 LLM 解析后的 model/base_url/timeout 写入 stream，便于运行中诊断
-            stream_writer.emit(
-                {
-                    "record_type": "meta",
-                    "run_id": run_id,
-                    "ts_ms": int(time.time() * 1000),
-                    "llm": {
-                        "base_url": args.base_url,
-                        "model_arg": args.llm_model,
-                        "resolved_model": resolved_model,
-                        "connect_timeout": args.connect_timeout,
-                        "read_timeout": args.timeout,
-                        "trust_env": args.trust_env,
-                    },
-                    "model_resolve": model_resolve,
-                }
+        try:
+            import requests  # noqa: F401
+        except Exception as e:
+            it = _termination_item(message=f"requests import failed: {type(e).__name__}: {e}", exc=e)
+            items.append(it)
+            _emit_item(it)
+            return _finalize_and_write()
+
+        try:
+            progress.update(stage="load_cases")
+            cases = read_jsonl_cases(cases_path)
+            total_cases = len(cases)
+            progress.total = total_cases
+
+            progress.update(current=0, stage="init_embedder")
+            backend, embedder = load_embedder(args.embed_backend, args.embed_model, args.device)
+
+            # Resolve model id (avoid placeholder like 'gpt-3.5-turbo' when server exposes real ids)
+            progress.update(current=0, stage="resolve_model")
+            resolved_model, _model_resolve = resolve_model_id(
+                args.base_url,
+                args.llm_model,
+                connect_timeout=args.connect_timeout,
+                read_timeout=args.timeout,
+                trust_env_mode=args.trust_env,
+                fallback_model="gpt-3.5-turbo",
             )
+        except Exception as e:
+            it = _termination_item(message=f"init failed: {type(e).__name__}: {e}", exc=e)
+            items.append(it)
+            _emit_item(it)
+            return _finalize_and_write()
 
-    except Exception as e:
-        return _fail(2, f"embedder/llm init failed: {type(e).__name__}: {e}", exc=e)
+        client = chromadb.PersistentClient(path=str(db_path))
+        col = client.get_collection(args.collection)
 
-    client = chromadb.PersistentClient(path=str(db_path))
-    col = client.get_collection(args.collection)
+        progress.update(current=0, stage="run")
 
-    cases = read_jsonl(cases_path)
-    per_case = []
-    pass_count = 0
-
-    t0 = time.time()
-    last_progress = t0
-    total_cases = len(cases)
-
-    try:
-        for idx, c in enumerate(cases, start=1):
+        for i, (line_no, c) in enumerate(cases, start=1):
             cid = c.get("id", "")
             q = c.get("query", "")
             must_inc = c.get("must_include", []) or []
@@ -414,30 +473,17 @@ def main() -> int:
 
             if args.print_case_errors and (not passed):
                 if err:
-                    cause = ""
-                    status = ""
-                    if isinstance(err_detail, dict):
-                        status = str(err_detail.get("status_code") or "")
-                        cause = str(err_detail.get("cause") or "")
-                    cause_snip = safe_truncate(cause, 300) if cause else ""
-
-                    # 控制台输出：避免单行过长（Windows 终端常被截断），采用多行、并留出空行分隔。
-                    print(
-                        f"[eval_rag] CASE_FAIL idx={idx}/{total_cases} id={cid}"
-                        + (f" status={status}" if status else "")
-                    )
-                    print(f"  err  : {safe_truncate(err, 300)}")
-                    if cause_snip:
-                        print(f"  cause: {cause_snip}")
-                    print("")
+                    sys.stderr.write(f"[eval_rag] CASE_FAIL {i}/{total_cases} id={cid} err={safe_truncate(err, 300)}\n")
                 elif not ok_call:
-                    print(f"[eval_rag] CASE_FAIL idx={idx}/{total_cases} id={cid} llm_call_ok=false")
+                    sys.stderr.write(f"[eval_rag] CASE_FAIL {i}/{total_cases} id={cid} llm_call_ok=false\n")
+                sys.stderr.flush()
 
             if passed:
                 pass_count += 1
 
             per_case.append(
                 {
+                    "line_no": line_no,
                     "id": cid,
                     "query": q,
                     "bucket": c.get("bucket"),
@@ -464,128 +510,65 @@ def main() -> int:
                     "answer": answer,
                     "error": err,
                     "error_detail": err_detail,
+                    "elapsed_ms": int((time.time() - case_t0) * 1000),
                 }
             )
+            # Build one report item and emit to events immediately.
+            passed_item = bool(passed) if passed is not None else None
+            error_any = err or err_detail or (ok_call is False)
+            if error_any:
+                status_label = "ERROR"
+                severity_level = 4
+            elif passed_item is True:
+                status_label = "PASS"
+                severity_level = 0
+            elif passed_item is False:
+                status_label = "FAIL"
+                severity_level = 3
+            else:
+                status_label = "INFO"
+                severity_level = 1
 
-            if stream_writer is not None:
-                ans_snip = safe_truncate(answer, args.stream_answer_chars) if args.stream_answer_chars > 0 else ""
-                stream_writer.emit(
-                    {
-                        "record_type": "case",
-                        "run_id": run_id,
-                        "ts_ms": int(time.time() * 1000),
-                        "case_index": idx,
-                        "cases_total": total_cases,
-                        "case_id": cid,
-                        "bucket": c.get("bucket"),
-                        "pair_id": c.get("pair_id"),
-                        "concept_id": c.get("concept_id"),
-                        "query": q,
-                        "passed": passed,
-                        "llm_call_ok": ok_call,
-                        "missing": missing,
-                        "context_chars": len(ctx),
-                        "answer_chars": len(answer),
-                        "answer_snippet": ans_snip,
-                        "error": err,
-                        "error_detail": err_detail,
-                        "elapsed_ms": int((time.time() - case_t0) * 1000),
-                    }
-                )
-
-            if args.progress_every_seconds > 0 and (time.time() - last_progress) >= args.progress_every_seconds:
-                elapsed = time.time() - t0
-                pr = (pass_count / idx) if idx else 0.0
-                stream_tag = str(stream_path) if stream_path else "-"
-                print(
-                    f"[eval_rag] PROGRESS cases_done={idx}/{total_cases} passed_cases={pass_count} pass_rate={pr:.3f} elapsed_s={elapsed:.1f} stream={stream_tag}"
-                )
-                last_progress = time.time()
-
-    except Exception as e:
-        return _fail(1, f"unhandled exception during evaluation: {type(e).__name__}: {e}", exc=e)
-
-    total = len(per_case)
-    pass_rate = (pass_count / total) if total else 0.0
-
-    # Convert cases to items (v2 contract)
-    items: List[Dict[str, Any]] = []
-    for c in per_case:
-        passed_val = c.get("passed")
-        passed_item: Optional[bool] = bool(passed_val) if passed_val is not None else None
-        llm_call_ok = c.get("llm_call_ok")
-        error = c.get("error") or c.get("error_detail")
-
-        if error or llm_call_ok is False:
-            status_label = "ERROR"
-            severity_level = 4
-        elif passed_item is True:
-            status_label = "PASS"
-            severity_level = 0
-        elif passed_item is False:
-            status_label = "FAIL"
-            severity_level = 3
-        else:
-            status_label = "INFO"
-            severity_level = 1
-
-        items.append(
-            {
+            # Path contract: always use '/' separators in loc text.
+            cases_rel = str(args.cases).replace("\\", "/")
+            item: Dict[str, Any] = {
                 "tool": "run_eval_rag",
-                "title": str(c.get("id", "")),
+                "title": str(cid or f"line_{line_no}"),
                 "status_label": status_label,
-                "severity_level": severity_level,
-                "message": f"passed={passed_item} llm_call_ok={llm_call_ok} bucket={c.get('bucket', '')}",
-                "detail": dict(c),
+                "severity_level": int(severity_level),
+                "message": f"passed={passed_item} llm_call_ok={ok_call} missing={len(missing)} bucket={c.get('bucket', '')}",
+                "loc": f"{cases_rel}:{line_no}:1",
+                "duration_ms": int((time.time() - case_t0) * 1000),
+                "detail": dict(per_case[-1]),
             }
-        )
+            items.append(item)
+            _emit_item(item)
 
-    # Compute summary
-    summary = compute_summary(items)
+            progress.update(current=i, stage="run")
 
-    # Build v2 report
-    report = {
-        "schema_version": 2,
-        "generated_at": now_iso(),
-        "tool": "run_eval_rag",
-        "root": str(root),
-        "summary": summary.to_dict(),
-        "items": items,
-        "data": {
-            "timestamp": now_iso(),
-            "db_path": str(db_path),
-            "collection": args.collection,
-            "k": args.k,
-            "embed": {"backend": backend, "model": args.embed_model, "device": args.device},
-            "llm": {
-                "base_url": args.base_url,
-                "connect_timeout": args.connect_timeout,
-                "read_timeout": args.timeout,
-                "trust_env": args.trust_env,
-                "model_field": args.llm_model,
-            },
-            "metrics": {"cases": total, "passed_cases": pass_count, "pass_rate": pass_rate},
-            "cases": per_case,
-        },
-    }
+        return _finalize_and_write()
 
-    write_json_report(out_path, report)
-
-    if stream_writer is not None:
-        stream_writer.emit(
-            {
-                "record_type": "summary",
-                "run_id": run_id,
-                "ts_ms": int(time.time() * 1000),
-                "metrics": report.get("metrics"),
-                "out_final": str(out_path),
-                "elapsed_ms": int((time.time() - t0) * 1000),
-            }
-        )
-        _close_stream()
-
-    print(f"[eval_rag] OK  pass_rate={pass_rate:.3f}  out={out_path}")
-    return 0
+    except KeyboardInterrupt as e:
+        it = _termination_item(message="KeyboardInterrupt", exc=e)
+        items.append(it)
+        _emit_item(it)
+        return _finalize_and_write()
+    except Exception as e:
+        it = _termination_item(message=f"unhandled exception: {type(e).__name__}: {e}", exc=e)
+        items.append(it)
+        _emit_item(it)
+        return _finalize_and_write()
+    finally:
+        # Best-effort cleanup if _finalize_and_write was not reached.
+        try:
+            progress.close()
+        except Exception:
+            pass
+        try:
+            if events_writer is not None:
+                events_writer.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
