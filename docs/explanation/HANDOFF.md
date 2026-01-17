@@ -37,7 +37,7 @@ ssot: true
 - `db` / `collection`
 - `embed_model` / `device`
 - 门禁模式（`warning` 迁移期 / 已收紧为 `fail` 的条目）
-- repo gate（PR/CI Lite）：`profile=ci`，SSOT=`docs/reference/reference.yaml`（产物：`gate_report.json`）
+- repo gate（PR/CI Lite）：`profile=ci`，SSOT=`docs/reference/reference.yaml`（产物：`gate_report.json` + `gate_report.md` + `gate_report.events.jsonl`）
 
 ### Act（最小改动、可回滚、可观测）
 - 优先以“旁路工件 + 明确契约 + 对账门禁”的方式演进，避免一次性破坏现有消费链路。  
@@ -214,7 +214,9 @@ next（最小改动优先）：
   - 生成（本地修复）：`python tools/generate_review_spec_docs.py --root . --write`（然后重跑校验）
 - SSOT：`docs/reference/reference.yaml`（门禁顺序/产物路径/schema/policy 输入集）
 - 单入口：`python tools/gate.py --profile ci --root .`（或安装后 `rag-gate ...`）
-- 产物：`data_processed/build_reports/gate_report.json` + `gate_logs/`
+- 产物（落盘 + 可恢复）：`data_processed/build_reports/gate_report.json`（SoT） + `gate_report.md`（人类入口） + `gate_report.events.jsonl`（运行中增量，可重建） + `gate_logs/`
+- 进度反馈（stderr）：`--progress {auto|on|off}`；auto 仅在 TTY 且非 CI 启用，更新节流默认 200ms，结束时清理进度行后再输出最终报告。
+- durability_mode（events 落盘强度）：`--durability-mode {none|flush|fsync}`（默认 flush）；fsync 允许按 `--fsync-interval-ms` 节流。
 - 文件落盘报告顺序（人类可读）：对“写入文件”的报告在落盘入口做归一化：汇总块置顶；明细按严重度稳定排序（ERROR/FAIL 在前，PASS 在后）。回链：`docs/postmortems/2026-01-15_postmortem_file_report_ordering.md`。
 - 路径展示一致性（跨 OS diff 降噪）：落盘报告内的路径展示串统一使用 `/`（`Path.as_posix()`）；但“可点击跳转”不依赖该启发式，仍以 `loc_uri`/Markdown 链接为准。回链：`docs/postmortems/2026-01-15_postmortem_report_output_contract_paths.md`。
 - 诊断定位可点击：落盘报告中若包含 `DIAG_LOC_FILE_LINE_COL`，应补充 `loc_uri`（`vscode://file/<abs_path>:line:col`）或用 Markdown 链接渲染，避免依赖 VS Code 的启发式 linkify。

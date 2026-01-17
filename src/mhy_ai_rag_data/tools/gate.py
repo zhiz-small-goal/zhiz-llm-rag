@@ -36,6 +36,10 @@ import yaml
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
 from mhy_ai_rag_data.tools.report_contract import compute_summary
+from mhy_ai_rag_data.tools.report_events import ItemEventsWriter
+from mhy_ai_rag_data.tools.runtime_feedback import Progress
+from mhy_ai_rag_data.tools.vscode_links import to_vscode_file_uri
+from mhy_ai_rag_data.tools.view_gate_report import _render_console, _render_markdown
 
 
 def _iso_now() -> str:
@@ -57,6 +61,14 @@ def _ensure_dir(p: Path) -> None:
 def _write_text(p: Path, s: str) -> None:
     _ensure_dir(p.parent)
     p.write_text(s, encoding="utf-8")
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Write text atomically: write <path>.tmp then rename."""
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    tmp.write_text(content, encoding="utf-8", newline="\n")
+    tmp.replace(path)
 
 
 def _write_json(p: Path, obj: Any) -> None:
@@ -344,6 +356,45 @@ def main() -> int:
     ap.add_argument("--profile", default="ci", choices=["fast", "ci", "release"], help="Gate profile")
     ap.add_argument("--ssot", default="docs/reference/reference.yaml", help="SSOT yaml path (relative to root)")
     ap.add_argument("--json-out", default="", help="Override gate report output path")
+
+    # Human-friendly entrypoints / recovery artifacts
+    ap.add_argument(
+        "--md-out",
+        default="",
+        help="Override markdown report output path (default: alongside json report)",
+    )
+    ap.add_argument(
+        "--events-out",
+        default="",
+        help="Override item events jsonl output path (default: alongside json report)",
+    )
+    ap.add_argument(
+        "--durability-mode",
+        default="flush",
+        choices=["none", "flush", "fsync"],
+        help="events durability: none|flush|fsync (default: flush)",
+    )
+    ap.add_argument(
+        "--fsync-interval-ms",
+        default=1000,
+        type=int,
+        help="when durability_mode=fsync, fsync at most once per interval (ms)",
+    )
+
+    # Runtime feedback (progress) - to stderr only
+    ap.add_argument(
+        "--progress",
+        default="auto",
+        choices=["auto", "on", "off"],
+        help="runtime progress feedback to stderr: auto|on|off (default: auto)",
+    )
+    ap.add_argument(
+        "--progress-min-interval-ms",
+        default=200,
+        type=int,
+        help="throttle progress updates (ms)",
+    )
+
     args = ap.parse_args()
 
     repo = Path(args.root).resolve()
@@ -365,6 +416,15 @@ def main() -> int:
     if not out_path.is_absolute():
         out_path = (repo / out_path).resolve()
 
+    # Derived artifact paths (can be overridden)
+    md_out = Path(args.md_out) if args.md_out else out_path.with_suffix(".md")
+    if not md_out.is_absolute():
+        md_out = (repo / md_out).resolve()
+
+    events_out = Path(args.events_out) if args.events_out else out_path.with_suffix(".events.jsonl")
+    if not events_out.is_absolute():
+        events_out = (repo / events_out).resolve()
+
     _ensure_dir(report_dir)
     _ensure_dir(gate_logs_dir)
 
@@ -373,109 +433,166 @@ def main() -> int:
 
     results: List[StepResult] = []
     warnings: List[Dict[str, Any]] = []
-
-    for step_id in profile_steps:
-        step_cfg = steps_cfg.get(step_id, {})
-        # builtin step (policy)
-        if isinstance(step_cfg, dict) and step_cfg.get("builtin") == "conftest":
-            results.append(_run_conftest(repo, ssot, gate_logs_dir))
-            continue
-
-        argv_tail = []
-        argv_cfg = step_cfg.get("argv") if isinstance(step_cfg, dict) else None
-        if isinstance(step_cfg, dict) and isinstance(argv_cfg, list):
-            argv_tail = [str(x) for x in argv_cfg]
-        else:
-            # allow step id to be directly an argv list in future
-            warnings.append({"code": "unknown_step", "message": f"unknown step_id in profile: {step_id}"})
-            results.append(StepResult(id=step_id, argv=[], rc=3, status="ERROR", elapsed_ms=0, note="unknown_step"))
-            continue
-
-        results.append(_run_step(repo, step_id, argv_tail, gate_logs_dir))
-
-    overall_status, overall_rc = _overall_rc(results)
-
-    counts = {
-        "pass": sum(1 for r in results if r.status == "PASS"),
-        "fail": sum(1 for r in results if r.status == "FAIL"),
-        "error": sum(1 for r in results if r.status == "ERROR"),
-        "skip": sum(1 for r in results if r.status == "SKIP"),
-        "total": len(results),
-    }
-    # --- build v2 report (item model) ---
-
     items: List[Dict[str, Any]] = []
-    for r in results:
-        items.append(
-            {
-                "tool": "rag-gate",
-                "title": str(r.id),
-                "status_label": str(r.status),
-                "severity_level": int(
-                    {"PASS": 0, "SKIP": 1, "INFO": 1, "WARN": 2, "FAIL": 3, "ERROR": 4}.get(str(r.status).upper(), 1)
-                ),
-                "message": f"rc={r.rc} elapsed_ms={r.elapsed_ms}",
-                "detail": _step_result_to_dict(r),
-            }
-        )
 
-    # profile/unknown-step warnings from SSOT parsing
-    for w in warnings:
-        items.append(
-            {
-                "tool": "rag-gate",
-                "title": str(w.get("code") or "warning"),
-                "status_label": "WARN",
-                "severity_level": 2,
-                "message": str(w.get("message") or ""),
-                "detail": dict(w),
-            }
-        )
+    progress = Progress(
+        total=len(profile_steps) or None, mode=str(args.progress), min_interval_ms=int(args.progress_min_interval_ms)
+    ).start()
+    writer = ItemEventsWriter(
+        events_out, durability_mode=str(args.durability_mode), fsync_interval_ms=int(args.fsync_interval_ms)
+    ).open(truncate=True)
 
-    def _counts_by_label(xs: List[Dict[str, Any]]) -> Dict[str, int]:
-        out: Dict[str, int] = {}
-        for it in xs:
-            lab = str(it.get("status_label") or "INFO").upper()
-            out[lab] = out.get(lab, 0) + 1
-        return out
+    def _emit_item(it: Dict[str, Any]) -> None:
+        items.append(it)
+        try:
+            writer.emit_item(it)
+        except Exception:
+            # best-effort: events is auxiliary, do not crash the gate runner
+            pass
 
-    max_sev = max([int(it.get("severity_level", 0)) for it in items], default=0)
+    def _step_item(r: StepResult) -> Dict[str, Any]:
+        status_u = str(r.status).upper()
+        sev = int({"PASS": 0, "SKIP": 1, "INFO": 1, "WARN": 2, "FAIL": 3, "ERROR": 4}.get(status_u, 1))
+        it: Dict[str, Any] = {
+            "tool": "rag-gate",
+            "title": str(r.id),
+            "status_label": status_u,
+            "severity_level": sev,
+            "message": f"rc={r.rc} elapsed_ms={r.elapsed_ms}",
+            "duration_ms": int(r.elapsed_ms),
+            "detail": _step_result_to_dict(r),
+        }
+        return it
 
-    report: Dict[str, Any] = {
-        "schema_version": 2,
-        "generated_at": _iso_now(),
-        "tool": "rag-gate",
-        "root": str(repo),
-        "summary": {
-            "overall_status_label": overall_status,
-            "overall_rc": overall_rc,
-            "max_severity_level": max_sev,
-            "counts": _counts_by_label(items),
-            "total_items": len(items),
-            "step_counts": counts,
-        },
-        "items": items,
-        "data": {
-            "profile": args.profile,
-            "ssot_path": str(ssot_path.relative_to(repo)) if ssot_path.is_relative_to(repo) else str(ssot_path),
-            "results": [_step_result_to_dict(r) for r in results],
-            "warnings": warnings,
-            "gate_logs_dir": str(gate_logs_dir.as_posix()),
-        },
-    }
+    def _termination_item(exc: BaseException, *, kind: str) -> Dict[str, Any]:
+        loc = ""
+        loc_uri = ""
+        try:
+            import traceback
 
-    _write_json(out_path, report)
+            tb = traceback.extract_tb(exc.__traceback__) if getattr(exc, "__traceback__", None) else []
+            if tb:
+                fr = tb[-1]
+                fp = Path(fr.filename)
+                lineno = int(fr.lineno) if fr.lineno is not None else 1
+                try:
+                    rel = fp.resolve().relative_to(repo)
+                    loc = f"{rel.as_posix()}:{lineno}:1"
+                except Exception:
+                    loc = f"{fp.resolve().as_posix()}:{lineno}:1"
+                try:
+                    loc_uri = to_vscode_file_uri(fp.resolve().as_posix(), line=lineno, col=1)
+                except Exception:
+                    loc_uri = ""
+        except Exception:
+            pass
 
-    # Self schema validation
-    # 规则：
-    # - schema 校验器缺失：属于环境能力不足，进入 items（WARN/2），但不强制 overall 失败。
-    # - schema 不匹配：属于契约破坏，进入 items（ERROR/4），并强制 overall=ERROR。
-    warn = _validate_self_schema(repo, ssot, out_path)
-    if warn:
-        code = str(warn.get("code") or "")
-        is_validator_missing = code == "schema_validator_missing"
-        report.setdefault("items", []).append(
-            {
+        msg = f"{kind}: {exc.__class__.__name__}: {exc}".strip()
+        it: Dict[str, Any] = {
+            "tool": "rag-gate",
+            "title": "terminated",
+            "status_label": "ERROR",
+            "severity_level": 4,
+            "message": msg,
+            "detail": {"kind": kind, "exception": exc.__class__.__name__},
+        }
+        if loc:
+            it["loc"] = loc
+        if loc_uri:
+            it["loc_uri"] = loc_uri
+        return it
+
+    overall_rc = 3
+    try:
+        for i, step_id in enumerate(profile_steps):
+            progress.update(current=i, stage=str(step_id))
+
+            step_cfg = steps_cfg.get(step_id, {})
+            # builtin step (policy)
+            if isinstance(step_cfg, dict) and step_cfg.get("builtin") == "conftest":
+                r = _run_conftest(repo, ssot, gate_logs_dir)
+                results.append(r)
+                _emit_item(_step_item(r))
+                progress.update(current=i + 1, stage=str(step_id))
+                continue
+
+            argv_tail: List[str] = []
+            argv_cfg = step_cfg.get("argv") if isinstance(step_cfg, dict) else None
+            if isinstance(step_cfg, dict) and isinstance(argv_cfg, list):
+                argv_tail = [str(x) for x in argv_cfg]
+            else:
+                warnings.append({"code": "unknown_step", "message": f"unknown step_id in profile: {step_id}"})
+                r = StepResult(id=step_id, argv=[], rc=3, status="ERROR", elapsed_ms=0, note="unknown_step")
+                results.append(r)
+                _emit_item(_step_item(r))
+                progress.update(current=i + 1, stage=str(step_id))
+                continue
+
+            r = _run_step(repo, step_id, argv_tail, gate_logs_dir)
+            results.append(r)
+            _emit_item(_step_item(r))
+            progress.update(current=i + 1, stage=str(step_id))
+
+        # profile/unknown-step warnings from SSOT parsing
+        for w in warnings:
+            _emit_item(
+                {
+                    "tool": "rag-gate",
+                    "title": str(w.get("code") or "warning"),
+                    "status_label": "WARN",
+                    "severity_level": 2,
+                    "message": str(w.get("message") or ""),
+                    "detail": dict(w),
+                }
+            )
+
+        overall_status, overall_rc = _overall_rc(results)
+
+        counts = {
+            "pass": sum(1 for r in results if r.status == "PASS"),
+            "fail": sum(1 for r in results if r.status == "FAIL"),
+            "error": sum(1 for r in results if r.status == "ERROR"),
+            "skip": sum(1 for r in results if r.status == "SKIP"),
+            "total": len(results),
+        }
+
+        report: Dict[str, Any] = {
+            "schema_version": 2,
+            "generated_at": _iso_now(),
+            "tool": "rag-gate",
+            "root": str(repo.as_posix()),
+            "summary": compute_summary(items).to_dict(),
+            "items": items,
+            "data": {
+                "profile": args.profile,
+                "ssot_path": str(ssot_path.relative_to(repo))
+                if hasattr(ssot_path, "is_relative_to") and ssot_path.is_relative_to(repo)
+                else str(ssot_path),
+                "results": [_step_result_to_dict(r) for r in results],
+                "warnings": warnings,
+                "gate_logs_dir": str(gate_logs_dir.as_posix()),
+                "events_path": str(events_out.as_posix()),
+                "artifacts": {
+                    "report_json": str(out_path.as_posix()),
+                    "report_md": str(md_out.as_posix()),
+                    "report_events": str(events_out.as_posix()),
+                },
+            },
+        }
+        # keep legacy step_counts in summary for downstream consumers
+        report["summary"]["step_counts"] = counts
+
+        write_json_report(out_path, report)
+
+        # Self schema validation
+        # 规则：
+        # - schema 校验器缺失：属于环境能力不足，进入 items（WARN/2），但不强制 overall 失败。
+        # - schema 不匹配：属于契约破坏，进入 items（ERROR/4），并强制 overall=ERROR。
+        warn = _validate_self_schema(repo, ssot, out_path)
+        if warn:
+            code = str(warn.get("code") or "")
+            is_validator_missing = code == "schema_validator_missing"
+            extra = {
                 "tool": "rag-gate",
                 "title": str(code or "gate_report_schema"),
                 "status_label": "WARN" if is_validator_missing else "ERROR",
@@ -483,19 +600,82 @@ def main() -> int:
                 "message": str(warn.get("message") or ""),
                 "detail": dict(warn),
             }
-        )
-        step_counts = (report.get("summary") or {}).get("step_counts")
-        report["summary"] = compute_summary(report["items"]).to_dict()
-        if step_counts is not None:
-            report["summary"]["step_counts"] = step_counts
-        overall_status = str(
-            report["summary"].get("overall_status_label") or ("PASS" if is_validator_missing else "ERROR")
-        )
-        overall_rc = int(report["summary"].get("overall_rc") or (0 if is_validator_missing else 3))
-        _write_json(out_path, report)
+            _emit_item(extra)
+            report["summary"] = compute_summary(items).to_dict()
+            report["summary"]["step_counts"] = counts
+            write_json_report(out_path, report)
 
-    print(f"[gate] profile={args.profile} status={overall_status} rc={overall_rc} report={out_path}")
-    return int(overall_rc)
+        # Render markdown (atomic) as human entrypoint
+        md = _render_markdown(report, report_path=out_path, root=repo)
+        _atomic_write_text(md_out, md)
+
+        # Console report (scroll-friendly) must be on stdout
+        print(_render_console(report), end="")
+
+        return int(overall_rc)
+
+    except KeyboardInterrupt as e:
+        overall_rc = 3
+        _emit_item(_termination_item(e, kind="KeyboardInterrupt"))
+        report_interrupt: Dict[str, Any] = {
+            "schema_version": 2,
+            "generated_at": _iso_now(),
+            "tool": "rag-gate",
+            "root": str(repo.as_posix()),
+            "summary": compute_summary(items).to_dict(),
+            "items": items,
+            "data": {
+                "profile": args.profile,
+                "events_path": str(events_out.as_posix()),
+            },
+        }
+        try:
+            write_json_report(out_path, report_interrupt)
+        except Exception:
+            pass
+        try:
+            md = _render_markdown(report_interrupt, report_path=out_path, root=repo)
+            _atomic_write_text(md_out, md)
+        except Exception:
+            pass
+        print(_render_console(report_interrupt), end="")
+        return overall_rc
+
+    except Exception as e:
+        overall_rc = 3
+        _emit_item(_termination_item(e, kind="Exception"))
+        report_error: Dict[str, Any] = {
+            "schema_version": 2,
+            "generated_at": _iso_now(),
+            "tool": "rag-gate",
+            "root": str(repo.as_posix()),
+            "summary": compute_summary(items).to_dict(),
+            "items": items,
+            "data": {
+                "profile": args.profile,
+                "events_path": str(events_out.as_posix()),
+            },
+        }
+        try:
+            write_json_report(out_path, report_error)
+        except Exception:
+            pass
+        try:
+            md = _render_markdown(report_error, report_path=out_path, root=repo)
+            _atomic_write_text(md_out, md)
+        except Exception:
+            pass
+        print(_render_console(report_error), end="")
+        return overall_rc
+
+    finally:
+        try:
+            progress.close()
+        finally:
+            try:
+                writer.close()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

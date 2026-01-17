@@ -1,13 +1,17 @@
 ---
 title: gate.py / rag-gate 使用说明（单入口 Gate：Schema + Policy + 可审计报告）
-version: v1.2
-last_updated: 2026-01-12
+version: v1.3
+last_updated: 2026-01-16
 ---
 
 # gate.py / rag-gate 使用说明（单入口 Gate）
 
 
-> 目标：用**一条命令**跑完 PR/CI Lite 门禁，并生成**确定性可审计产物**（`gate_report.json` + logs）。
+> 目标：用**一条命令**跑完 PR/CI Lite 门禁，并生成**确定性可审计产物**：
+> - `gate_report.json`（SoT，机器可读）
+> - `gate_report.md`（人类入口，可点击跳转）
+> - `gate_report.events.jsonl`（运行中增量，可用于中断后重建）
+> - `gate_logs/`（每步独立日志）
 
 ## 目录
 
@@ -22,6 +26,7 @@ last_updated: 2026-01-12
 - [退出码与判定](#退出码与判定)
 - [产物与副作用](#产物与副作用)
 - [人类可读报告](#人类可读报告)
+- [中断恢复](#中断恢复)
 - [常见失败与处理](#常见失败与处理)
 - [关联文档](#关联文档)
 
@@ -31,7 +36,7 @@ last_updated: 2026-01-12
 本仓库提供“单入口 Gate runner”，用于把 PR/CI Lite 的多条门禁命令收敛为：
 
 - **SSOT 驱动**：门禁顺序、输出路径、schema/policy 输入集由 `docs/reference/reference.yaml` 统一管理。
-- **可审计产物**：固定输出 `data_processed/build_reports/gate_report.json`，并为每个 step 写入独立日志。
+- **可审计产物**：固定输出 `data_processed/build_reports/gate_report.json/.md/.events.jsonl`，并为每个 step 写入独立日志。
 - **Schema + Policy**：
   - 生成后对 `gate_report.json` 做 JSON Schema 自校验（需要 `jsonschema`）。
   - 支持用 Conftest(Rego) 执行“流程/配置不变量”检查（CI 上强制；本地缺 conftest 时会 SKIP）。
@@ -89,6 +94,12 @@ python tools/gate.py --profile fast --root .
 | `--profile <fast\|ci\|release>` | `ci` | 门禁组合；定义在 `docs/reference/reference.yaml`。 |
 | `--ssot <path>` | `docs/reference/reference.yaml` | SSOT 配置路径（相对 `--root`）。 |
 | `--json-out <path>` | 空 | 覆盖 `gate_report.json` 输出路径（相对/绝对均可）。 |
+| `--md-out <path>` | 空 | 覆盖 `gate_report.md` 输出路径（默认与 json 同目录同名）。 |
+| `--events-out <path>` | 空 | 覆盖 `gate_report.events.jsonl` 输出路径（默认与 json 同目录同名）。 |
+| `--durability-mode <none\|flush\|fsync>` | `flush` | events 落盘强度；fsync 可配节流间隔。 |
+| `--fsync-interval-ms <int>` | `1000` | durability=fsync 时，最多每间隔一次 fsync（ms）。 |
+| `--progress <auto\|on\|off>` | `auto` | 运行时进度反馈（stderr）；auto 仅在 TTY 且非 CI 启用。 |
+| `--progress-min-interval-ms <int>` | `200` | 进度刷新节流（ms）。 |
 
 
 ## 执行流程
@@ -96,14 +107,17 @@ python tools/gate.py --profile fast --root .
 1) 读取 SSOT：`docs/reference/reference.yaml`。
 2) 解析 profile → steps：按 SSOT 指定顺序逐条执行。
    - `profile=ci/release` 默认包含 `check_ruff` / `check_mypy`；`RAG_RUFF_FORMAT=1`、`RAG_MYPY_STRICT=1` 可选收紧。
-3) 每个 step：捕获 stdout+stderr → 写入 `gate_logs/<step_id>.log`。
-4) 生成 `gate_report.json`：包含每步 argv/rc/status/耗时与 summary。
-5) 自校验（Schema）：用 `schemas/gate_report_v1.schema.json` 校验 `gate_report.json`。
-   - 若 schema 校验失败：判定为 **ERROR**（rc=3）。
-6) Policy（Conftest）：
+3) 运行时反馈（stderr）：若 `--progress` 启用，则持续刷新 stage + current/total，并在结束时清理进度行。
+4) 每个 step：捕获 stdout+stderr → 写入 `gate_logs/<step_id>.log`；同时把“step item”追加到 `gate_report.events.jsonl`（可用于中断后重建）。
+5) 生成 `gate_report.json`（schema v2）：包含 items + summary + results/warnings 等 data。
+6) 自校验（Schema）：用 `schemas/gate_report_v2.schema.json` 校验 `gate_report.json`。
+   - 若 schema 校验失败：进入 items（ERROR/4），并强制 overall 为 ERROR（rc=3）。
+7) Policy（Conftest）：
    - SSOT `policy.enabled=true` 时，尝试运行 `conftest test <inputs...> -p policy/`。
    - conftest 搜索顺序：`CONFTEST_BIN` → `third_party/conftest/v<version>/<system>_<arch>/...` → `PATH`。
    - 若找不到 conftest：默认记录为 **SKIP**（不阻断本地）；可在 SSOT 中设置 `policy.conftest.required=true` 强制缺失时 ERROR。
+8) 渲染 `gate_report.md`：从 report/items 生成 Markdown，定位字段以 `[loc](loc_uri)` 形式可点击跳转；写入采用 `*.tmp` → rename 的原子方式。
+9) 控制台最终输出（stdout）：detail 按严重度从轻到重；summary 在末尾；整体至少以 `\n\n` 结尾（与下一条命令提示符分隔）。
 
 
 ## 退出码与判定
@@ -123,23 +137,29 @@ Gate runner 统一遵循项目退出码契约：
 
 ## 产物与副作用
 
-- 报告：`data_processed/build_reports/gate_report.json`
+- 报告（SoT）：`data_processed/build_reports/gate_report.json`
+- 人类入口：`data_processed/build_reports/gate_report.md`
+- 增量事件：`data_processed/build_reports/gate_report.events.jsonl`
 - 日志目录：`data_processed/build_reports/gate_logs/`
   - 例如：`pytest.log`、`check_tools_layout.log`、`policy_conftest.log`
 - repo health 报告（release profile）：`data_processed/build_reports/repo_health_report.json`
-- 人类可读摘要（可选）：`data_processed/build_reports/gate_report.md`
-  - 由 `python tools/view_gate_report.py --root . --md-out data_processed/build_reports/gate_report.md` 生成
 - 默认不修改仓库源文件；但会创建/更新上述产物目录。
 
 
 ## 人类可读报告
 
-- `gate_report.json` 为机器可读主产物，人类可读摘要从 JSON 派生。
-- 生成人类可读摘要（Markdown）：
+- `gate_report.json` 为机器可读主产物，`gate_report.md` 为默认派生入口。
+- Markdown 内定位字段会以 `[loc](loc_uri)` 渲染（`vscode://file/<abs_path>:line:col`），在 VS Code 里可直接点击跳转。
+
+
+## 中断恢复
+
+- 若运行中断（异常/KeyboardInterrupt），`gate_report.events.jsonl` 仍会保留已完成 items，并追加一条终止 item。
+- 重建/查看方式：
   ```bash
-  python tools/view_gate_report.py --root . --md-out data_processed/build_reports/gate_report.md
+  python tools/view_gate_report.py --root . --events data_processed/build_reports/gate_report.events.jsonl --md-out data_processed/build_reports/gate_report.md
   ```
-- 完成后，可直接打开 `data_processed/build_reports/gate_report.md` 快速扫描 FAIL/ERROR step 与 log 指向。
+
 
 ## 常见失败与处理
 
@@ -177,5 +197,5 @@ Gate runner 统一遵循项目退出码契约：
 - [view_gate_report 使用说明](view_gate_report_README.md)
 - [参考与契约（退出码/报告契约/SSOT）](../docs/reference/REFERENCE.md)
 - [SSOT（机器可读）](../docs/reference/reference.yaml)
-- [Gate report schema](../schemas/gate_report_v1.schema.json)
+- [Gate report schema](../schemas/gate_report_v2.schema.json)
 - [Policy（Conftest/Rego）](../policy/README.md)

@@ -2,317 +2,374 @@
 # -*- coding: utf-8 -*-
 """mhy_ai_rag_data.tools.view_gate_report
 
-人类入口渲染器：从 gate_report.json（schema_version=2，item 模型）生成：
-- 控制台输出：detail 轻->重；summary 在末尾；整体以 \n\n 结尾。
-- Markdown 文件：summary 在顶部；detail 重->轻；关键路径/定位使用可点击的 VS Code 链接。
+Render a schema_version=2 gate report (items model) to:
+- console (scroll-friendly: least severe first; summary at end; extra trailing blank line)
+- markdown (human entrypoint: summary at top; most severe first; clickable loc via loc_uri)
 
-约束（无迁移期）
-- 仅接受 schema_version=2。
-- Markdown 中必须显式输出 `vscode://file/...`（或 `vscode-insiders://file/...`）链接，
-  不能只在 code block 里输出纯字符串路径（VS Code 不保证可点击）。
+Recovery mode
+- --events: render directly from a jsonl item stream (report.events.jsonl) to rebuild markdown/console
 
-注意：本脚本只渲染，不改动原 report 内容。
+Contract highlights
+- Sorting uses numeric `severity_level` (no status_label string ordering).
+- Stable ordering: within the same severity_level, preserve generation order.
+- Markdown paths and VS Code links use '/' separators; loc stays pure text, loc_uri is vscode://file/... absolute.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from mhy_ai_rag_data.tools.vscode_links import to_vscode_file_uri, to_vscode_file_uri_from_path
-
-
-def now_iso() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
-
-
-def _load_json(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as f:
-        obj = json.load(f)
-    if not isinstance(obj, dict):
-        raise ValueError("report must be a JSON object")
-    return obj
+from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
+from mhy_ai_rag_data.tools.report_events import iter_items
+from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
+from mhy_ai_rag_data.tools.vscode_links import normalize_abs_path_posix, to_vscode_file_uri_from_path
 
 
-def _as_list_str(v: Any) -> List[str]:
-    if v is None:
-        return []
-    if isinstance(v, list):
-        return [str(x) for x in v]
-    return [str(v)]
+def _load_json(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            obj = json.load(f)
+        if not isinstance(obj, dict):
+            return None
+        return obj
+    except Exception:
+        return None
 
 
-def _clip(s: str, n: int = 160) -> str:
-    s = (s or "").replace("\r", " ").replace("\n", " ").strip()
-    return s if len(s) <= n else (s[:n] + "...")
+def _load_report_from_events(*, root: Path, events_path: Path) -> Optional[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for raw in iter_items(events_path):
+        if not isinstance(raw, dict):
+            continue
+        items.append(ensure_item_fields(raw, tool_default="rag-gate"))
+
+    if not items:
+        return None
+
+    report: Dict[str, Any] = {
+        "schema_version": 2,
+        "generated_at": iso_now(),
+        "tool": "rag-gate",
+        "root": str(root.resolve().as_posix()),
+        "summary": compute_summary(items).to_dict(),
+        "items": items,
+        "data": {
+            "events_path": str(events_path.resolve().as_posix()),
+        },
+    }
+
+    # Normalize paths + enrich loc_uri for markdown; keep report structure stable.
+    return prepare_report_for_file_output(report)
 
 
-def _stable_sorted_items(items: List[Dict[str, Any]], *, asc: bool) -> List[Tuple[int, int, Dict[str, Any]]]:
+def _stable_sorted_items(report: Dict[str, Any], *, reverse: bool) -> List[Tuple[int, int, Dict[str, Any]]]:
+    items = report.get("items") or []
     out: List[Tuple[int, int, Dict[str, Any]]] = []
     for idx, it in enumerate(items):
-        sevs = it.get("severity_level")
-        if sevs is None:
+        if not isinstance(it, dict):
+            continue
+        sev = it.get("severity_level")
+        try:
+            sev_i = int(sev) if sev is not None else 1
+        except (ValueError, TypeError):
             sev_i = 1
-        else:
-            try:
-                sev_i = int(sevs)
-            except Exception:
-                sev_i = 1
         out.append((sev_i, idx, it))
-    out.sort(key=lambda t: (t[0], t[1]), reverse=not asc)
+    out.sort(key=lambda t: (t[0], t[1]), reverse=reverse)
     return out
 
 
-def _md_link(display_text: str, uri: str) -> str:
-    display_text = (display_text or "").strip()
-    uri = (uri or "").strip()
-    if not display_text:
-        display_text = uri
-    if display_text and uri:
-        return f"[{display_text}]({uri})"
-    return display_text or uri
+def _counts_by_severity(items: List[Dict[str, Any]]) -> Dict[int, Dict[str, int]]:
+    """Return sev -> {STATUS_LABEL -> count}."""
+
+    out: Dict[int, Dict[str, int]] = {}
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        try:
+            sev = int(it.get("severity_level", 1))
+        except Exception:
+            sev = 1
+        lab = str(it.get("status_label") or "INFO").upper()
+        out.setdefault(sev, {})[lab] = out.setdefault(sev, {}).get(lab, 0) + 1
+    return out
 
 
-def _md_link_path(p: Path, *, line: int = 1, col: int = 1) -> str:
-    try:
-        abs_posix = p.resolve().as_posix()
-    except Exception:
-        abs_posix = p.as_posix()
-    uri = to_vscode_file_uri(abs_posix, line=line, col=col)
-    return _md_link(abs_posix, uri)
+def _sev_bucket_lines(sev_map: Dict[int, Dict[str, int]], *, order: str) -> List[str]:
+    """Format severity buckets.
 
-
-_LOC_RSPLIT = re.compile(r"^(?P<path>.+):(?P<line>\d+):(?P<col>\d+)$")
-
-
-def _try_build_loc_uri_from_loc(loc: Any, *, root: Path) -> str:
-    """从 `file:line:col` 推导 vscode://file URI。
-
-    兼容 Windows 盘符（d:/...）与相对路径。
+    order: asc|desc
     """
 
-    loc_list = _as_list_str(loc)
-    if not loc_list:
-        return ""
-
-    m = _LOC_RSPLIT.match(loc_list[0].strip())
-    if not m:
-        return ""
-
-    path_s = (m.group("path") or "").strip()
-    try:
-        line = int(m.group("line"))
-        col = int(m.group("col"))
-    except Exception:
-        return ""
-
-    # 若为相对路径，按 root 解析成绝对路径
-    p = Path(path_s)
-    if not p.is_absolute():
-        p = (root / p).resolve()
-
-    return to_vscode_file_uri_from_path(p, line=line, col=col)
-
-
-def _fmt_loc_md(loc: Any, loc_uri: Any, *, root: Path) -> str:
-    loc_s = ", ".join(_as_list_str(loc))
-    uri_s = ", ".join(_as_list_str(loc_uri))
-
-    # 若 loc_uri 缺失但 loc 是 file:line:col，尝试推导
-    if loc_s and not uri_s:
-        uri_s = _try_build_loc_uri_from_loc(loc_s, root=root)
-
-    if loc_s and uri_s:
-        # 在 md 中保持 loc 为可复制文本，同时作为链接文字
-        return _md_link(loc_s, uri_s)
-    return loc_s
-
-
-def _extract_log_path_from_detail(detail: Any) -> str:
-    if isinstance(detail, dict):
-        v = detail.get("log_path") or detail.get("log")
-        if isinstance(v, str) and v.strip():
-            return v.strip()
-    return ""
+    sevs = sorted(sev_map.keys(), reverse=(order == "desc"))
+    lines: List[str] = []
+    for sev in sevs:
+        lab_counts = sev_map.get(sev) or {}
+        total = sum(int(v) for v in lab_counts.values())
+        # show stable label order within bucket: by label name
+        parts = [f"{k}={lab_counts[k]}" for k in sorted(lab_counts.keys())]
+        detail = (" " + " ".join(parts)) if parts else ""
+        lines.append(f"- sev={sev}: {total}{detail}")
+    return lines
 
 
 def _render_console(report: Dict[str, Any]) -> str:
-    summary = report.get("summary") or {}
-    items = report.get("items") or []
-    if not isinstance(items, list):
-        items = []
+    root = str(report.get("root") or "")
+    gen = str(report.get("generated_at") or "")
+    summ = report.get("summary") or {}
+
+    items_raw = report.get("items") or []
+    items: List[Dict[str, Any]] = [it for it in items_raw if isinstance(it, dict)]
 
     lines: List[str] = []
-    lines.append(
-        f"[gate_report] tool={report.get('tool', '')} root={report.get('root', '')} generated_at={report.get('generated_at', '')}\n\n"
-    )
+    lines.append("# gate report")
+    lines.append(f"root: {root}")
+    lines.append(f"generated_at: {gen}")
+    lines.append("")
 
-    # detail: 轻->重（滚屏友好：越严重越靠后）
-    for sev, _idx, it in _stable_sorted_items(items, asc=True):
-        lab = str(it.get("status_label") or "INFO").upper()
+    lines.append("## details (least severe last)")
+
+    sorted_items = _stable_sorted_items(report, reverse=False)
+    prev_sev: Optional[int] = None
+    first = True
+    for sev, _idx, it in sorted_items:
+        if not first:
+            # spacing contract:
+            # - 1 empty line between items
+            # - 2 empty lines between severity groups
+            lines.append("")
+            if prev_sev is not None and sev != prev_sev:
+                lines.append("")
+        first = False
+        prev_sev = sev
+
         title = str(it.get("title") or "")
+        status = str(it.get("status_label") or "INFO")
         msg = str(it.get("message") or "")
-        loc = ", ".join(_as_list_str(it.get("loc")))
-        header = f"[{lab}] (sev={sev}) {title}"
-        lines.append(header + "\n")
+
+        lines.append(f"- [{status}] (sev={sev}) {title}")
         if msg:
-            lines.append("  " + _clip(msg, 400) + "\n")
-        if loc:
-            lines.append("  loc: " + loc + "\n")
-        log_path = _extract_log_path_from_detail(it.get("detail"))
-        if log_path:
-            lines.append("  log: " + log_path + "\n")
-        # 每条 detail 之间 1 行空行
-        lines.append("\n")
+            lines.append(f"  - {msg}")
 
-    # summary: 在末尾
-    counts = summary.get("counts") or {}
-    if not isinstance(counts, dict):
-        counts = {}
-    max_sev = summary.get("max_severity_level")
-    total_items = summary.get("total_items")
-    overall = summary.get("overall_status_label")
-    rc = summary.get("overall_rc")
+        # loc (pure text) or list[str]
+        loc = it.get("loc")
+        loc_uri = it.get("loc_uri")
+        if isinstance(loc, str) and loc.strip():
+            if isinstance(loc_uri, str) and loc_uri.strip():
+                lines.append(f"  - loc: {loc} ({loc_uri})")
+            else:
+                lines.append(f"  - loc: {loc}")
+        elif isinstance(loc, list) and loc:
+            lines.append("  - loc:")
+            for i, loc_i in enumerate(loc[:5]):
+                if not isinstance(loc_i, str) or not loc_i.strip():
+                    continue
+                uri_i = ""
+                if isinstance(loc_uri, list) and i < len(loc_uri) and isinstance(loc_uri[i], str):
+                    uri_i = loc_uri[i]
+                if uri_i:
+                    lines.append(f"    - {loc_i} ({uri_i})")
+                else:
+                    lines.append(f"    - {loc_i}")
 
-    lines.append("[summary]\n")
-    lines.append(f"  overall: {overall} (rc={rc})\n")
-    lines.append(f"  max_severity_level: {max_sev}\n")
-    lines.append(f"  total_items: {total_items}\n")
+        # common gate detail: log path
+        det = it.get("detail")
+        if isinstance(det, dict):
+            lp = det.get("log_path")
+            if isinstance(lp, str) and lp.strip():
+                lines.append(f"  - log: {lp}")
 
-    # counts 输出：保持稳定，并更贴近严重度递增阅读
-    preferred = ["PASS", "INFO", "WARN", "WARNING", "FAIL", "ERROR"]
-    seen = set()
-    for k in preferred:
-        if k in counts and k not in seen:
-            lines.append(f"  count[{k}]: {counts.get(k)}\n")
-            seen.add(k)
-    for k in sorted(counts.keys()):
-        if k in seen:
-            continue
-        lines.append(f"  count[{k}]: {counts.get(k)}\n")
+    # summary at the end
+    lines.append("")
+    lines.append("## summary")
 
-    # 控制台末尾额外空行（整体以 \n\n 结尾）
-    if not lines[-1].endswith("\n"):
-        lines.append("\n")
-    lines.append("\n")
-    return "".join(lines)
+    overall = str(summ.get("overall_status_label") or "")
+    overall_rc = summ.get("overall_rc")
+    max_sev = summ.get("max_severity_level")
+    total_items = summ.get("total_items")
+
+    lines.append(f"overall: {overall} rc={overall_rc} max_sev={max_sev} total_items={total_items}")
+
+    sev_map = _counts_by_severity(items)
+    lines.append("counts_by_severity (low->high):")
+    lines.extend(_sev_bucket_lines(sev_map, order="asc"))
+
+    # must end with an extra blank line for prompt separation ("\n\n")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _md_link(text: str, uri: str) -> str:
+    if not uri:
+        return text
+    return f"[{text}]({uri})"
 
 
 def _render_markdown(report: Dict[str, Any], *, report_path: Path, root: Path) -> str:
-    summary = report.get("summary") or {}
-    items = report.get("items") or []
-    if not isinstance(items, list):
-        items = []
+    summ = report.get("summary") or {}
+    items_raw = report.get("items") or []
+    items: List[Dict[str, Any]] = [it for it in items_raw if isinstance(it, dict)]
 
     lines: List[str] = []
-    lines.append("# Gate report\n\n")
+    lines.append("---")
+    lines.append("title: gate_report.md (derived)")
+    lines.append("version: v1")
+    lines.append(f"generated_at: {report.get('generated_at')}")
+    lines.append("---")
+    lines.append("")
+    lines.append("# Gate report")
+    lines.append("")
 
-    # 顶部元信息：显式可点击路径
-    lines.append(f"- generated_at: `{report.get('generated_at', '')}`\n")
-    lines.append(f"- tool: `{report.get('tool', '')}`\n")
-    lines.append(f"- root: `{report.get('root', '')}`\n")
+    # summary must be at top
+    lines.append("## Summary")
+    lines.append("")
 
-    # report_path 必须可点击（不能只放反引号）
-    lines.append(f"- report_path: {_md_link_path(report_path)}\n")
+    overall = str(summ.get("overall_status_label") or "")
+    overall_rc = summ.get("overall_rc")
+    max_sev = summ.get("max_severity_level")
+    total_items = summ.get("total_items")
 
-    lines.append(f"- overall: `{summary.get('overall_status_label', '')}` (rc={summary.get('overall_rc', '')})\n")
-    lines.append(f"- max_severity_level: `{summary.get('max_severity_level', '')}`\n")
-    lines.append(f"- total_items: `{summary.get('total_items', '')}`\n")
+    lines.append(f"- overall: **{overall}** (rc={overall_rc})")
+    lines.append(f"- max_severity_level: {max_sev}")
+    lines.append(f"- total_items: {total_items}")
 
-    counts = summary.get("counts") or {}
-    if isinstance(counts, dict) and counts:
-        lines.append("\n## Summary counts\n")
-        preferred = ["ERROR", "FAIL", "WARN", "WARNING", "INFO", "PASS"]
-        seen = set()
-        for k in preferred:
-            if k in counts and k not in seen:
-                lines.append(f"- {k}: {counts.get(k)}\n")
-                seen.add(k)
-        for k in sorted(counts.keys()):
-            if k in seen:
-                continue
-            lines.append(f"- {k}: {counts.get(k)}\n")
+    # clickable paths
+    rp_abs = report_path.resolve()
+    rp_uri = to_vscode_file_uri_from_path(rp_abs)
+    lines.append(f"- report_source: {_md_link(normalize_abs_path_posix(str(rp_abs.as_posix())), rp_uri)}")
 
-    lines.append("\n## Details\n")
+    # severity-sorted counts for markdown (high->low)
+    sev_map = _counts_by_severity(items)
+    lines.append("- counts_by_severity (high->low):")
+    for line in _sev_bucket_lines(sev_map, order="desc"):
+        lines.append(f"  {line}")
 
-    # detail: 重->轻（文件阅读优先异常）
-    for sev, _idx, it in _stable_sorted_items(items, asc=False):
-        lab = str(it.get("status_label") or "INFO").upper()
-        title = str(it.get("title") or "")
-        msg = str(it.get("message") or "")
-        loc_md = _fmt_loc_md(it.get("loc"), it.get("loc_uri"), root=root)
-
-        lines.append(f"### [{lab}] (sev={sev}) {title}\n\n")
-
-        if msg:
-            lines.append(f"- message: {_clip(msg, 600)}\n")
-
-        # 若 detail 中包含 log_path，必须显式输出可点击链接（不能只藏在 JSON 中）
-        log_path = _extract_log_path_from_detail(it.get("detail"))
-        if log_path:
-            uri = to_vscode_file_uri(log_path, line=1, col=1)
-            lines.append(f"- log_path: {_md_link(log_path, uri)}\n")
-
-        if loc_md:
-            lines.append(f"- loc: {loc_md}\n")
-
-        # detail 保留在 JSON block 以便追溯（允许长内容）；但关键路径已在正文层可点击
-        detail = it.get("detail")
-        if detail is not None:
+    # show gate_logs_dir if present
+    data = report.get("data")
+    if isinstance(data, dict):
+        gld = data.get("gate_logs_dir")
+        if isinstance(gld, str) and gld.strip():
+            gld_abs = Path(gld)
             try:
-                detail_json = json.dumps(detail, ensure_ascii=False, indent=2)
-                lines.append("- detail:\n\n```json\n")
-                lines.append(detail_json)
-                lines.append("\n```\n")
+                if not gld_abs.is_absolute():
+                    gld_abs = (root / gld_abs).resolve()
             except Exception:
                 pass
+            gld_uri = to_vscode_file_uri_from_path(gld_abs)
+            lines.append(f"- gate_logs_dir: {_md_link(normalize_abs_path_posix(str(gld_abs.as_posix())), gld_uri)}")
 
-        lines.append("\n")
+    # optional: events_path (recovery)
+    if isinstance(data, dict) and data.get("events_path"):
+        ev_abs = Path(str(data.get("events_path"))).resolve()
+        ev_uri = to_vscode_file_uri_from_path(ev_abs)
+        lines.append(f"- report_events: {_md_link(normalize_abs_path_posix(str(ev_abs.as_posix())), ev_uri)}")
 
-    lines.append(f"\n- generated_by: view_gate_report ({now_iso()})\n")
-    return "".join(lines)
+    lines.append("")
+
+    # details: most severe first
+    lines.append("## Details (most severe first)")
+    lines.append("")
+
+    sorted_items = _stable_sorted_items(report, reverse=True)
+    for sev, _idx, it in sorted_items:
+        title = str(it.get("title") or "")
+        status = str(it.get("status_label") or "INFO")
+        msg = str(it.get("message") or "")
+
+        lines.append(f"### [{status}] (sev={sev}) {title}")
+        lines.append("")
+        if msg:
+            lines.append(msg)
+            lines.append("")
+
+        loc = it.get("loc")
+        loc_uri = it.get("loc_uri")
+        if isinstance(loc, str) and loc.strip():
+            uri = loc_uri if isinstance(loc_uri, str) else ""
+            lines.append(f"- loc: {_md_link(loc, uri)}")
+        elif isinstance(loc, list) and loc:
+            lines.append("- loc:")
+            for i, loc_i in enumerate(loc[:10]):
+                if not isinstance(loc_i, str) or not loc_i.strip():
+                    continue
+                uri_i = ""
+                if isinstance(loc_uri, list) and i < len(loc_uri) and isinstance(loc_uri[i], str):
+                    uri_i = loc_uri[i]
+                lines.append(f"  - {_md_link(loc_i, uri_i)}")
+
+        det = it.get("detail")
+        if isinstance(det, dict):
+            lp = det.get("log_path")
+            if isinstance(lp, str) and lp.strip():
+                lp_abs = Path(lp)
+                try:
+                    if not lp_abs.is_absolute():
+                        lp_abs = (root / lp_abs).resolve()
+                except Exception:
+                    pass
+                lp_uri = to_vscode_file_uri_from_path(lp_abs)
+                lines.append(f"- log: {_md_link(normalize_abs_path_posix(str(lp_abs.as_posix())), lp_uri)}")
+
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    tmp.write_text(content, encoding="utf-8", newline="\n")
+    tmp.replace(path)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Render gate_report.json (schema_version=2)")
-    ap.add_argument("--root", default=".", help="repo root")
+    ap = argparse.ArgumentParser(description="View/render gate_report.json or gate_report.events.jsonl")
+    ap.add_argument("--root", default=".", help="project root")
     ap.add_argument(
         "--report",
         default="data_processed/build_reports/gate_report.json",
         help="gate_report.json path (relative to root)",
     )
-    ap.add_argument("--md-out", default="", help="optional markdown output path")
+    ap.add_argument(
+        "--events",
+        default="",
+        help="optional: item events jsonl to render (relative to root); used for recovery/rebuild",
+    )
+    ap.add_argument("--md-out", default="", help="optional markdown output path (relative to root)")
+
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
-    report_path = (root / args.report).resolve()
 
-    try:
+    report_path = (root / args.report).resolve() if args.report else None
+    events_path = (root / args.events).resolve() if args.events else None
+
+    report: Optional[Dict[str, Any]] = None
+    source_path: Optional[Path] = None
+
+    if events_path is not None:
+        report = _load_report_from_events(root=root, events_path=events_path)
+        source_path = events_path
+
+    if report is None and report_path is not None:
         report = _load_json(report_path)
-    except Exception as e:
-        print(f"[gate_report] FAIL: cannot read report: {report_path} :: {e}")
+        source_path = report_path
+
+    if report is None or not isinstance(report, dict) or report.get("schema_version") != 2:
+        sp = str(source_path) if source_path else "(none)"
+        print(f"[gate_report] missing or invalid report: {sp}")
         return 2
 
-    if int(report.get("schema_version") or 0) != 2:
-        print(f"[gate_report] FAIL: schema_version!=2: {report.get('schema_version')}")
-        return 2
+    # console output
+    print(_render_console(report), end="")
 
-    # 控制台输出（滚屏友好）
-    console = _render_console(report)
-    print(console, end="")
-
-    # 可选：落盘 md（summary 顶部、重->轻、关键路径可点击）
+    # markdown optional
     if args.md_out:
-        out_path = Path(args.md_out)
-        if not out_path.is_absolute():
-            out_path = (root / out_path).resolve()
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        md = _render_markdown(report, report_path=report_path, root=root)
-        out_path.write_text(md, encoding="utf-8")
+        out_path = (root / args.md_out).resolve()
+        md = _render_markdown(report, report_path=(source_path or out_path), root=root)
+        _atomic_write_text(out_path, md)
         print(f"[gate_report] wrote markdown: {out_path.as_posix()}\n")
 
     return 0

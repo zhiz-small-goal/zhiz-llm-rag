@@ -13,6 +13,15 @@
 - 单写者：默认假设单进程顺序写入；若并发写入需要上层做分文件或锁。
 - 可增量消费：每条记录写入后可 flush；消费端应容错最后一条半写记录。
 
+落盘强度（durability）
+- durability_mode = none|flush|fsync（默认：flush）
+  - none : 不主动 flush/fsync（由 OS/缓冲策略决定）。
+  - flush: 每条记录 flush。
+  - fsync: 每条记录 flush，且按 fsync_interval_ms 节流执行 fsync。
+
+兼容性
+- 旧字段 flush_per_record/fsync_per_record 保留；当 durability_mode 为空时按旧字段行为。
+
 记录字段建议（写端尽量补齐）：
 - record_type: meta|case|error|summary
 - run_id: 本次运行唯一标识
@@ -61,18 +70,30 @@ def safe_truncate(text: str, n: int) -> str:
     return text[:n]
 
 
+def _norm_durability_mode(mode: str) -> str:
+    return (mode or "").strip().lower()
+
+
 @dataclass
 class StreamWriter:
     path: Path
     fmt: StreamFormat = "jsonl"
+
+    # legacy knobs (kept for backward compatibility)
     flush_per_record: bool = True
     fsync_per_record: bool = False
 
+    # new knob (preferred)
+    durability_mode: str = ""  # none|flush|fsync ; empty => use legacy knobs
+    fsync_interval_ms: int = 1000
+
     _f: Optional[TextIO] = None
+    _last_fsync_ms: int = 0
 
     def open(self) -> "StreamWriter":
         ensure_parent_dir(self.path)
         self._f = open(self.path, "a", encoding="utf-8", newline="\n")
+        self._last_fsync_ms = 0
         return self
 
     def emit(self, record: Dict[str, Any]) -> None:
@@ -91,6 +112,24 @@ class StreamWriter:
             raise RuntimeError(f"Unsupported stream format: {self.fmt}")
 
         self._f.write(line)
+
+        mode = _norm_durability_mode(self.durability_mode)
+        if mode:
+            # new behavior
+            if mode == "none":
+                return
+            self._f.flush()
+            if mode != "fsync":
+                return
+            now = now_ts_ms()
+            if self._last_fsync_ms <= 0 or (now - self._last_fsync_ms) >= max(0, int(self.fsync_interval_ms)):
+                try:
+                    os.fsync(self._f.fileno())
+                finally:
+                    self._last_fsync_ms = now
+            return
+
+        # legacy behavior
         if self.flush_per_record:
             self._f.flush()
             if self.fsync_per_record:
