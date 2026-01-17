@@ -36,6 +36,7 @@ from types import ModuleType
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
 
 # Optional dependency (present in project deps, but keep tool usable in "no-install" mode)
 yaml: Optional[ModuleType]
@@ -398,13 +399,57 @@ def build_report(
     metrics: Dict[str, Any],
     errors: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
+    # Convert errors to v2 items
+    items: List[Dict[str, Any]] = []
+    for err in errors:
+        # Determine severity_level based on error code
+        code = err.get("code", "")
+        if code == "EXCEPTION":
+            status_label = "ERROR"
+            severity_level = 4
+        elif code in ("MISSING_DIR", "INDEX_STALE"):
+            status_label = "FAIL"
+            severity_level = 3
+        elif code in ("MISSING_DATE", "MISSING_KEYWORDS", "WEAK_TITLE"):
+            status_label = "WARN"
+            severity_level = 2
+        else:
+            status_label = "INFO"
+            severity_level = 1
+
+        items.append(
+            {
+                "tool": "update_postmortems_index",
+                "title": code or "UNKNOWN",
+                "status_label": status_label,
+                "severity_level": severity_level,
+                "message": err.get("loc", ""),
+                "detail": {
+                    "file": err.get("file", ""),
+                    "line": err.get("line", 0),
+                    "col": err.get("col", 0),
+                },
+            }
+        )
+
+    # Compute summary
+    summary = compute_summary(items)
+
+    # Build v2 report
     return {
-        "schema_version": 1,
-        "step": "postmortems_index",
-        "status": status,
-        "inputs": inputs,
-        "metrics": metrics,
-        "errors": errors,
+        "schema_version": 2,
+        "generated_at": iso_now(),
+        "tool": "update_postmortems_index",
+        "summary": summary.to_dict(),
+        "items": items,
+        "data": {
+            # Preserve original v1 structure for backward compatibility
+            "step": "postmortems_index",
+            "status": status,
+            "inputs": inputs,
+            "metrics": metrics,
+            "errors": errors,
+        },
     }
 
 

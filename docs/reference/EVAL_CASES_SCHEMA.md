@@ -18,6 +18,8 @@ last_updated: 2026-01-13
 - [5. 对照组约定（pair_id）](#5-对照组约定pair_id)
 - [6. 向后兼容原则](#6-向后兼容原则)
 
+**相关文档**：[报告输出契约（REPORT_OUTPUT_CONTRACT.md）](REPORT_OUTPUT_CONTRACT.md) - 所有报告工具的统一输出规范（schema_version=2, items model, 排序规则等）
+
 ---
 
 ## 1. 背景与边界

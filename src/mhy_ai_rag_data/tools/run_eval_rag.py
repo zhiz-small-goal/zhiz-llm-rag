@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_contract import compute_summary
 
 from mhy_ai_rag_data.tools.report_stream import StreamWriter, default_run_id, safe_truncate
 
@@ -507,22 +508,65 @@ def main() -> int:
     total = len(per_case)
     pass_rate = (pass_count / total) if total else 0.0
 
+    # Convert cases to items (v2 contract)
+    items: List[Dict[str, Any]] = []
+    for c in per_case:
+        passed_val = c.get("passed")
+        passed_item: Optional[bool] = bool(passed_val) if passed_val is not None else None
+        llm_call_ok = c.get("llm_call_ok")
+        error = c.get("error") or c.get("error_detail")
+
+        if error or llm_call_ok is False:
+            status_label = "ERROR"
+            severity_level = 4
+        elif passed_item is True:
+            status_label = "PASS"
+            severity_level = 0
+        elif passed_item is False:
+            status_label = "FAIL"
+            severity_level = 3
+        else:
+            status_label = "INFO"
+            severity_level = 1
+
+        items.append(
+            {
+                "tool": "run_eval_rag",
+                "title": str(c.get("id", "")),
+                "status_label": status_label,
+                "severity_level": severity_level,
+                "message": f"passed={passed_item} llm_call_ok={llm_call_ok} bucket={c.get('bucket', '')}",
+                "detail": dict(c),
+            }
+        )
+
+    # Compute summary
+    summary = compute_summary(items)
+
+    # Build v2 report
     report = {
-        "timestamp": now_iso(),
+        "schema_version": 2,
+        "generated_at": now_iso(),
+        "tool": "run_eval_rag",
         "root": str(root),
-        "db_path": str(db_path),
-        "collection": args.collection,
-        "k": args.k,
-        "embed": {"backend": backend, "model": args.embed_model, "device": args.device},
-        "llm": {
-            "base_url": args.base_url,
-            "connect_timeout": args.connect_timeout,
-            "read_timeout": args.timeout,
-            "trust_env": args.trust_env,
-            "model_field": args.llm_model,
+        "summary": summary.to_dict(),
+        "items": items,
+        "data": {
+            "timestamp": now_iso(),
+            "db_path": str(db_path),
+            "collection": args.collection,
+            "k": args.k,
+            "embed": {"backend": backend, "model": args.embed_model, "device": args.device},
+            "llm": {
+                "base_url": args.base_url,
+                "connect_timeout": args.connect_timeout,
+                "read_timeout": args.timeout,
+                "trust_env": args.trust_env,
+                "model_field": args.llm_model,
+            },
+            "metrics": {"cases": total, "passed_cases": pass_count, "pass_rate": pass_rate},
+            "cases": per_case,
         },
-        "metrics": {"cases": total, "passed_cases": pass_count, "pass_rate": pass_rate},
-        "cases": per_case,
     }
 
     write_json_report(out_path, report)

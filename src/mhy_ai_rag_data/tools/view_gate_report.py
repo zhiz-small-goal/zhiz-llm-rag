@@ -62,7 +62,8 @@ def _load_report_from_events(*, root: Path, events_path: Path) -> Optional[Dict[
     }
 
     # Normalize paths + enrich loc_uri for markdown; keep report structure stable.
-    return prepare_report_for_file_output(report)
+    result = prepare_report_for_file_output(report)
+    return result if isinstance(result, dict) else None
 
 
 def _stable_sorted_items(report: Dict[str, Any], *, reverse: bool) -> List[Tuple[int, int, Dict[str, Any]]]:

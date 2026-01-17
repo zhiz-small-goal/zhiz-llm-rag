@@ -68,3 +68,4 @@ python validate_rag_units.py --max-samples 50
 
 - 查看排障手册：[`docs/howto/TROUBLESHOOTING.md`](../howto/TROUBLESHOOTING.md)
 - 查阅契约与参考：[`docs/reference/REFERENCE.md`](../reference/REFERENCE.md)
+- 了解报告输出规范：[`docs/reference/REPORT_OUTPUT_CONTRACT.md`](../reference/REPORT_OUTPUT_CONTRACT.md)

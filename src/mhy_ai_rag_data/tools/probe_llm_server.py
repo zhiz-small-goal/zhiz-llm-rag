@@ -27,7 +27,8 @@ try:
 except Exception:  # noqa: BLE001
     from llm_http_client import resolve_trust_env, get_session, resolve_model_id  # type: ignore
 
-from mhy_ai_rag_data.tools.reporting import build_base, add_error, write_report, status_to_rc
+from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
 
 
 GET_CANDIDATES = [
@@ -105,17 +106,11 @@ def main() -> int:
         trust_env_mode=args.trust_env,
         fallback_model="gpt-3.5-turbo",
     )
-    report = build_base(
-        "llm_probe",
-        inputs={
-            "base": args.base,
-            "connect_timeout": args.connect_timeout,
-            "read_timeout": args.timeout,
-            "trust_env": args.trust_env,
-        },
-    )
-    report["resolved_model"] = resolved_model
-    report["model_resolve"] = model_resolve
+    # Temporary dict to collect probe results
+    report: dict[str, Any] = {
+        "resolved_model": resolved_model,
+        "model_resolve": model_resolve,
+    }
 
     # payloads
     chat_payload = {
@@ -152,18 +147,81 @@ def main() -> int:
         code = res.get("status", "")
         print(f"{ok:<4} {str(code):<4} {path:<22} {res.get('seconds', 0):>6.2f}s")
 
-    post_ok = any(x.get("ok") and x.get("status") == 200 for x in report["post"])
-    report["status"] = "PASS" if post_ok else "FAIL"
-    if not post_ok:
-        add_error(report, "NO_POST_200", "No POST probe returned HTTP 200")
+    # No longer compute final status here; will use summary.overall_rc later
+
+    # Build v2 report
+    items: list[dict[str, Any]] = []
+
+    # GET probes -> items
+    for entry in report.get("get", []):
+        ok = entry.get("ok") and entry.get("status") == 200
+        status_label = "PASS" if ok else "FAIL"
+        severity_level = 0 if ok else 3
+        path = str(entry.get("path", ""))
+        items.append(
+            {
+                "tool": "probe_llm_server",
+                "title": f"GET {path}",
+                "status_label": status_label,
+                "severity_level": severity_level,
+                "message": f"status={entry.get('status', '')} seconds={entry.get('seconds', 0):.2f}s",
+                "detail": entry,
+            }
+        )
+
+    # POST probes -> items
+    for entry in report.get("post", []):
+        ok = entry.get("ok") and entry.get("status") == 200
+        status_label = "PASS" if ok else "FAIL"
+        severity_level = 0 if ok else 3
+        path = str(entry.get("path", ""))
+        items.append(
+            {
+                "tool": "probe_llm_server",
+                "title": f"POST {path}",
+                "status_label": status_label,
+                "severity_level": severity_level,
+                "message": f"status={entry.get('status', '')} seconds={entry.get('seconds', 0):.2f}s",
+                "detail": entry,
+            }
+        )
+
+    # Compute summary
+    summary = compute_summary(items)
+
+    # Build final v2 report
+    final_report: dict[str, Any] = {
+        "schema_version": 2,
+        "generated_at": iso_now(),
+        "tool": "probe_llm_server",
+        "root": "",
+        "summary": summary.to_dict(),
+        "items": items,
+        "data": {
+            "inputs": {
+                "base": args.base,
+                "connect_timeout": args.connect_timeout,
+                "read_timeout": args.timeout,
+                "trust_env": args.trust_env,
+            },
+            "resolved_model": resolved_model,
+            "model_resolve": model_resolve,
+            "get": report.get("get", []),
+            "post": report.get("post", []),
+        },
+    }
 
     default_name = f"llm_probe_report_{int(time.time())}.json"
     if args.json_stdout:
-        print(json.dumps(report, ensure_ascii=False, indent=2))
-    out_path = write_report(report, json_out=args.json_out, default_name=default_name)
+        print(json.dumps(final_report, ensure_ascii=False, indent=2))
+
+    from pathlib import Path
+
+    out_path = Path(args.json_out) if args.json_out else Path(default_name)
+    write_json_report(out_path, final_report)
     print(f"\nWrote report: {out_path}")
 
-    return status_to_rc(report["status"])
+    return summary.overall_rc
 
 
 if __name__ == "__main__":

@@ -372,6 +372,8 @@ python tools\verify_reports_schema.py --report data_processed\build_reports\llm_
 python tools\verify_reports_schema.py --report data_processed\build_reports\units.json --schema schemas\build_report_v2.schema.json
 ```
 
+**相关文档**：[报告输出契约（REPORT_OUTPUT_CONTRACT.md）](../reference/REPORT_OUTPUT_CONTRACT.md) - schema_version=2 的完整契约说明，包含 item 模型、排序规则、VS Code 跳转等
+
 
 ## 2) 替代方案（1–2 个：适用场景 + 代价/限制）
 

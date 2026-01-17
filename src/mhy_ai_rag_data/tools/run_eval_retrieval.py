@@ -35,12 +35,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Mapping, Sequence
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_contract import compute_summary
 
 import platform
 
 from mhy_ai_rag_data.tools.report_stream import StreamWriter, default_run_id
 
-REPORT_SCHEMA_VERSION = "2"
+REPORT_SCHEMA_VERSION = 2
 DEFAULT_BUCKET = "official"
 ALLOWED_BUCKETS = {"official", "oral", "ambiguous"}
 
@@ -348,25 +349,73 @@ def main() -> int:
             "hit_rate": (hit_b / cases_b) if cases_b else 0.0,
         }
 
+    # Convert cases to items (v2 contract)
+    items: List[Dict[str, Any]] = []
+    for c in per_case:
+        hit_val = c.get("hit_at_k")
+        if hit_val is True:
+            status_label = "PASS"
+            severity_level = 0
+        elif hit_val is False:
+            status_label = "FAIL"
+            severity_level = 3
+        else:
+            status_label = "INFO"
+            severity_level = 1
+
+        items.append(
+            {
+                "tool": "run_eval_retrieval",
+                "title": str(c.get("id", "")),
+                "status_label": status_label,
+                "severity_level": severity_level,
+                "message": f"hit_at_k={hit_val} bucket={c.get('bucket', '')}",
+                "detail": dict(c),
+            }
+        )
+
+    # Convert warnings to items
+    for w in warnings:
+        items.append(
+            {
+                "tool": "run_eval_retrieval",
+                "title": str(w.get("code", "warning")),
+                "status_label": "WARN",
+                "severity_level": 2,
+                "message": str(w.get("code", "")),
+                "detail": dict(w),
+            }
+        )
+
+    # Compute summary
+    summary = compute_summary(items)
+
+    # Build v2 report
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
-        "timestamp": now_iso(),
+        "generated_at": now_iso(),
+        "tool": "run_eval_retrieval",
         "root": str(root),
-        "db_path": str(db_path),
-        "collection": args.collection,
-        "k": args.k,
-        "embed": {"backend": backend, "model": args.embed_model, "device": args.device},
-        "run_meta": {
-            "tool": "run_eval_retrieval",
-            "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_retrieval.py",
-            "python": sys.version.split()[0],
-            "platform": platform.platform(),
-            "argv": sys.argv,
+        "summary": summary.to_dict(),
+        "items": items,
+        "data": {
+            "timestamp": now_iso(),
+            "db_path": str(db_path),
+            "collection": args.collection,
+            "k": args.k,
+            "embed": {"backend": backend, "model": args.embed_model, "device": args.device},
+            "run_meta": {
+                "tool": "run_eval_retrieval",
+                "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_retrieval.py",
+                "python": sys.version.split()[0],
+                "platform": platform.platform(),
+                "argv": sys.argv,
+            },
+            "metrics": {"cases": total, "hit_cases": hit_count, "hit_rate": hit_rate},
+            "buckets": buckets_out,
+            "warnings": warnings,
+            "cases": per_case,
         },
-        "metrics": {"cases": total, "hit_cases": hit_count, "hit_rate": hit_rate},
-        "buckets": buckets_out,
-        "warnings": warnings,
-        "cases": per_case,
     }
 
     write_json_report(out_path, report)

@@ -95,10 +95,23 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --b
 
 ## 7. 输出报告说明
 
-核心字段：
+**报告格式**: `schema_version=2`（v2 契约）
 
-- `metrics.pass_rate`：通过率
-- `cases[]`：每条用例包含：
+v2 契约特性：
+- `schema_version`: `2` (int, 非字符串)
+- `summary`: 自动计算的聚合统计（overall_status_label, overall_rc, counts 等）
+- `items`: 标准 item 模型数组（每个 case 转为一个 item，含 severity_level）
+- `data`: 向后兼容，保留原始 cases/metrics 数据
+
+核心字段（v2 顶层）：
+- `summary.overall_status_label`: 整体状态（PASS/FAIL/ERROR）
+- `summary.overall_rc`: 推荐退出码（0=PASS, 2=FAIL, 3=ERROR）
+- `summary.counts`: 各状态计数（PASS/FAIL/ERROR/INFO）
+- `items[]`: 每条用例转换为标准 item（含 severity_level 用于排序）
+
+原始数据（v2 中的 data 块）：
+- `data.metrics.pass_rate`：通过率
+- `data.cases[]`：每条用例包含：
   - `passed`、`llm_call_ok`
   - `missing`：缺失的 must_include
   - `context_chars`：实际发送给 LLM 的上下文字符数（用于定位是否因上下文过长导致 400）
@@ -106,6 +119,8 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --b
   - `answer`：模型输出（用于审计与定位）
   - `error_detail`：当 LLM 调用失败且为 HTTP 4xx/5xx 时，会尽量落盘服务端响应摘要：
     `status_code/content_type/response_snippet`（正文截断），用于快速裁决“是超时还是请求被拒绝”。
+
+**相关文档**: [报告输出契约（REPORT_OUTPUT_CONTRACT.md）](../docs/reference/REPORT_OUTPUT_CONTRACT.md) - v2 完整规范
 
 ---
 

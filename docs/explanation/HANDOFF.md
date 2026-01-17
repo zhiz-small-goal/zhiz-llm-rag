@@ -184,6 +184,19 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k
 - 新增统一写入器：`src/mhy_ai_rag_data/tools/report_stream.py`（jsonl + json-seq）。
 - 新增文档：`docs/howto/OBSERVE_LONG_RUNS.md` 与 `docs/reference/EVAL_REPORTS_STREAM_SCHEMA.md`。
 
+已落地（v2 升级，2026-01-17）：
+- **schema_version=2 升级完成**（Tier 1+2，共4个脚本）：
+  - `run_eval_retrieval.py`：schema_version=2 (int)，cases→items，完整 v2 契约 ✅
+  - `run_eval_rag.py`：schema_version=2，cases→items with severity_level ✅
+  - `probe_llm_server.py`：从 v1 迁移到 v2，GET/POST→items ✅  
+  -` rag_status.py`：保持 v1 输出，扩展兼容检查 v1/v2 报告 ✅
+- **核心特性**：
+  - 所有 items 包含 `severity_level` (int) 用于数值排序，非字符串标签
+  - 统一使用 `compute_summary()` 计算 summary（overall_status_label, overall_rc, counts 等）
+  - 通过 `write_json_report()` 自动归一化路径 `/` + 添加 VS Code 跳转 `loc_uri`
+  - 向后兼容：原始数据保留在 `data` 块
+- **新增文档**：`docs/reference/REPORT_OUTPUT_CONTRACT.md`（报告输出契约集中说明）
+
 next（最小改动优先）：
 1) 可选：为长跑脚本补充 `--progress-out`（原子替换 `progress.json`），用于更易消费的“当前摘要快照”。
 2) 新增 `tools/<verify_stream_vs_final>.py`：运行结束后对账 stream 与 final 的关键计数（默认 warning，满足触发器后可收紧为 fail）。
@@ -238,8 +251,14 @@ next（最小改动优先）：
 
 ## 7. 变更日志
 
+### v7 (2026-01-17)
+- **报告输出 v2 升级完成**（WS-REPORT-OBSERVABILITY）：
+  - 升级 4 个脚本到 schema_version=2：run_eval_retrieval, run_eval_rag, probe_llm_server（完整v2），rag_status（兼容v1/v2检查）
+  - 新增契约文档：`docs/reference/REPORT_OUTPUT_CONTRACT.md`
+  - 核心特性：severity_level 数值排序、compute_summary()、VS Code 跳转 loc_uri、向后兼容
+- 更新本文档：补充 v2 升级状态到第 4.4 节
 
-- 2026-01-15
+### v7 (2026-01-15)
   - 报告可用性契约：落盘报告中的诊断定位新增 `loc_uri`（`vscode://file/...`），并更新渲染脚本/文档
   - 新增复盘：`docs/postmortems/2026-01-15_postmortem_vscode_clickable_loc_uri.md`
 

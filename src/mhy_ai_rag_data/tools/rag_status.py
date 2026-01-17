@@ -378,13 +378,22 @@ def _evaluate_item(it: CheckItem) -> Dict[str, Any]:
             out["status"] = "FAIL"
             out["detail"]["reason"] = "report_not_object"
             return out
-        if obj.get("schema_version") != 1:
+        # Support both v1 and v2 reports (v2: schema_version=2 with summary)
+        sv = obj.get("schema_version")
+        if sv not in (1, 2):
             out["status"] = "FAIL"
-            out["detail"]["reason"] = f"schema_version_not_1: {obj.get('schema_version')}"
+            out["detail"]["reason"] = f"unsupported_schema_version: {sv}"
             return out
-        report_status = str(obj.get("status") or "INFO").upper()
+        # Extract status: v1 uses top-level "status", v2 uses "summary.overall_status_label"
+        if sv == 1:
+            report_status = str(obj.get("status") or "INFO").upper()
+            out["detail"]["step"] = obj.get("step")
+        else:  # sv == 2
+            summary = obj.get("summary", {})
+            report_status = str(summary.get("overall_status_label") or "INFO").upper()
+            out["detail"]["total_items"] = summary.get("total_items", 0)
+            out["detail"]["max_severity"] = summary.get("max_severity_level", 0)
         out["detail"]["report_status"] = report_status
-        out["detail"]["step"] = obj.get("step")
         if report_status == "PASS":
             out["status"] = "OK"
         elif report_status in ("FAIL", "ERROR"):

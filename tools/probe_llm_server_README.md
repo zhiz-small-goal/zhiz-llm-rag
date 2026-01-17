@@ -32,6 +32,33 @@ python tools\probe_llm_server.py --base http://localhost:8000\v1 --timeout 10 --
 - `2`：FAIL（所有 POST 探测失败）
 - `3`：ERROR（脚本异常）
 
+## 输出报告格式
+
+**报告格式**: `schema_version=2`（v2 契约）
+
+主要字段：
+- `schema_version`: `2` (int)
+- `tool`: `"probe_llm_server"`
+- `generated_at`: ISO 8601 时间戳
+- `summary`: 聚合统计（overall_status_label, overall_rc, counts）
+- `items`: 探测结果数组（每个 GET/POST 探测转为一个 item）
+  - 每个 item 包含: tool, title, status_label, severity_level, message
+  - severity_level: PASS=0, FAIL=3（用于排序）
+- `data`: 向后兼容，保留原始 GET/POST 探测详情
+
+示例 item：
+```json
+{
+  "tool": "probe_llm_server",
+  "title": "POST /v1/chat/completions",
+  "status_label": "PASS",
+  "severity_level": 0,
+  "message": "HTTP 200 - chat completion ok"
+}
+```
+
+**相关文档**: [报告输出契约（REPORT_OUTPUT_CONTRACT.md）](../docs/reference/REPORT_OUTPUT_CONTRACT.md)
+
 ## 探测内容
 
 ### GET 探测

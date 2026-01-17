@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
+from typing import Any
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -36,14 +37,14 @@ def _is_ci() -> bool:
     return False
 
 
-def _isatty(stream) -> bool:
+def _isatty(stream: Any) -> bool:
     try:
         return bool(stream.isatty())
     except Exception:
         return False
 
 
-def should_enable(mode: str, *, stream=None) -> bool:
+def should_enable(mode: str, *, stream: Any = None) -> bool:
     """Decide whether runtime feedback is enabled.
 
     mode: auto|on|off

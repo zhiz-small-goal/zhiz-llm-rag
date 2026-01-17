@@ -38,6 +38,16 @@ rem 严格模式（用于 CI）
 python tools\rag_status.py --root . --strict --json-out data_processed\build_reports\status.json
 ```
 
+## 报告兼容性
+
+**自身输出格式**: `schema_version=1`（保持向后兼容）
+
+**检查能力**: 兼容检查 `schema_version=1` 和 `schema_version=2` 的报告
+- v1 报告：从顶层 `status` 字段读取状态
+- v2 报告：从 `summary.overall_status_label` 读取状态，并记录 `total_items` 和 `max_severity_level`
+
+rag_status 定位为"状态检查工具"而非"诊断报告工具"，因此其自身输出保持简单的 v1 格式，但能够检查其他工具生成的 v1 或 v2 报告。
+
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/rag_status.py`。
