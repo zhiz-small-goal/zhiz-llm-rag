@@ -37,18 +37,14 @@ from typing import Any, Dict, List, Mapping, Optional
 
 # v1.2 映射（仅兜底；对外必须显式给 severity_level）
 DEFAULT_STATUS_TO_SEVERITY: Dict[str, int] = {
+    # Fallback mapping (compat only)
+    # Only these labels are allowed for implicit severity when `severity_level` is missing.
+    # Any other label MUST provide an explicit `severity_level`.
     "PASS": 0,
-    "OK": 0,
     "INFO": 1,
     "WARN": 2,
-    "WARNING": 2,
     "FAIL": 3,
-    "FAILED": 3,
     "ERROR": 4,
-    "ERR": 4,
-    "EXCEPTION": 4,
-    "SKIP": 1,
-    "SKIPPED": 1,
 }
 
 
@@ -93,10 +89,29 @@ def ensure_item_fields(item: Dict[str, Any], *, tool_default: str) -> Dict[str, 
 
     sev = _safe_int(out.get("severity_level"))
     if sev is None:
-        sev = status_label_to_severity_level(out.get("status_label"))
+        # fallback mapping is allowed ONLY for PASS/INFO/WARN/FAIL/ERROR
+        lab = norm_label(out.get("status_label"))
+        if lab in DEFAULT_STATUS_TO_SEVERITY:
+            sev = int(DEFAULT_STATUS_TO_SEVERITY[lab])
+        else:
+            # Contract violation: unknown label without explicit severity_level
+            sev = 4
+            cv_msg = f"contract_violation: missing severity_level for status_label={lab or '(empty)'}"
+
+            # Make the violation visible in the human message (markdown/console).
+            base_msg = str(out.get("message") or out.get("msg") or "").strip()
+            out["message"] = (base_msg + "\n" + cv_msg).strip() if base_msg else cv_msg
+            det = out.get("detail")
+            if isinstance(det, dict):
+                det = dict(det)
+            else:
+                det = {"upstream_detail": det} if det is not None else {}
+            det.setdefault("contract_violation", cv_msg)
+            det.setdefault("original_status_label", out.get("status_label"))
+            out["detail"] = det
     out["severity_level"] = int(sev)
 
-    out["message"] = str(out.get("message") or out.get("msg") or out.get("detail") or "")
+    out["message"] = str(out.get("message") or out.get("msg") or "")
 
     # normalize optional fields
     if "duration_ms" in out and _safe_int(out.get("duration_ms")) is not None:

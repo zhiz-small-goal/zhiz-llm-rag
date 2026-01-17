@@ -66,6 +66,16 @@ def _load_report_from_events(*, root: Path, events_path: Path) -> Optional[Dict[
 
 
 def _stable_sorted_items(report: Dict[str, Any], *, reverse: bool) -> List[Tuple[int, int, Dict[str, Any]]]:
+    """Return items decorated with (severity_level, generation_index, item) sorted stably.
+
+    Contract:
+    - Primary key: numeric severity_level.
+    - Stability: within the same severity_level, preserve generation order (idx asc).
+
+    reverse=False  => low->high (console)
+    reverse=True   => high->low (markdown)
+    """
+
     items = report.get("items") or []
     out: List[Tuple[int, int, Dict[str, Any]]] = []
     for idx, it in enumerate(items):
@@ -77,7 +87,11 @@ def _stable_sorted_items(report: Dict[str, Any], *, reverse: bool) -> List[Tuple
         except (ValueError, TypeError):
             sev_i = 1
         out.append((sev_i, idx, it))
-    out.sort(key=lambda t: (t[0], t[1]), reverse=reverse)
+
+    if reverse:
+        out.sort(key=lambda t: (-t[0], t[1]))
+    else:
+        out.sort(key=lambda t: (t[0], t[1]))
     return out
 
 
@@ -129,7 +143,7 @@ def _render_console(report: Dict[str, Any]) -> str:
     lines.append(f"generated_at: {gen}")
     lines.append("")
 
-    lines.append("## details (least severe last)")
+    lines.append("## details (most severe last)")
 
     sorted_items = _stable_sorted_items(report, reverse=False)
     prev_sev: Optional[int] = None
@@ -361,6 +375,9 @@ def main() -> int:
         sp = str(source_path) if source_path else "(none)"
         print(f"[gate_report] missing or invalid report: {sp}")
         return 2
+
+    # Normalize paths/order/loc/loc_uri for consistent rendering
+    report = prepare_report_for_file_output(report)
 
     # console output
     print(_render_console(report), end="")

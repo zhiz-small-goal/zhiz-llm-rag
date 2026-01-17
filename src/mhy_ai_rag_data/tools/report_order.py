@@ -281,6 +281,10 @@ def _prepare_any(x: Any, repo_root: Optional[Path]) -> Any:
                 continue
             d2[pk] = _normalize_path_value(d2[pk])
 
+        # normalize loc text (path separators)
+        if "loc" in d2:
+            d2["loc"] = _normalize_loc_value(d2.get("loc"))
+
         # sort common detail lists by severity
         for lk in DETAIL_LIST_KEYS:
             if lk in d2 and isinstance(d2[lk], list):
@@ -307,6 +311,21 @@ def _normalize_path_str(s: str) -> str:
         return s
     # posix separators + windows drive lowercasing when possible
     return normalize_abs_path_posix(s)
+
+
+def _normalize_loc_value(v: Any) -> Any:
+    """Normalize `loc` text to use '/' separators.
+
+    Contract: all paths shown in reports use '/' as separator, including `loc`.
+    We keep `loc` as pure text (path[:line[:col]]), only normalizing separators and drive casing.
+    """
+
+    if isinstance(v, str):
+        # `normalize_abs_path_posix` is safe for relative paths too.
+        return normalize_abs_path_posix(v)
+    if isinstance(v, list):
+        return [(_normalize_loc_value(x) if isinstance(x, (str, list)) else x) for x in v]
+    return v
 
 
 def _extract_repo_root(obj: Any) -> Optional[Path]:
