@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""write_db_build_stamp.py
+"""mhy_ai_rag_data.tools.write_db_build_stamp
 
-目标
-----
-为 Chroma 持久化库写入一个“构建戳（build stamp）”文件，用于：
-- 在 rag-status 中提供**稳定**的“DB 是否新于 plan/check”等依赖判定；
-- 避免 Windows/SQLite 在仅查询（read）场景下也刷新 DB 目录/文件 mtime，导致 check.json 被误判为 STALE。
+写入“DB build stamp”到 state_root/db_build_stamp.json。
 
-设计要点
---------
-- 构建戳文件仅应在“写库”行为成功完成后更新（build/upsert/sync），而不应在 query/eval/retriever 等只读行为中变化。
-- stamp 文件放在 state_root（默认 data_processed/index_state）下，便于与增量同步状态同域管理。
+目的
+- 为 rag-status 提供**稳定 freshness basis**：仅在“写库成功”后更新，避免读取/评测触碰 DB 目录 mtime 导致误 STALE。
+- 该文件属于“状态元数据”，但同样遵循**统一报告契约（schema_version=2）**：
+  - 顶层具备 schema_version/generated_at/tool/root/summary/items
+  - 允许扩展字段（例如 db/collection/schema_hash/plan 等），用于机器侧读取
 
-默认输出
---------
-<state_root>/db_build_stamp.json
+路径
+- 默认：<root>/data_processed/index_state/db_build_stamp.json
 
+生成时机（建议）
+- build/upsert/sync 成功后自动写入（build_chroma_index.py 已集成）。
+- 也允许手动补写（旧库/迁移时）。
 """
 
 from __future__ import annotations
@@ -28,62 +27,60 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from mhy_ai_rag_data.tools import index_state as index_state_mod
+from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
+from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
+
+# Optional: import Chroma only when used
 
 
-def _now_iso() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
-
-
-def _sha256_file(p: Path, *, chunk_size: int = 1024 * 1024) -> str:
+def _sha256_text(s: str) -> str:
     h = hashlib.sha256()
-    with p.open("rb") as f:
-        while True:
-            b = f.read(chunk_size)
-            if not b:
-                break
-            h.update(b)
+    h.update(s.encode("utf-8"))
     return h.hexdigest()
 
 
-def _read_json(path: Path) -> Tuple[Optional[Any], Optional[str]]:
+def _read_json(path: Path) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     try:
-        return json.loads(path.read_text(encoding="utf-8")), None
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(obj, dict):
+            return obj, None
+        return None, "json_root_not_object"
     except Exception as e:  # noqa: BLE001
-        return None, f"json_parse_error: {type(e).__name__}: {e}"
+        return None, f"json_parse_error: {e!r}"
 
 
-def _infer_planned_chunks(plan_obj: Any) -> Optional[int]:
-    # 支持历史/不同脚本可能产出的几种形态。
-    if isinstance(plan_obj, dict):
-        if isinstance(plan_obj.get("planned_chunks"), int):
-            return int(plan_obj["planned_chunks"])
-        if isinstance(plan_obj.get("n_chunks"), int):
-            return int(plan_obj["n_chunks"])
-        chunks = plan_obj.get("chunks")
-        if isinstance(chunks, list):
-            return len(chunks)
-        planned = plan_obj.get("planned")
-        if isinstance(planned, list):
-            return len(planned)
-        return None
-    if isinstance(plan_obj, list):
-        return len(plan_obj)
-    return None
+def _iso_local() -> str:
+    # Keep legacy-friendly local timestamp for human reading.
+    return time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime())
 
 
-def _maybe_get_collection_count(db: Path, collection: str) -> Tuple[Optional[int], Optional[str]]:
+def _sanitize_no_backslash(obj: Any) -> Any:
+    """Ensure item fields contain no backslashes.
+
+    verify_report_output_contract() will recursively scan item string fields and fail on '\\'.
+    For state-metadata reports, we sanitize any human-facing strings placed under `items`.
+    """
+
+    if isinstance(obj, str):
+        return obj.replace("\\", "/")
+    if isinstance(obj, dict):
+        return {k: _sanitize_no_backslash(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_no_backslash(v) for v in obj]
+    return obj
+
+
+def _try_collection_count(*, db: Path, collection: str) -> Tuple[Optional[int], Optional[str]]:
     try:
         import chromadb
-    except Exception as e:  # noqa: BLE001
-        return None, f"chromadb_import_failed: {type(e).__name__}: {e}"
 
-    try:
-        client = chromadb.PersistentClient(path=str(db))
-        col = client.get_collection(collection)
+        Settings = chromadb.config.Settings
+        client = chromadb.PersistentClient(path=str(db), settings=Settings(anonymized_telemetry=False))
+        col = client.get_collection(name=str(collection))
         return int(col.count()), None
     except Exception as e:  # noqa: BLE001
-        return None, f"chroma_count_failed: {type(e).__name__}: {e}"
+        # keep message compact; paths may appear -> sanitize later if emitted to items
+        return None, f"{type(e).__name__}: {e}"
 
 
 def write_db_build_stamp(
@@ -92,63 +89,71 @@ def write_db_build_stamp(
     db: Path,
     collection: str,
     state_root: Path,
-    plan_path: Optional[Path] = None,
-    collection_count: Optional[int] = None,
-    writer: str = "manual",
+    plan_path: Optional[Path],
+    collection_count: Optional[int],
+    writer: str,
     out_path: Optional[Path] = None,
+    schema_hash: Optional[str] = None,
 ) -> Path:
-    """Write a stable build-stamp json file.
+    """Write db_build_stamp.json.
 
-    - 若 collection_count 未提供，将尝试连接 Chroma 读取 count（可失败，失败时写入 None + error）。
-    - 若 plan_path 提供且存在，将写入其 sha256 与 planned_chunks，便于离线审计。
+    Contract (file output): schema_version=2 report.
+
+    Notes
+    - `collection_count` can be provided by caller to avoid re-opening Chroma.
+    - If not provided, this function will try to read count (best-effort).
     """
 
     root = root.resolve()
     db = db.resolve()
     state_root = state_root.resolve()
+    state_root.mkdir(parents=True, exist_ok=True)
 
     if out_path is None:
         out_path = state_root / "db_build_stamp.json"
     out_path = out_path.resolve()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    schema_hash: Optional[str] = None
-    try:
-        schema_hash = index_state_mod.read_latest_pointer(state_root, collection)
-    except Exception:  # noqa: BLE001
-        schema_hash = None
-
-    plan_info: Dict[str, Any] = {"path": None, "sha256": None, "planned_chunks": None, "read_error": None}
+    # plan snapshot (best-effort)
+    plan_info: Dict[str, Any] = {
+        "path": None,
+        "sha256": None,
+        "planned_chunks": None,
+        "read_error": None,
+    }
     if plan_path is not None:
-        plan_path = plan_path.resolve()
-        plan_info["path"] = str(plan_path)
-        if plan_path.exists() and plan_path.is_file():
-            try:
-                plan_info["sha256"] = _sha256_file(plan_path)
-            except Exception as e:  # noqa: BLE001
-                plan_info["read_error"] = f"plan_hash_failed: {type(e).__name__}: {e}"
-            obj, err = _read_json(plan_path)
+        pp = plan_path.resolve()
+        plan_info["path"] = str(pp)
+        if pp.exists():
+            obj, err = _read_json(pp)
             if err:
                 plan_info["read_error"] = err
             else:
-                plan_info["planned_chunks"] = _infer_planned_chunks(obj)
+                try:
+                    raw = pp.read_text(encoding="utf-8")
+                    plan_info["sha256"] = _sha256_text(raw)
+                except Exception as e:  # noqa: BLE001
+                    plan_info["read_error"] = f"sha256_failed: {type(e).__name__}: {e}"
+                if obj is not None and isinstance(obj.get("planned_chunks"), int):
+                    plan_info["planned_chunks"] = int(obj["planned_chunks"])
         else:
-            plan_info["read_error"] = "plan_not_found"
+            plan_info["read_error"] = "plan_missing"
 
+    # count snapshot (best-effort)
     count_err: Optional[str] = None
     if collection_count is None:
-        if db.exists():
-            collection_count, count_err = _maybe_get_collection_count(db, collection)
-        else:
-            count_err = "db_not_found"
+        collection_count, count_err = _try_collection_count(db=db, collection=collection)
 
+    # 1) legacy-like state payload (kept as top-level fields for consumers)
     payload: Dict[str, Any] = {
-        "schema_version": 1,
-        "updated_at": _now_iso(),
-        "writer": writer,
-        "root": str(root),
-        "db": str(db),
-        "collection": collection,
+        "schema_version": 2,
+        "generated_at": iso_now(),
+        "tool": "db_build_stamp",
+        "root": str(root.as_posix()),
+        # legacy-ish fields
+        "updated_at": _iso_local(),
+        "writer": str(writer),
+        "db": str(db.as_posix()),
+        "collection": str(collection),
         "schema_hash": schema_hash,
         "collection_count": collection_count,
         "count_error": count_err,
@@ -156,45 +161,135 @@ def write_db_build_stamp(
         "note": "Updated only by successful write-to-db operations (build/upsert/sync) or explicit manual stamp.",
     }
 
-    index_state_mod.atomic_write_text(out_path, json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    # 2) report items (no backslashes allowed anywhere under each item)
+    items: list[Dict[str, Any]] = []
+
+    items.append(
+        ensure_item_fields(
+            _sanitize_no_backslash(
+                {
+                    "tool": "db_build_stamp",
+                    "key": "stamp_written",
+                    "title": "db_build_stamp written",
+                    "status_label": "PASS",
+                    "severity_level": 0,
+                    "message": f"wrote {out_path.as_posix()} (collection={collection})",
+                    "detail": {
+                        "out_path": out_path.as_posix(),
+                        "db": db.as_posix(),
+                        "collection": str(collection),
+                        "schema_hash": schema_hash,
+                        "collection_count": collection_count,
+                        "writer": str(writer),
+                    },
+                }
+            ),
+            tool_default="db_build_stamp",
+        )
+    )
+
+    if count_err:
+        items.append(
+            ensure_item_fields(
+                _sanitize_no_backslash(
+                    {
+                        "tool": "db_build_stamp",
+                        "key": "collection_count_unavailable",
+                        "title": "collection_count unavailable",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": str(count_err),
+                        "detail": {"db": db.as_posix(), "collection": str(collection)},
+                    }
+                ),
+                tool_default="db_build_stamp",
+            )
+        )
+
+    if plan_info.get("read_error"):
+        items.append(
+            ensure_item_fields(
+                _sanitize_no_backslash(
+                    {
+                        "tool": "db_build_stamp",
+                        "key": "plan_read_issue",
+                        "title": "plan read issue",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": str(plan_info.get("read_error")),
+                        "detail": {"plan_path": str(plan_info.get("path") or "")},
+                    }
+                ),
+                tool_default="db_build_stamp",
+            )
+        )
+
+    payload["items"] = items
+    payload["summary"] = compute_summary(items).to_dict()
+
+    # Keep an explicit "data" block for future evolvability.
+    payload.setdefault("data", {})
+    if isinstance(payload["data"], dict):
+        payload["data"].setdefault(
+            "state",
+            {
+                "db": str(db.as_posix()),
+                "collection": str(collection),
+                "schema_hash": schema_hash,
+                "collection_count": collection_count,
+                "count_error": count_err,
+                "plan": plan_info,
+                "writer": str(writer),
+                "updated_at": payload.get("updated_at"),
+            },
+        )
+
+    final_obj = prepare_report_for_file_output(payload)
+    if not isinstance(final_obj, dict):
+        raise RuntimeError("prepare_report_for_file_output did not return dict")
+
+    # atomic-ish write
+    tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+    tmp.write_text(json.dumps(final_obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(out_path)
+
     return out_path
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Write a stable DB build-stamp for rag-status freshness.")
-    ap.add_argument("--root", default=".", help="Project root")
-    ap.add_argument("--db", default="chroma_db", help="Chroma persistent dir")
-    ap.add_argument("--collection", default="rag_chunks", help="Chroma collection")
-    ap.add_argument(
-        "--state-root",
-        default="data_processed/index_state",
-        help="index_state root (default: data_processed/index_state)",
-    )
-    ap.add_argument(
-        "--plan",
-        default="data_processed/chunk_plan.json",
-        help="plan path (optional; default points to standard location)",
-    )
-    ap.add_argument("--writer", default="manual", help="writer tag (e.g., build_chroma_index_flagembedding)")
-    ap.add_argument("--count", type=int, default=None, help="optional: override collection_count (skip opening chroma)")
+    ap = argparse.ArgumentParser(description="Write db_build_stamp.json (state metadata, schema_version=2 report)")
+    ap.add_argument("--root", default=".")
+    ap.add_argument("--db", default="chroma_db")
+    ap.add_argument("--collection", default="rag_chunks")
+    ap.add_argument("--state-root", default="data_processed/index_state")
+    ap.add_argument("--plan", default=None)
+    ap.add_argument("--writer", default="manual")
+    ap.add_argument("--schema-hash", default=None)
     ap.add_argument("--out", default=None, help="output path (default: <state_root>/db_build_stamp.json)")
+    ap.add_argument(
+        "--collection-count",
+        default=None,
+        help="optional: provide collection.count snapshot to avoid opening Chroma (int)",
+    )
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
     db = (root / args.db).resolve() if not Path(args.db).is_absolute() else Path(args.db).resolve()
-    state_root = (
-        (root / args.state_root).resolve()
-        if not Path(args.state_root).is_absolute()
-        else Path(args.state_root).resolve()
-    )
-
-    plan_path: Optional[Path] = None
+    state_root = (root / args.state_root).resolve()
+    plan_path = None
     if args.plan:
         plan_path = (root / args.plan).resolve() if not Path(args.plan).is_absolute() else Path(args.plan).resolve()
 
-    out_path: Optional[Path] = None
+    out_path = None
     if args.out:
         out_path = (root / args.out).resolve() if not Path(args.out).is_absolute() else Path(args.out).resolve()
+
+    cc = None
+    if args.collection_count is not None:
+        try:
+            cc = int(args.collection_count)
+        except Exception:
+            cc = None
 
     p = write_db_build_stamp(
         root=root,
@@ -202,13 +297,28 @@ def main() -> int:
         collection=str(args.collection),
         state_root=state_root,
         plan_path=plan_path,
-        collection_count=args.count,
+        collection_count=cc,
         writer=str(args.writer),
         out_path=out_path,
+        schema_hash=str(args.schema_hash) if args.schema_hash else None,
     )
-    print(f"Wrote db build stamp: {p}")
+
+    print(f"[OK] wrote: {p}")
     return 0
 
 
+def _entry() -> int:
+    try:
+        return main()
+    except KeyboardInterrupt:
+        print("[ERROR] KeyboardInterrupt")
+        return 3
+    except SystemExit:
+        raise
+    except Exception as e:  # noqa: BLE001
+        print(f"[ERROR] unhandled exception: {type(e).__name__}: {e}")
+        return 3
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(_entry())
