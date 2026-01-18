@@ -57,7 +57,7 @@ python tools\probe_llm_server.py --base http://localhost:8000\v1 --timeout 10 --
 }
 ```
 
-**相关文档**: [报告输出契约（REPORT_OUTPUT_CONTRACT.md）](../docs/reference/REPORT_OUTPUT_CONTRACT.md)
+**相关文档**: [报告输出契约与工程规则（SSOT）](../docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md)
 
 ## 探测内容
 

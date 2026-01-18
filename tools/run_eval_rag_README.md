@@ -120,7 +120,7 @@ v2 契约特性：
   - `error_detail`：当 LLM 调用失败且为 HTTP 4xx/5xx 时，会尽量落盘服务端响应摘要：
     `status_code/content_type/response_snippet`（正文截断），用于快速裁决“是超时还是请求被拒绝”。
 
-**相关文档**: [报告输出契约（REPORT_OUTPUT_CONTRACT.md）](../docs/reference/REPORT_OUTPUT_CONTRACT.md) - v2 完整规范
+**相关文档**: [报告输出契约与工程规则（SSOT）](../docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md) - schema_version=2 完整规范
 
 ---
 

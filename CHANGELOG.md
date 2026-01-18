@@ -15,7 +15,7 @@ last_updated: 2026-01-09
 - 新增 `CITATION.cff`（引用元数据，便于他人引用本仓库/软件）。
 - 新增 `.editorconfig`（统一基础格式约定，减少 diff 噪音）。
 - 新增 `CODE_OF_CONDUCT.md`（行为准则与专用举报渠道）。
-- 新增 `docs/reference/REPORT_OUTPUT_CONTRACT.md`（报告输出契约 v2 定义）。
+- 新增输出契约 SSOT：`docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`（schema_version=2）；保留兼容入口：`docs/reference/REPORT_OUTPUT_CONTRACT.md`。
 
 ### Changed
 - 升级核心报告工具 (`run_eval_retrieval`, `run_eval_rag`, `probe_llm_server` 等) 输出格式至 schema_version=2 (Items Model)。

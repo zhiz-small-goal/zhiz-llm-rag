@@ -195,7 +195,7 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k
   - 统一使用 `compute_summary()` 计算 summary（overall_status_label, overall_rc, counts 等）
   - 通过 `write_json_report()` 自动归一化路径 `/` + 添加 VS Code 跳转 `loc_uri`
   - 向后兼容：原始数据保留在 `data` 块
-- **新增文档**：`docs/reference/REPORT_OUTPUT_CONTRACT.md`（报告输出契约集中说明）
+- **新增文档**：`docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`（输出契约 SSOT；`REPORT_OUTPUT_CONTRACT.md` 为兼容 alias）
 
 next（最小改动优先）：
 1) 可选：为长跑脚本补充 `--progress-out`（原子替换 `progress.json`），用于更易消费的“当前摘要快照”。
@@ -254,7 +254,7 @@ next（最小改动优先）：
 ### v7 (2026-01-17)
 - **报告输出 v2 升级完成**（WS-REPORT-OBSERVABILITY）：
   - 升级 4 个脚本到 schema_version=2：run_eval_retrieval, run_eval_rag, probe_llm_server（完整v2），rag_status（兼容v1/v2检查）
-  - 新增契约文档：`docs/reference/REPORT_OUTPUT_CONTRACT.md`
+  - 新增契约文档（SSOT）：`docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`（兼容 alias：`REPORT_OUTPUT_CONTRACT.md`）
   - 核心特性：severity_level 数值排序、compute_summary()、VS Code 跳转 loc_uri、向后兼容
 - 更新本文档：补充 v2 升级状态到第 4.4 节
 

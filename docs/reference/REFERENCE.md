@@ -32,7 +32,8 @@ last_updated: 2026-01-15
 
 ## 1. 参考入口与导航
 
-- 报告输出契约（schema_version=2）：[`REPORT_OUTPUT_CONTRACT.md`](REPORT_OUTPUT_CONTRACT.md)
+- 报告输出契约与工程规则（schema_version=2，SSOT）：[`REPORT_OUTPUT_ENGINEERING_RULES.md`](REPORT_OUTPUT_ENGINEERING_RULES.md)
+  - 兼容入口：[`REPORT_OUTPUT_CONTRACT.md`](REPORT_OUTPUT_CONTRACT.md)
 - 依赖策略（默认/可选 extras）：[`deps_policy.md`](deps_policy.md)
 - Index State 与 Stamps：[`index_state_and_stamps.md`](index_state_and_stamps.md)
 - Stage-2 评测契约：[`EVAL_CASES_SCHEMA.md`](EVAL_CASES_SCHEMA.md)

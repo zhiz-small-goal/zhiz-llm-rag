@@ -19,7 +19,7 @@ timezone: America/Los_Angeles
 - [6. 引用](#6-引用)
 
 **相关文档**：
-- [报告输出契约（REPORT_OUTPUT_CONTRACT.md）](REPORT_OUTPUT_CONTRACT.md) - 最终报告的统一输出规范（v2 item model, 排序, 路径归一化等）
+- [报告输出契约与工程规则（SSOT）](REPORT_OUTPUT_ENGINEERING_RULES.md) - 最终报告的统一输出规范（v2 items/summary, 排序, 路径归一化, loc_uri, events 等）
 - 本文档定义的是**事件流**（实时旁路），与最终报告互补
 
 ---

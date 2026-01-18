@@ -36,7 +36,7 @@ last_updated: 2026-01-14
 
 ## Reference（参考：契约/参数/格式）
 - [参考与契约（口径、产物、架构）](reference/REFERENCE.md)
-- [报告输出契约（Report Output Contract v2）](reference/REPORT_OUTPUT_CONTRACT.md)
+- [报告输出契约与工程规则（SSOT，schema_version=2）](reference/REPORT_OUTPUT_ENGINEERING_RULES.md)
 - [审查规范（Review Spec：SSOT/生成/模板）](reference/review/README.md)
 - [tools 目录说明（入口层 / 治理脚本）](../tools/README.md)
 - [Policy（Conftest/Rego）](../policy/README.md)
