@@ -293,6 +293,14 @@ def _prepare_any(x: Any, repo_root: Optional[Path]) -> Any:
                 d2[lk] = _sort_list_for_file(d2[lk])
 
         d3 = _sort_mapping_by_value_severity(d2)
+
+        # Free-text normalization for item-like dicts.
+        # The verifier enforces that *any* string field inside items[] must not
+        # contain backslashes. Some tools may embed Windows paths in message/
+        # detail/traceback strings. Normalize those separators here so that
+        # file output + markdown + verification are consistent.
+        if _looks_like_item(d3):
+            d3 = _normalize_item_string_fields(d3)
         _augment_loc_uri_in_place(d3, repo_root)
         return _reorder_dict_keys_for_file(d3)
 
@@ -305,6 +313,34 @@ def _normalize_path_value(v: Any) -> Any:
     if isinstance(v, list):
         return [_normalize_path_value(it) for it in v]
     return v
+
+
+def _looks_like_item(d: Mapping[str, Any]) -> bool:
+    # Minimal heuristic: items use the v2 item model fields.
+    # Keep this strict to avoid touching arbitrary free-text blocks.
+    if not isinstance(d.get("tool"), str):
+        return False
+    if not isinstance(d.get("title"), str):
+        return False
+    if "severity_level" in d or "status_label" in d:
+        return True
+    return False
+
+
+def _normalize_item_string_fields(x: Any) -> Any:
+    """Replace backslashes with '/' recursively for item dicts.
+
+    Note: This is intentionally broader than loc/path keys. It targets the
+    verifier rule that item fields must not contain '\\'.
+    """
+
+    if isinstance(x, str):
+        return x.replace("\\", "/")
+    if isinstance(x, list):
+        return [_normalize_item_string_fields(v) for v in x]
+    if isinstance(x, dict):
+        return {k: _normalize_item_string_fields(v) for k, v in x.items()}
+    return x
 
 
 def _normalize_path_str(s: str) -> str:

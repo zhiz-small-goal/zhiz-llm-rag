@@ -29,7 +29,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
 def now_iso() -> str:
@@ -176,9 +176,51 @@ def main() -> int:
         out_path = pa.parent / f"baseline_diff_{int(time.time())}.json"
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json_report(out_path, report)
 
-    print(f"[baseline_diff] overall={report['overall']} out={out_path}")
+    items = []
+    for k, difflist in (report.get("diffs") or {}).items():
+        if not difflist:
+            continue
+        items.append(
+            {
+                "tool": "compare_stage1_baseline_snapshots",
+                "title": f"diff:{k}",
+                "status_label": "FAIL",
+                "severity_level": 3,
+                "message": f"{k} diffs={len(difflist)}",
+                "detail": difflist,
+            }
+        )
+
+    if not items:
+        items = [
+            {
+                "tool": "compare_stage1_baseline_snapshots",
+                "title": "baseline_equal",
+                "status_label": "PASS",
+                "severity_level": 0,
+                "message": "no diffs detected",
+            }
+        ]
+
+    report_v2 = {
+        "schema_version": 2,
+        "generated_at": report.get("ts") or now_iso(),
+        "tool": "compare_stage1_baseline_snapshots",
+        "root": "",
+        "summary": {},
+        "items": items,
+        "data": report,
+    }
+
+    write_report_bundle(
+        report=report_v2,
+        report_json=out_path,
+        repo_root=Path(".").resolve(),
+        console_title="compare_stage1_baseline_snapshots",
+        emit_console=True,
+    )
+
     return 0 if report["overall"] == "PASS" else 2
 
 

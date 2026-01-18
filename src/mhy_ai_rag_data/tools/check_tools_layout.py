@@ -32,7 +32,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 MARK_WRAPPER = "AUTO-GENERATED WRAPPER"
 MARK_REPO_ONLY = "REPO-ONLY TOOL"
@@ -185,22 +185,8 @@ def main() -> int:
         f"repo_only={report['summary']['repo_only']} unknown={report['summary']['unknown']}"
     )
 
-    if wrapper_warnings:
-        print(f"[WARN] wrapper_sanity_warnings={len(wrapper_warnings)} (heuristic; marker-first contract)")
-        for w in wrapper_warnings[:10]:
-            print(f"  - {w['file']}: {w['detail']}")
-        if len(wrapper_warnings) > 10:
-            print("  - ...")
-
-    if issues:
-        print(f"[ISSUES] count={len(issues)}")
-        for it in issues[:50]:
-            if it.get("type") == "name_conflict_tools_vs_src":
-                print(f"  - {it['file']}  <->  {it['src_peer']}  kind={it['kind']}")
-            else:
-                print(f"  - {it['file']}: {it.get('detail', '')}")
-        if len(issues) > 50:
-            print("  - ...")
+    # v2 report items
+    tool_name = "check_tools_layout"
 
     status = "PASS"
     exit_code = 0
@@ -212,13 +198,82 @@ def main() -> int:
             status = "WARN"
             exit_code = 0
 
-    if args.out:
-        out_path = (repo / args.out).resolve()
-        ensure_dir(out_path.parent)
-        write_json_report(out_path, report)
-        print(f"[check_tools_layout] report={out_path}")
+    items: List[Dict[str, Any]] = []
 
-    print(f"\nSTATUS: {status}")
+    # summary item
+    items.append(
+        {
+            "tool": tool_name,
+            "title": "tools_layout_summary",
+            "status_label": status,
+            "severity_level": 0 if status == "PASS" else (3 if status == "FAIL" else 2),
+            "message": f"total={len(tools_py)} wrappers={len(wrappers)} repo_only={len(repo_only)} unknown={len(unknown)} wrapper_warnings={len(wrapper_warnings)} issues={len(issues)}",
+            "detail": {
+                "wrappers": wrappers,
+                "repo_only": repo_only,
+                "unknown": unknown,
+            },
+        }
+    )
+
+    for w in wrapper_warnings:
+        items.append(
+            {
+                "tool": tool_name,
+                "title": "wrapper_sanity_warning",
+                "status_label": "WARN",
+                "severity_level": 2,
+                "message": str(w.get("detail") or "wrapper sanity warning"),
+                "loc": f"{w.get('file')}:1:1" if w.get("file") else None,
+                "detail": w,
+            }
+        )
+
+    for it in issues:
+        items.append(
+            {
+                "tool": tool_name,
+                "title": str(it.get("type") or "layout_issue"),
+                "status_label": "FAIL" if args.mode == "fail" else "WARN",
+                "severity_level": 3 if args.mode == "fail" else 2,
+                "message": str(it.get("detail") or "tools layout issue"),
+                "loc": f"{it.get('file')}:1:1" if it.get("file") else None,
+                "detail": it,
+            }
+        )
+
+    report = {
+        "schema_version": 2,
+        "generated_at": now_iso(),
+        "tool": tool_name,
+        "root": repo.as_posix(),
+        "summary": {},
+        "items": items,
+        "data": {
+            "mode": args.mode,
+            "recursive": bool(args.recursive),
+            "counts": {
+                "total": len(tools_py),
+                "wrappers": len(wrappers),
+                "repo_only": len(repo_only),
+                "unknown": len(unknown),
+                "wrapper_warnings": len(wrapper_warnings),
+                "issues": len(issues),
+            },
+        },
+    }
+
+    out_rel = args.out or "data_processed/build_reports/check_tools_layout_report.json"
+    out_path = (repo / out_rel).resolve()
+
+    write_report_bundle(
+        report=report,
+        report_json=out_path,
+        repo_root=repo,
+        console_title=tool_name,
+        emit_console=True,
+    )
+
     return exit_code
 
 

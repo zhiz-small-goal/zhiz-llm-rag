@@ -23,7 +23,7 @@ import argparse
 from pathlib import Path
 from typing import Any, Dict
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
 def _bool(s: str) -> bool:
@@ -113,18 +113,36 @@ def main() -> int:
         "type_breakdown": type_breakdown,
     }
 
-    write_json_report(out_path, report)
+    report_v2 = {
+        "schema_version": 2,
+        "generated_at": report.get("generated_at") or report.get("timestamp") or "",
+        "tool": "plan_chunks_from_units",
+        "root": str(root.as_posix()),
+        "summary": {},
+        "items": [
+            {
+                "tool": "plan_chunks_from_units",
+                "title": "chunk_plan",
+                "status_label": "PASS",
+                "severity_level": 0,
+                "message": (
+                    f"units_read={units_read} units_indexed={units_indexed} units_skipped={units_skipped} "
+                    f"planned_chunks={planned_chunks} include_media_stub={include_media_stub}"
+                ),
+                "detail": report,
+            }
+        ],
+        "data": report,
+    }
 
-    print("=== CHUNK PLAN ===")
-    print(f"units_read={units_read}")
-    print(f"units_indexed={units_indexed}")
-    print(f"units_skipped={units_skipped}")
-    print(f"planned_chunks={planned_chunks}")
-    print(f"include_media_stub={include_media_stub}")
-    print(
-        f"chunk_conf=chunk_chars:{args.chunk_chars} overlap_chars:{args.overlap_chars} min_chunk_chars:{args.min_chunk_chars}"
+    write_report_bundle(
+        report=report_v2,
+        report_json=out_path,
+        repo_root=root,
+        console_title="plan_chunks_from_units",
+        emit_console=True,
     )
-    print(f"out={out_path}")
+
     return 0
 
 

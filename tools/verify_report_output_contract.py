@@ -3,8 +3,8 @@
 """AUTO-GENERATED WRAPPER
 
 Generated-By: tools/gen_tools_wrappers.py
-Target-Module: mhy_ai_rag_data.tools.view_report
-SSOT: src/mhy_ai_rag_data/tools/view_report.py
+Target-Module: mhy_ai_rag_data.tools.verify_report_output_contract
+SSOT: src/mhy_ai_rag_data/tools/verify_report_output_contract.py
 
 兼容入口：允许运行 `python tools/<name>.py ...`，但真实实现固定在 src（SSOT）。
 不要手工修改本文件；请运行：python tools/gen_tools_wrappers.py --write
@@ -30,7 +30,7 @@ def _ensure_src_on_path() -> None:
 
 def main() -> int:
     _ensure_src_on_path()
-    runpy.run_module("mhy_ai_rag_data.tools.view_report", run_name="__main__")
+    runpy.run_module("mhy_ai_rag_data.tools.verify_report_output_contract", run_name="__main__")
     return 0
 
 

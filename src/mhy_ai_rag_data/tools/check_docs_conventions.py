@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
 def now_iso() -> str:
@@ -291,9 +291,34 @@ def main() -> int:
             "reason": "target dirs not found",
             "files": [],
         }
-        write_json_report(out_path, missing_report)
-        print(f"[docs_check] FAIL: target dirs not found: {target_dirs}  out={out_path}")
-        return 2
+    # v2 report bundle (missing dirs)
+    report_v2 = {
+        "schema_version": 2,
+        "generated_at": now_iso(),
+        "tool": "check_docs_conventions",
+        "root": root.as_posix(),
+        "summary": {},
+        "items": [
+            {
+                "tool": "check_docs_conventions",
+                "title": "target_dirs_not_found",
+                "status_label": "FAIL",
+                "severity_level": 3,
+                "message": f"target dirs not found: {target_dirs}",
+                "detail": missing_report,
+            }
+        ],
+        "data": missing_report,
+    }
+
+    write_report_bundle(
+        report=report_v2,
+        report_json=out_path,
+        repo_root=root,
+        console_title="check_docs_conventions",
+        emit_console=True,
+    )
+    return 2
 
     files = iter_md_files(root, target_dirs, glob_arg, ignore_arg)
     results = [check_one(p, fix=fix) for p in files]
@@ -311,9 +336,74 @@ def main() -> int:
         "counts": {"files": len(results), "bad": len(bad)},
         "files": results,
     }
-    write_json_report(out_path, report)
+    # v2 report bundle
+    items = []
+    for r in results:
+        rel_path = str(r.get("file") or "")
+        # keep report text stable: use repo-relative path when possible
+        try:
+            rel_disp = Path(rel_path).resolve().relative_to(root).as_posix()
+        except Exception:
+            rel_disp = Path(rel_path).as_posix()
 
-    print(f"[docs_check] {report['overall']}  files={len(results)} bad={len(bad)}  out={out_path}")
+        if r.get("ok"):
+            if r.get("fixed_blank_lines"):
+                items.append(
+                    {
+                        "tool": "check_docs_conventions",
+                        "title": "auto_fix_applied",
+                        "status_label": "INFO",
+                        "severity_level": 1,
+                        "message": f"fixed blank lines after title: {rel_disp}",
+                        "loc": f"{rel_disp}:1:1",
+                        "detail": r,
+                    }
+                )
+            continue
+
+        issues = r.get("issues") or []
+        msg = "\n".join(str(x) for x in issues) if issues else "docs convention violation"
+        items.append(
+            {
+                "tool": "check_docs_conventions",
+                "title": "docs_convention_violation",
+                "status_label": "FAIL",
+                "severity_level": 3,
+                "message": msg,
+                "loc": f"{rel_disp}:1:1",
+                "detail": r,
+            }
+        )
+
+    if not items:
+        items = [
+            {
+                "tool": "check_docs_conventions",
+                "title": "docs_conventions_ok",
+                "status_label": "PASS",
+                "severity_level": 0,
+                "message": f"checked {len(results)} markdown files",
+            }
+        ]
+
+    report_v2 = {
+        "schema_version": 2,
+        "generated_at": now_iso(),
+        "tool": "check_docs_conventions",
+        "root": root.as_posix(),
+        "summary": {},
+        "items": items,
+        "data": report,
+    }
+
+    write_report_bundle(
+        report=report_v2,
+        report_json=out_path,
+        repo_root=root,
+        console_title="check_docs_conventions",
+        emit_console=True,
+    )
+
     return 0 if not bad else 2
 
 

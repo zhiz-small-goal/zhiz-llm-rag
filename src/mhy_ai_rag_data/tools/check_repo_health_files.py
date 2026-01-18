@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from mhy_ai_rag_data.project_paths import find_project_root
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
 DEFAULT_PLACEHOLDERS = [
@@ -205,15 +205,101 @@ def main() -> int:
         placeholders.extend([str(x) for x in args.placeholder if str(x).strip()])
 
     report = build_report(repo, args.mode, placeholders)
-    print_summary(report)
 
-    if args.out:
-        out_path = resolve_out_path(repo, args.out)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        write_json_report(out_path, report)
-        print(f"report_written={out_path}")
+    # v2 items
+    items: list[dict[str, Any]] = []
 
-    return result_to_rc(report["summary"]["result"])
+    # required missing -> FAIL
+    for name in report.get("required_missing", []) or []:
+        items.append(
+            {
+                "tool": "check_repo_health_files",
+                "title": "required_file_missing",
+                "status_label": "FAIL",
+                "severity_level": 3,
+                "message": f"missing required file: {name}",
+                "loc": f"{name}:1:1",
+            }
+        )
+
+    # optional missing -> WARN
+    for name in report.get("optional_missing", []) or []:
+        items.append(
+            {
+                "tool": "check_repo_health_files",
+                "title": "optional_file_missing",
+                "status_label": "WARN",
+                "severity_level": 2,
+                "message": f"missing optional file: {name}",
+                "loc": f"{name}:1:1",
+            }
+        )
+
+    # placeholders -> WARN/FAIL depending on mode
+    placeholders_disallowed = bool(report.get("placeholders_disallowed"))
+    for it in report.get("placeholders", []) or []:
+        fn = str(it.get("file") or "")
+        hits = it.get("hits", []) or []
+        lab = "FAIL" if placeholders_disallowed else "WARN"
+        sev = 3 if placeholders_disallowed else 2
+        items.append(
+            {
+                "tool": "check_repo_health_files",
+                "title": "placeholder_detected",
+                "status_label": lab,
+                "severity_level": sev,
+                "message": "placeholders detected: " + ", ".join(str(x) for x in hits),
+                "loc": f"{fn}:1:1" if fn else None,
+                "detail": {"file": fn, "hits": hits},
+            }
+        )
+
+    # internal errors -> ERROR
+    for e in report.get("errors", []) or []:
+        items.append(
+            {
+                "tool": "check_repo_health_files",
+                "title": "error",
+                "status_label": "ERROR",
+                "severity_level": 4,
+                "message": str(e),
+            }
+        )
+
+    if not items:
+        items = [
+            {
+                "tool": "check_repo_health_files",
+                "title": "repo_health_ok",
+                "status_label": "PASS",
+                "severity_level": 0,
+                "message": "repo health checks passed",
+            }
+        ]
+
+    report_v2: dict[str, Any] = {
+        "schema_version": 2,
+        "generated_at": now_iso(),
+        "tool": "check_repo_health_files",
+        "root": repo.as_posix(),
+        "summary": {},
+        "items": items,
+        "data": report,
+    }
+
+    out_rel = args.out or "data_processed/build_reports/check_repo_health_files_report.json"
+    out_path = resolve_out_path(repo, out_rel)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    normalized = write_report_bundle(
+        report=report_v2,
+        report_json=out_path,
+        repo_root=repo,
+        console_title="check_repo_health_files",
+        emit_console=True,
+    )
+
+    return int(normalized.get("summary", {}).get("overall_rc") or 0)
 
 
 def _entry() -> int:

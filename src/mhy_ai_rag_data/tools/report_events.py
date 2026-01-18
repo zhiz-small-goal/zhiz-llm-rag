@@ -23,6 +23,23 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, Optional
 
 
+def _normalize_item_strings(x: Any) -> Any:
+    """Normalize string fields inside an item for events.jsonl.
+
+    Contract wants '/' separators in report paths. Some tools may embed Windows
+    paths inside free-text fields (message/detail/traceback). For durability and
+    replay consistency, normalize backslashes here at emit time.
+    """
+
+    if isinstance(x, str):
+        return x.replace("\\", "/")
+    if isinstance(x, list):
+        return [_normalize_item_strings(v) for v in x]
+    if isinstance(x, dict):
+        return {k: _normalize_item_strings(v) for k, v in x.items()}
+    return x
+
+
 def _now_ms() -> int:
     return int(time.time() * 1000)
 
@@ -60,6 +77,9 @@ class ItemEventsWriter:
     def emit_item(self, item: Dict[str, Any]) -> None:
         if self._f is None:
             raise RuntimeError("ItemEventsWriter is not open")
+
+        # Normalize item strings early (Windows path separators etc.).
+        item = _normalize_item_strings(item)
 
         # 可扩展字段：允许上层附带 ts_ms（便于对账/恢复），但不强制。
         if "ts_ms" not in item:

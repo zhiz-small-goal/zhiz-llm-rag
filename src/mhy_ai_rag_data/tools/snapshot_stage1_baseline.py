@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 SMALL_FILE_SHA256_LIMIT = 50 * 1024 * 1024  # 50MB
 
@@ -106,9 +107,40 @@ def main() -> int:
 
     missing = [str(p) for p in [req_units, req_plan] if not p.exists()]
     if missing:
-        print("[snapshot] FAIL: missing required artifacts:")
+        report_dir = root / "data_processed" / "build_reports"
+        ensure_dir(report_dir)
+        report_json = report_dir / "stage1_baseline_snapshot_report.json"
+
+        items = []
         for m in missing:
-            print(" -", m)
+            items.append(
+                {
+                    "tool": "snapshot_stage1_baseline",
+                    "title": "missing_artifact",
+                    "status_label": "FAIL",
+                    "severity_level": 3,
+                    "message": str(m),
+                    "loc": f"{Path(m).as_posix()}:1:1",
+                }
+            )
+
+        rep = {
+            "schema_version": 2,
+            "generated_at": now_iso(),
+            "tool": "snapshot_stage1_baseline",
+            "root": root.as_posix(),
+            "summary": {},
+            "items": items,
+            "data": {"missing_required_artifacts": missing},
+        }
+
+        write_report_bundle(
+            report=rep,
+            report_json=report_json,
+            repo_root=root,
+            console_title="snapshot_stage1_baseline",
+            emit_console=True,
+        )
         return 2
 
     report_dir = root / "data_processed" / "build_reports"
@@ -151,9 +183,39 @@ def main() -> int:
     rc3, out3 = run_cmd([sys.executable, "-m", "pip", "freeze"])
     snap["pip_freeze"] = out3 if rc3 == 0 else f"ERROR: {out3}"
 
+    # 1) data snapshot (stable schema for later comparisons)
     write_json_report(out_path, snap)
 
-    print(f"[snapshot] OK  out={out_path}")
+    # 2) human report bundle (v2 contract)
+    report_json = out_path.parent / "stage1_baseline_snapshot_report.json"
+    items = [
+        {
+            "tool": "snapshot_stage1_baseline",
+            "title": "stage1_baseline_snapshot_written",
+            "status_label": "PASS",
+            "severity_level": 0,
+            "message": f"snapshot_json={out_path.as_posix()}",
+        }
+    ]
+
+    rep = {
+        "schema_version": 2,
+        "generated_at": now_iso(),
+        "tool": "snapshot_stage1_baseline",
+        "root": root.as_posix(),
+        "summary": {},
+        "items": items,
+        "data": snap,
+    }
+
+    write_report_bundle(
+        report=rep,
+        report_json=report_json,
+        repo_root=root,
+        console_title="snapshot_stage1_baseline",
+        emit_console=True,
+    )
+
     return 0
 
 

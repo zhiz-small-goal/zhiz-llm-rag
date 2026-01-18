@@ -28,9 +28,22 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Sequence
+from typing import Any, Dict, List, Sequence, Tuple, TypedDict
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.runtime_feedback import Progress
+
+
+class StepInfo(TypedDict):
+    name: str
+    cmd: List[str]
+
+
+class StepResult(TypedDict):
+    name: str
+    returncode: int
+    seconds: float
+    cmd: List[str]
 
 
 def _run(cmd: Sequence[str], cwd: Path) -> Tuple[int, float]:
@@ -63,6 +76,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--profile", required=True, help="Profile JSON path, e.g. build_profile_schemeB.json")
     ap.add_argument("--smoke", action="store_true", help="Run retriever_chroma.py and check_rag_pipeline.py after PASS")
+    ap.add_argument("--progress", default="auto", choices=["auto", "on", "off"], help="runtime feedback to stderr")
     ap.add_argument("--max-samples", type=int, default=20, help="validate_rag_units.py --max-samples")
     args = ap.parse_args()
 
@@ -109,7 +123,7 @@ def main() -> int:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = out_dir / f"time_report_{stamp}.json"
 
-    steps = []
+    steps: List[StepInfo] = []
     started_at = datetime.now().isoformat(timespec="seconds")
 
     def add_step(name: str, cmd: List[str]) -> None:
@@ -203,15 +217,23 @@ def main() -> int:
         add_step("smoke_retriever", [sys.executable, "retriever_chroma.py", "--q", "存档导入与导出怎么做", "--k", "5"])
         add_step("smoke_pipeline", [sys.executable, "check_rag_pipeline.py", "--q", "如何自定义资产", "--k", "5"])
 
-    results = []
+    results: List[StepResult] = []
     total_t0 = time.perf_counter()
-    for s in steps:
-        name = s["name"]
-        cmd = s["cmd"]
-        rc, dt = _run(cmd, cwd)
-        results.append({"name": name, "returncode": rc, "seconds": dt, "cmd": cmd})
-        if rc != 0:
-            break
+
+    prog = Progress(total=len(steps), mode=args.progress).start()
+    try:
+        for i, s in enumerate(steps, start=1):
+            name = s["name"]
+            cmd = s["cmd"]
+            prog.update(current=i - 1, stage=name)
+            rc, dt = _run(cmd, cwd)
+            results.append({"name": name, "returncode": rc, "seconds": dt, "cmd": cmd})
+            prog.update(current=i, stage=name)
+            if rc != 0:
+                break
+    finally:
+        prog.close()
+
     total_dt = time.perf_counter() - total_t0
 
     finished_at = datetime.now().isoformat(timespec="seconds")
@@ -239,15 +261,41 @@ def main() -> int:
         "status": "PASS" if ok else "FAIL",
     }
 
-    write_json_report(report_path, report)
-
-    # print summary
-    print("\n=== TIME SUMMARY ===")
+    # v2 bundle
+    items: list[dict[str, Any]] = []
     for r in results:
-        print(f"{r['name']:<26}  {r['seconds']:>8.2f}s  rc={r['returncode']}")
-    print(f"{'TOTAL':<26}  {total_dt:>8.2f}s")
-    print(f"REPORT: {report_path}")
-    print(f"STATUS: {report['status']}")
+        rc = r["returncode"]
+        status_label = "PASS" if rc == 0 else "FAIL"
+        severity_level = 0 if rc == 0 else 3
+        items.append(
+            {
+                "tool": "run_profile_with_timing",
+                "title": r.get("name") or "step",
+                "status_label": status_label,
+                "severity_level": severity_level,
+                "message": f"seconds={r['seconds']:.2f} rc={rc}",
+                "detail": r,
+            }
+        )
+
+    report_v2 = {
+        "schema_version": 2,
+        "generated_at": finished_at,
+        "tool": "run_profile_with_timing",
+        "root": cwd.as_posix(),
+        "summary": {},
+        "items": items,
+        "data": report,
+    }
+
+    write_report_bundle(
+        report=report_v2,
+        report_json=report_path,
+        repo_root=cwd,
+        console_title="run_profile_with_timing",
+        emit_console=True,
+    )
+
     return 0 if ok else 2
 
 

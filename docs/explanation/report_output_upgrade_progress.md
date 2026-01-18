@@ -72,6 +72,24 @@
 - 新增文件：
   - `tools/view_report.py`（wrapper；SSOT 指向 `src/mhy_ai_rag_data/tools/view_report.py`）
 
+### 1.8 验收脚本：verify_report_output_contract ✅
+- 目标：把“全局一致输出契约”验收从人工检查变为可执行脚本（适合 CI/门禁）。
+- 覆盖：
+  - 控制台：detail 轻->重、summary 在末尾、整体以 `\n\n` 结尾、空行上限。
+  - Markdown：summary 在顶部、detail 重->轻、`[loc](loc_uri)` 可点击。
+  - 路径：所有路径统一 `/`；`loc_uri` 为 `vscode://file/<abs>:line:col`。
+- 新增文件：
+  - `src/mhy_ai_rag_data/tools/verify_report_output_contract.py`（实现）
+  - `tools/verify_report_output_contract.py`（wrapper）
+
+### 1.9 wrappers 管理清单扩展 ✅
+- 目标：把新引入的 wrapper（view_report / verify_report_output_contract）纳入受管范围，避免入口漂移，并允许一键刷新模板。
+- 变更文件：
+  - `tools/wrapper_gen_config.json`
+    - `managed_wrappers` 增加：`view_report.py`、`verify_report_output_contract.py`。
+  - `tools/view_report.py`、`tools/verify_report_output_contract.py`
+    - 通过 `python tools/gen_tools_wrappers.py --write --bootstrap-missing` 生成 canonical 模板。
+
 
 
 ## 2. 待完成（后续迁移主线）
@@ -97,8 +115,11 @@
 - [ ] 输出到 `stderr`，不得进入 items，也不得写入 events。
 - [ ] 刷新节流（>=200ms），单行重绘，结束清理。
 
-### 2.4 验收用例与验证命令 ⬜
-- [ ] 新增或更新 `verify_*`：覆盖排序、末尾空行、md 可点击、路径分隔符、强制中断可恢复。
+### 2.4 验收用例与验证命令 ✅
+- [x] 新增 `verify_report_output_contract`：覆盖排序、末尾空行、md 可点击、路径分隔符（中断可恢复由 events + view_report 联合验证）。
+  - 示例：
+    - `python tools/verify_report_output_contract.py --root . --report data_processed/build_reports/check_all_report.json`
+    - `python tools/verify_report_output_contract.py --root . --events data_processed/build_reports/eval_retrieval_report.events.jsonl --tool-default run_eval_retrieval`
 
 ## 3. 下一步从哪里继续（建议推进顺序）
 1) 选一个“高耗时 + 当前输出最不符合”的脚本做样板（优先 `run_eval_rag.py`）。
@@ -117,8 +138,13 @@
   - `src/mhy_ai_rag_data/tools/validate_eval_cases.py`
   - `src/mhy_ai_rag_data/tools/check_all.py`
   - `src/mhy_ai_rag_data/tools/view_report.py`
+  - `tools/wrapper_gen_config.json`
+  - `tools/view_report.py`（wrapper 模板刷新为 canonical）
+  - `tools/verify_report_output_contract.py`（wrapper 模板刷新为 canonical）
 - 新增：
   - `src/mhy_ai_rag_data/tools/report_render.py`
   - `src/mhy_ai_rag_data/tools/report_bundle.py`
   - `docs/explanation/report_output_upgrade_progress.md`
   - `tools/view_report.py`
+  - `src/mhy_ai_rag_data/tools/verify_report_output_contract.py`
+  - `tools/verify_report_output_contract.py`

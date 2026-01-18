@@ -13,6 +13,8 @@
   ],
   "exclude_self": true,
   "managed_wrappers": [
-    "check_tools_layout.py"
+    "check_tools_layout.py",
+    "view_report.py",
+    "verify_report_output_contract.py"
   ]
 }

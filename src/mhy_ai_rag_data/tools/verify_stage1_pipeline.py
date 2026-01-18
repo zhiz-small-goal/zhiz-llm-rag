@@ -25,7 +25,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 # 兼容两种运行方式：python -m tools.verify_stage1_pipeline 以及 python tools/verify_stage1_pipeline.py
 try:
@@ -267,12 +267,41 @@ def main() -> int:
     overall_ok = bool(ok_files and ok_chroma and ok_llm)
     report["overall"] = "PASS" if overall_ok else "FAIL"
 
-    write_json_report(out_path, report)
-
-    # human-readable stdout
-    print(f"[stage1] overall={report['overall']}  report={out_path}")
+    # v2 report
+    items = []
     for name, chk in report["checks"].items():
-        print(f"- {name}: {'PASS' if chk['ok'] else 'FAIL'}")
+        ok = bool(chk.get("ok"))
+        status_label = "PASS" if ok else "FAIL"
+        severity_level = 0 if ok else 3
+        items.append(
+            {
+                "tool": "verify_stage1_pipeline",
+                "title": name,
+                "status_label": status_label,
+                "severity_level": severity_level,
+                "message": f"{name}={'PASS' if ok else 'FAIL'}",
+                "detail": chk.get("details"),
+            }
+        )
+
+    report_v2 = {
+        "schema_version": 2,
+        "generated_at": _now_iso(),
+        "tool": "verify_stage1_pipeline",
+        "root": root.as_posix(),
+        "summary": {},
+        "items": items,
+        "data": report,
+    }
+
+    write_report_bundle(
+        report=report_v2,
+        report_json=out_path,
+        repo_root=root,
+        console_title="verify_stage1_pipeline",
+        emit_console=True,
+    )
+
     return 0 if overall_ok else 2
 
 

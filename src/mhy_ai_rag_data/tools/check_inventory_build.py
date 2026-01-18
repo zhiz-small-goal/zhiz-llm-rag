@@ -35,6 +35,7 @@ from typing import Any, Dict, Iterable, List
 
 from mhy_ai_rag_data.project_paths import find_project_root
 from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
 SNAPSHOT_SCHEMA = "inventory_snapshot_v1"
@@ -367,8 +368,52 @@ def main() -> int:
         else:
             diff_out = inv_path.parent / f"inventory_diff_{int(time.time())}.json"
 
-        _write_json(diff_out, report)
-        print(f"[check_inventory] compare={'FAIL' if has_diff else 'PASS'} out={diff_out}")
+        # build v2 report bundle (diff_out is the human-facing report sink)
+        items = []
+        if has_diff:
+            items.append(
+                {
+                    "tool": "check_inventory_build",
+                    "title": "inventory_drift_detected",
+                    "status_label": "FAIL",
+                    "severity_level": 3,
+                    "message": (
+                        f"added={len(diffs['added'])} removed={len(diffs['removed'])} "
+                        f"changed_content={len(diffs['changed_content'])} changed_meta={len(diffs['changed_meta'])} "
+                        f"doc_id_changed={len(diffs['doc_id_changed'])}"
+                    ),
+                    "detail": report,
+                }
+            )
+        else:
+            items.append(
+                {
+                    "tool": "check_inventory_build",
+                    "title": "inventory_ok",
+                    "status_label": "PASS",
+                    "severity_level": 0,
+                    "message": f"no diff vs snapshot (rows={len(rows)})",
+                    "detail": report,
+                }
+            )
+
+        report_v2 = {
+            "schema_version": 2,
+            "generated_at": now_iso(),
+            "tool": "check_inventory_build",
+            "root": root.as_posix(),
+            "summary": {},
+            "items": items,
+            "data": report,
+        }
+
+        write_report_bundle(
+            report=report_v2,
+            report_json=diff_out,
+            repo_root=root,
+            console_title="check_inventory_build",
+            emit_console=True,
+        )
 
         if has_diff and args.strict:
             return 2

@@ -27,7 +27,7 @@ try:
 except Exception:  # noqa: BLE001
     from llm_http_client import resolve_trust_env, get_session, resolve_model_id  # type: ignore
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
 
 
@@ -218,8 +218,14 @@ def main() -> int:
     from pathlib import Path
 
     out_path = Path(args.json_out) if args.json_out else Path(default_name)
-    write_json_report(out_path, final_report)
-    print(f"\nWrote report: {out_path}")
+
+    write_report_bundle(
+        report=final_report,
+        report_json=out_path,
+        repo_root=None,
+        console_title="probe_llm_server",
+        emit_console=(not bool(args.json_stdout)),
+    )
 
     return summary.overall_rc
 

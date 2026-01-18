@@ -33,7 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
 KEY_PACKAGES = [
@@ -127,8 +127,65 @@ def main() -> int:
     except Exception as e:
         report["torch"] = {"error": str(e)}
 
-    write_json_report(out_path, report)
-    print(f"Wrote: {out_path}")
+    # Build v2 report (items + raw data)
+    items = []
+
+    # base item
+    items.append(
+        {
+            "tool": "capture_rag_env",
+            "title": "environment_captured",
+            "status_label": "PASS",
+            "severity_level": 0,
+            "message": f"python={sys.version.split()[0]} platform={platform.system()}",
+            "detail": {
+                "out": str(out_path.as_posix()),
+                "VIRTUAL_ENV": report.get("env", {}).get("VIRTUAL_ENV"),
+            },
+        }
+    )
+
+    # warnings/errors
+    if report.get("pip_freeze_error"):
+        items.append(
+            {
+                "tool": "capture_rag_env",
+                "title": "pip_freeze_failed",
+                "status_label": "WARN",
+                "severity_level": 2,
+                "message": str(report.get("pip_freeze_error") or ""),
+            }
+        )
+
+    torch_info = report.get("torch")
+    if isinstance(torch_info, dict) and torch_info.get("error"):
+        items.append(
+            {
+                "tool": "capture_rag_env",
+                "title": "torch_probe_failed",
+                "status_label": "WARN",
+                "severity_level": 2,
+                "message": str(torch_info.get("error") or ""),
+            }
+        )
+
+    bundle_report = {
+        "schema_version": 2,
+        "generated_at": report.get("generated_at"),
+        "tool": "capture_rag_env",
+        "root": str(Path(".").resolve().as_posix()),
+        "summary": {},
+        "items": items,
+        "data": report,
+    }
+
+    write_report_bundle(
+        report=bundle_report,
+        report_json=out_path,
+        repo_root=Path(".").resolve(),
+        console_title="capture_rag_env",
+        emit_console=True,
+    )
     return 0
 
 

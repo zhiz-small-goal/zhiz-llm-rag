@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Any
 
-from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
 DEFAULT_PATTERNS = [
@@ -103,31 +103,66 @@ def main() -> int:
     files = iter_text_files(root)
     results: Dict[str, Any] = {
         "timestamp": now_iso(),
-        "root": str(root),
+        "root": str(root.as_posix()),
         "patterns": pats,
         "matches": [],
         "counts": {"files_scanned": len(files), "files_matched": 0, "hit_lines": 0},
     }
 
+    items: List[Dict[str, Any]] = []
+
     for f in files:
         hits = scan_file(f, regexes)
         if hits:
-            rel = str(f.relative_to(root))
+            rel = f.relative_to(root).as_posix()
             results["matches"].append({"file": rel, "hits": hits})
             results["counts"]["files_matched"] += 1
             results["counts"]["hit_lines"] += len(hits)
 
-    write_json_report(out_path, results)
+            for h in hits:
+                line_no = int(h.get("line") or 1)
+                items.append(
+                    {
+                        "tool": "audit_baseline_tools",
+                        "title": "pattern_hit",
+                        "status_label": "INFO",
+                        "severity_level": 1,
+                        "message": f"pattern={h.get('pattern', '')}\n{h.get('text', '')}",
+                        "loc": f"{rel}:{line_no}:1",
+                        "detail": h,
+                    }
+                )
 
-    # stdout (human)
-    print(
-        f"[audit] scanned={results['counts']['files_scanned']}  matched={results['counts']['files_matched']}  hit_lines={results['counts']['hit_lines']}"
+    if not items:
+        items.append(
+            {
+                "tool": "audit_baseline_tools",
+                "title": "no_hits",
+                "status_label": "PASS",
+                "severity_level": 0,
+                "message": "no baseline-related patterns found",
+            }
+        )
+
+    report_v2: Dict[str, Any] = {
+        "schema_version": 2,
+        "generated_at": now_iso(),
+        "tool": "audit_baseline_tools",
+        "root": str(root.as_posix()),
+        "summary": {},
+        "items": items,
+        "data": results,
+    }
+
+    write_report_bundle(
+        report=report_v2,
+        report_json=out_path,
+        report_md=None,
+        repo_root=root,
+        console_title="audit_baseline_tools",
+        emit_console=True,
     )
-    for m in results["matches"]:
-        file = m["file"]
-        for h in m["hits"]:
-            print(f"{file}:{h['line']}: {h['text']}")
-    print(f"[audit] report={out_path}")
+
     return 0
 
 
