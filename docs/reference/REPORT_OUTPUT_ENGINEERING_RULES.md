@@ -10,8 +10,6 @@ scope: "统一输出工程规则（schema_version=2）：报告/状态元数据/
 # 报告输出契约（v2）与工程规则（SSOT）
 
 > 本文档是**输出契约的单一真源（SSOT）**：约束 `schema_version=2` 的报告落盘、控制台渲染、VS Code 可点击定位链接，以及长跑任务的进度与 `*.events.jsonl` 恢复链路。
->
-> 兼容性说明：`docs/reference/REPORT_OUTPUT_CONTRACT.md` 保留为兼容入口（指向本文），后续新增/修改规则以本文为准。
 
 ## 目录
 - [1. 背景与目标](#1-背景与目标)
