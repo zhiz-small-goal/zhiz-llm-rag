@@ -70,7 +70,7 @@ DEFAULT_GLOBS = [
     "**/venv_*/bin/python3",
     "**/.venv/bin/python",
     "**/.venv/bin/python3",
-    "**/.venv_*/Scripst/python.exe",
+    "**/.venv_*/Scripts/python.exe",
 ]
 
 
