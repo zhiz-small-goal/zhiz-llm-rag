@@ -25,15 +25,11 @@ tools/build_chroma_index_flagembedding.py
 
 from __future__ import annotations
 
+
 import argparse
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, cast
-
-# report v2 contract
-from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
-from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
 
 
 # Tool self-description for report-output-v2 gates (static-AST friendly)
@@ -46,6 +42,7 @@ REPORT_TOOL_META = {
     "supports_selftest": False,
     "entrypoint": "python tools/build_chroma_index_flagembedding.py",
 }
+
 
 # Chroma metadata values are scalars, but stubs also allow SparseVector; keep Any for compatibility.
 MetaValue = Any
@@ -252,7 +249,7 @@ def main() -> int:
         latest = None  # treat as fresh
 
     state_file = ist.state_file_for(state_root, args.collection, schema_hash)
-    prev_state = ist.load_index_state(state_file)
+    prev_state = ist.load_index_state(state_file, root=root)
     existing_count = 0
     try:
         existing_count = int(collection.count())
@@ -522,84 +519,73 @@ def main() -> int:
     # 10) write state (only on success)
     write_state = _safe_bool(args.write_state)
     if ok and write_state:
+        # NOTE: index_state 作为状态元数据，也纳入 schema_version=2 report output 契约（写入侧 SSOT 在 index_state.py）。
         tool_name = "index_state"
-        items: List[Dict[str, Any]] = []
 
-        items.append(
-            ensure_item_fields(
-                {
-                    "tool": tool_name,
-                    "key": "state_written",
-                    "title": "index_state written",
-                    "status_label": "PASS",
-                    "severity_level": 0,
-                    "message": f"wrote {state_file.as_posix()} (collection={args.collection} schema_hash={schema_hash})",
-                    "detail": {
-                        "state_file": state_file.as_posix(),
-                        "collection": str(args.collection),
-                        "schema_hash": schema_hash,
-                        "sync_mode": sync_mode,
-                        "docs_current": len(cur_docs),
-                        "docs_processed": docs_processed,
-                        "expected_chunks": expected_chunks,
-                        "collection_count": final_count,
-                        "build_seconds": round(float(dt), 3),
-                    },
+        raw_items: list[dict[str, Any]] = []
+        raw_items.append(
+            {
+                "tool": tool_name,
+                "key": "state_written",
+                "title": "index_state written",
+                "status_label": "PASS",
+                "severity_level": 0,
+                "message": f"wrote {state_file.as_posix()} (collection={args.collection} schema_hash={schema_hash})",
+                "detail": {
+                    "state_file": state_file.as_posix(),
+                    "collection": str(args.collection),
+                    "schema_hash": schema_hash,
+                    "sync_mode": sync_mode,
+                    "docs_current": len(cur_docs),
+                    "docs_processed": docs_processed,
+                    "expected_chunks": expected_chunks,
+                    "collection_count": final_count,
+                    "build_seconds": round(float(dt), 3),
                 },
-                tool_default=tool_name,
-            )
+            }
         )
 
         if final_count is None:
-            items.append(
-                ensure_item_fields(
-                    {
-                        "tool": tool_name,
-                        "key": "collection_count_unavailable",
-                        "title": "collection.count unavailable",
-                        "status_label": "WARN",
-                        "severity_level": 2,
-                        "message": "collection.count() unavailable (count is None)",
-                        "detail": {"db_path": db_path.as_posix(), "collection": str(args.collection)},
-                    },
-                    tool_default=tool_name,
-                )
+            raw_items.append(
+                {
+                    "tool": tool_name,
+                    "key": "collection_count_unavailable",
+                    "title": "collection.count unavailable",
+                    "status_label": "WARN",
+                    "severity_level": 2,
+                    "message": "collection.count() unavailable (count is None)",
+                    "detail": {"db_path": db_path.as_posix(), "collection": str(args.collection)},
+                }
             )
 
-        state_obj: Dict[str, Any] = {
-            "schema_version": 2,
-            "generated_at": iso_now(),
-            "tool": tool_name,
-            "root": str(root.resolve().as_posix()),
-            "summary": compute_summary(items).to_dict(),
-            "items": items,
-            # state payload (consumer may read directly)
-            "schema_hash": schema_hash,
-            "db": db_path.as_posix(),
-            "collection": str(args.collection),
-            "embed_model": str(args.embed_model),
-            "chunk_conf": chunk_conf_dict,
-            "include_media_stub": include_media_stub,
-            "updated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
-            "docs": new_docs_state,
-            "last_build": {
-                "sync_mode": sync_mode,
-                "units_total": total_units,
-                "units_indexed": indexed_units,
-                "units_skipped": skipped_units,
-                "docs_current": len(cur_docs),
-                "docs_processed": docs_processed,
-                "docs_deleted": docs_deleted,
-                "chunks_deleted": chunks_deleted,
-                "chunks_upserted": chunks_upserted,
-                "expected_chunks": expected_chunks,
-                "collection_count": final_count,
-                "build_seconds": round(float(dt), 3),
-            },
+        last_build = {
+            "sync_mode": sync_mode,
+            "units_total": total_units,
+            "units_indexed": indexed_units,
+            "units_skipped": skipped_units,
+            "docs_current": len(cur_docs),
+            "docs_processed": docs_processed,
+            "docs_deleted": docs_deleted,
+            "chunks_deleted": chunks_deleted,
+            "chunks_upserted": chunks_upserted,
+            "expected_chunks": expected_chunks,
+            "collection_count": final_count,
+            "build_seconds": round(float(dt), 3),
         }
-        state_obj = cast(Dict[str, Any], prepare_report_for_file_output(state_obj))
-        ist.save_json_atomic(state_file, state_obj)
-        ist.write_latest_pointer(state_root, args.collection, schema_hash)
+
+        ist.write_index_state_report(
+            root=root,
+            state_root=state_root,
+            collection=str(args.collection),
+            schema_hash=schema_hash,
+            db=db_path,
+            embed_model=str(args.embed_model),
+            chunk_conf=chunk_conf_dict,
+            include_media_stub=include_media_stub,
+            docs=new_docs_state,
+            last_build=last_build,
+            items=raw_items,
+        )
 
     # 11) summary
     print("=== BUILD SUMMARY (FlagEmbedding) ===")
