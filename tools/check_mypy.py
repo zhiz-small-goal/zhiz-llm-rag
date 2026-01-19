@@ -25,7 +25,9 @@ Exit codes
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -47,12 +49,75 @@ def _map_rc(rc: int) -> int:
     return 3
 
 
+def _module_available(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except Exception:
+        return False
+
+
+_MYPY_LOC_RE = re.compile(r"^(?P<path>(?:[A-Za-z]:[/\\\\][^:]+|[^:]+)):(?P<line>\d+):(.*)$")
+
+
+def _normalize_loc_lines(text: str) -> str:
+    if not text:
+        return text
+    out: List[str] = []
+    for line in text.splitlines():
+        m = _MYPY_LOC_RE.match(line)
+        if not m:
+            out.append(line)
+            continue
+        path = m.group("path").replace("\\\\", "/")
+        rest = line[m.end("line") + 1 :]
+        line_no = m.group("line")
+        out.append(f"{path}:{line_no}:{rest}")
+    return "\n".join(out)
+
+
+def _tool_python_prefix(root: Path) -> List[str]:
+    """Return argv prefix to run `-m mypy ...`.
+
+    - If mypy is importable in current interpreter: use current interpreter.
+    - Else: delegate to tools/rag_python.py to locate a repo venv python.
+
+    This makes `python tools/check_mypy.py` work in a fresh cmd shell, as long as
+    a repo venv exists (or RAG_PYTHON is set).
+    """
+
+    if _module_available("mypy"):
+        return [sys.executable]
+
+    wrapper = root / "tools" / "rag_python.py"
+    if not wrapper.is_file():
+        return [sys.executable]
+
+    return [sys.executable, str(wrapper)]
+
+
 def _run(argv: List[str], cwd: Path) -> int:
     try:
-        proc = subprocess.run(argv, cwd=str(cwd), check=False)
+        proc = subprocess.run(
+            argv,
+            cwd=str(cwd),
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
     except Exception as e:
         print(f"[ERROR] failed to run: {argv}\n{e}", file=sys.stderr)
         return 3
+
+    if proc.stdout:
+        out = _normalize_loc_lines(proc.stdout)
+        print(out, end="" if out.endswith("\n") else "\n")
+    if proc.stderr:
+        err = _normalize_loc_lines(proc.stderr)
+        print(err, end="" if err.endswith("\n") else "\n", file=sys.stderr)
+
     return _map_rc(int(proc.returncode))
 
 
@@ -80,7 +145,8 @@ def main(argv: List[str] | None = None) -> int:
         print(f"[ERROR] config not found: {config_path}", file=sys.stderr)
         return 3
 
-    cmd = [sys.executable, "-m", "mypy", "--show-column-numbers", "--show-error-codes"]
+    py_prefix = _tool_python_prefix(root)
+    cmd = [*py_prefix, "-m", "mypy", "--show-column-numbers", "--show-error-codes"]
     cmd += ["--config-file", str(config_path)]
     if strict_mode:
         cmd.append("--strict")

@@ -25,6 +25,7 @@ Exit codes
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import re
 import subprocess
@@ -48,6 +49,13 @@ def _map_rc(rc: int) -> int:
     return 3
 
 
+def _module_available(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except Exception:
+        return False
+
+
 _LOC_RE = re.compile(r"^(?P<path>(?:[A-Za-z]:[/\\\\][^:]+|[^:]+)):(?P<line>\d+):(?P<col>\d+):(.*)$")
 
 
@@ -60,10 +68,34 @@ def _normalize_loc_lines(text: str) -> str:
         if not m:
             lines.append(line)
             continue
-        path = m.group("path").replace("\\", "/")
+        path = m.group("path").replace("\\\\", "/")
         rest = line[m.end("col") + 1 :]
-        lines.append(f"{path}:{m.group('line')}:{m.group('col')}:{rest}")
+        line_no = m.group("line")
+        col_no = m.group("col")
+        lines.append(f"{path}:{line_no}:{col_no}:{rest}")
     return "\n".join(lines)
+
+
+def _tool_python_prefix(root: Path) -> List[str]:
+    """Return argv prefix to run `-m ruff ...`.
+
+    - If ruff is importable in current interpreter: use current interpreter.
+    - Else: delegate to tools/rag_python.py to locate a repo venv python.
+
+    This makes `python tools/check_ruff.py` work in a fresh cmd shell, as long as
+    a repo venv exists (or RAG_PYTHON is set).
+    """
+
+    if _module_available("ruff"):
+        return [sys.executable]
+
+    wrapper = root / "tools" / "rag_python.py"
+    if not wrapper.is_file():
+        return [sys.executable]
+
+    # Run wrapper with the current interpreter (wrapper itself is stdlib-only).
+    # The wrapper will locate the target venv interpreter to run ruff.
+    return [sys.executable, str(wrapper)]
 
 
 def _run(argv: List[str], cwd: Path) -> int:
@@ -81,10 +113,14 @@ def _run(argv: List[str], cwd: Path) -> int:
     except Exception as e:
         print(f"[ERROR] failed to run: {argv}\n{e}", file=sys.stderr)
         return 3
+
     if proc.stdout:
-        print(_normalize_loc_lines(proc.stdout), end="" if proc.stdout.endswith("\n") else "\n")
+        out = _normalize_loc_lines(proc.stdout)
+        print(out, end="" if out.endswith("\n") else "\n")
     if proc.stderr:
-        print(_normalize_loc_lines(proc.stderr), end="" if proc.stderr.endswith("\n") else "\n", file=sys.stderr)
+        err = _normalize_loc_lines(proc.stderr)
+        print(err, end="" if err.endswith("\n") else "\n", file=sys.stderr)
+
     return _map_rc(int(proc.returncode))
 
 
@@ -110,7 +146,10 @@ def main(argv: List[str] | None = None) -> int:
         format_check = bool(args.format_check)
 
     targets = args.files or ["."]
-    base = [sys.executable, "-m", "ruff"]
+
+    py_prefix = _tool_python_prefix(root)
+    base = [*py_prefix, "-m", "ruff"]
+
     lint_cmd = base + ["check", *targets]
     if args.output_format:
         lint_cmd += ["--output-format", str(args.output_format)]
