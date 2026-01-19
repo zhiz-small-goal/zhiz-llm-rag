@@ -18,6 +18,7 @@ tmp_report.json
 .env.*
 !.env.example
 .claude/
+.phrase/
 
 # --- public-release hygiene (auto-added) ---
 data_raw/
@@ -38,3 +39,4 @@ chroma_db/
 *.bin
 # --- end public-release hygiene ---
 
+AGENTS.md
