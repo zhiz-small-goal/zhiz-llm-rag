@@ -20,6 +20,18 @@ from mhy_ai_rag_data.project_paths import find_project_root
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "check_repo_health_files",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/check_repo_health_files.py",
+}
+
+
 DEFAULT_PLACEHOLDERS = [
     "[INSERT CONTACT METHOD]",
     "INSERT CONTACT METHOD",

@@ -35,6 +35,18 @@ from typing import Any, Dict, List, Mapping, cast
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
 from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
 
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "build_chroma_index_flagembedding",
+    "kind": "INDEX_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": True,
+    "supports_selftest": False,
+    "entrypoint": "python tools/build_chroma_index_flagembedding.py",
+}
+
 # Chroma metadata values are scalars, but stubs also allow SparseVector; keep Any for compatibility.
 MetaValue = Any
 

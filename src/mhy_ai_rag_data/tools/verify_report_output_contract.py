@@ -30,6 +30,7 @@ Exit codes
 
 from __future__ import annotations
 
+
 import argparse
 import json
 import re
@@ -43,6 +44,18 @@ from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_f
 from mhy_ai_rag_data.tools.report_events import iter_items
 from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
 from mhy_ai_rag_data.tools.report_render import render_console, render_markdown
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "verify_report_output_contract",
+    "kind": "VERIFY_REPORT",
+    "contract_version": 2,
+    "channels": ["console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/verify_report_output_contract.py",
+}
 
 
 @dataclass

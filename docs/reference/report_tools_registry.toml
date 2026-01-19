@@ -1,0 +1,289 @@
+# report_tools_registry.toml
+#
+# Coverage SSOT for "tools that emit output artifacts" (reports/events/checkpoints/state).
+# This file is NOT the output-rules SSOT; output rules remain in:
+#   docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md
+#
+# Contract: Report Output v2 (schema_version=2) unless explicitly stated.
+
+schema_version = 1
+last_updated = "2026-01-19"
+source_timezone = "America/Los_Angeles"
+
+# ---------------------------
+# Registry entries
+# ---------------------------
+# Required fields
+# - id: stable tool id (matches REPORT_TOOL_META.id)
+# - module: import path
+# - entrypoint: stable wrapper invocation (recommended: python tools/<name>.py)
+# - kind: CHECK_REPORT | INDEX_REPORT | STATE_REPORT | EVAL_REPORT | GATE_REPORT | VERIFY_REPORT | RENDER_REPORT
+# - contract_version: 2
+# - channels: console | file | events | checkpoint
+# - supports_selftest: bool
+# - high_cost: bool
+#
+# Optional fields
+# - artifacts: expected outputs (path template, relative to repo root)
+
+[[tool]]
+id = "audit_baseline_tools"
+module = "mhy_ai_rag_data.tools.audit_baseline_tools"
+entrypoint = "python tools/audit_baseline_tools.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "build_chroma_index_flagembedding"
+module = "mhy_ai_rag_data.tools.build_chroma_index_flagembedding"
+entrypoint = "python tools/build_chroma_index_flagembedding.py"
+kind = "INDEX_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = true
+artifacts = [
+  "data_processed/index_state/<collection>/<schema_hash>/index_state.json",
+  "data_processed/index_state/db_build_stamp.json",
+]
+
+[[tool]]
+id = "capture_rag_env"
+module = "mhy_ai_rag_data.tools.capture_rag_env"
+entrypoint = "python tools/capture_rag_env.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "check_all"
+module = "mhy_ai_rag_data.tools.check_all"
+entrypoint = "python tools/check_all.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "check_docs_conventions"
+module = "mhy_ai_rag_data.tools.check_docs_conventions"
+entrypoint = "python tools/check_docs_conventions.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "check_inventory_build"
+module = "mhy_ai_rag_data.tools.check_inventory_build"
+entrypoint = "python tools/check_inventory_build.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "check_repo_health_files"
+module = "mhy_ai_rag_data.tools.check_repo_health_files"
+entrypoint = "python tools/check_repo_health_files.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "check_report_tools_contract"
+module = "mhy_ai_rag_data.tools.check_report_tools_contract"
+entrypoint = "python tools/check_report_tools_contract.py"
+kind = "VERIFY_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+artifacts = [
+  "data_processed/build_reports/check_report_tools_contract.json",
+  "data_processed/build_reports/check_report_tools_contract.md",
+]
+
+[[tool]]
+id = "check_tools_layout"
+module = "mhy_ai_rag_data.tools.check_tools_layout"
+entrypoint = "python tools/check_tools_layout.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "compare_stage1_baseline_snapshots"
+module = "mhy_ai_rag_data.tools.compare_stage1_baseline_snapshots"
+entrypoint = "python tools/compare_stage1_baseline_snapshots.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "gate"
+module = "mhy_ai_rag_data.tools.gate"
+entrypoint = "python tools/gate.py"
+kind = "GATE_REPORT"
+contract_version = 2
+channels = ["file", "console", "events"]
+supports_selftest = false
+high_cost = true
+artifacts = [
+  "data_processed/build_reports/gate_report.json",
+  "data_processed/build_reports/gate_report.md",
+  "data_processed/build_reports/gate_report.events.jsonl",
+  "data_processed/build_reports/gate_logs/<step_id>.log",
+]
+
+[[tool]]
+id = "plan_chunks_from_units"
+module = "mhy_ai_rag_data.tools.plan_chunks_from_units"
+entrypoint = "python tools/plan_chunks_from_units.py"
+kind = "INDEX_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+artifacts = [
+  "data_processed/chunk_plan.json",
+  "data_processed/build_reports/chunk_plan_report.json",
+  "data_processed/build_reports/chunk_plan_report.md",
+]
+
+[[tool]]
+id = "probe_llm_server"
+module = "mhy_ai_rag_data.tools.probe_llm_server"
+entrypoint = "python tools/probe_llm_server.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "run_eval_rag"
+module = "mhy_ai_rag_data.tools.run_eval_rag"
+entrypoint = "python tools/run_eval_rag.py"
+kind = "EVAL_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = true
+
+[[tool]]
+id = "run_eval_retrieval"
+module = "mhy_ai_rag_data.tools.run_eval_retrieval"
+entrypoint = "python tools/run_eval_retrieval.py"
+kind = "EVAL_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = true
+
+[[tool]]
+id = "run_profile_with_timing"
+module = "mhy_ai_rag_data.tools.run_profile_with_timing"
+entrypoint = "python tools/run_profile_with_timing.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "run_rag_eval_batch"
+module = "mhy_ai_rag_data.tools.run_rag_eval_batch"
+entrypoint = "python tools/run_rag_eval_batch.py"
+kind = "EVAL_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = true
+
+[[tool]]
+id = "snapshot_stage1_baseline"
+module = "mhy_ai_rag_data.tools.snapshot_stage1_baseline"
+entrypoint = "python tools/snapshot_stage1_baseline.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "update_postmortems_index"
+module = "mhy_ai_rag_data.tools.update_postmortems_index"
+entrypoint = "python tools/update_postmortems_index.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "validate_eval_cases"
+module = "mhy_ai_rag_data.tools.validate_eval_cases"
+entrypoint = "python tools/validate_eval_cases.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "verify_report_output_contract"
+module = "mhy_ai_rag_data.tools.verify_report_output_contract"
+entrypoint = "python tools/verify_report_output_contract.py"
+kind = "VERIFY_REPORT"
+contract_version = 2
+channels = ["console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "verify_stage1_pipeline"
+module = "mhy_ai_rag_data.tools.verify_stage1_pipeline"
+entrypoint = "python tools/verify_stage1_pipeline.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "view_report"
+module = "mhy_ai_rag_data.tools.view_report"
+entrypoint = "python tools/view_report.py"
+kind = "RENDER_REPORT"
+contract_version = 2
+channels = ["console", "file"]
+supports_selftest = false
+high_cost = false
+
+[[tool]]
+id = "write_db_build_stamp"
+module = "mhy_ai_rag_data.tools.write_db_build_stamp"
+entrypoint = "python tools/write_db_build_stamp.py"
+kind = "STATE_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = false
+high_cost = false
+artifacts = [
+  "data_processed/index_state/db_build_stamp.json",
+]

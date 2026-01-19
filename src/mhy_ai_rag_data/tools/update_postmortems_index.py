@@ -26,6 +26,7 @@
 
 from __future__ import annotations
 
+
 import argparse
 import difflib
 import json
@@ -37,6 +38,19 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "update_postmortems_index",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/update_postmortems_index.py",
+}
+
 
 # Optional dependency (present in project deps, but keep tool usable in "no-install" mode)
 yaml: Optional[ModuleType]

@@ -38,6 +38,18 @@ from mhy_ai_rag_data.tools.report_order import write_json_report
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "check_inventory_build",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/check_inventory_build.py",
+}
+
+
 SNAPSHOT_SCHEMA = "inventory_snapshot_v1"
 DIFF_SCHEMA = "inventory_diff_v1"
 

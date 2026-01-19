@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+
 import argparse
 import json
 import os
@@ -32,6 +33,18 @@ from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
 from mhy_ai_rag_data.tools.report_events import ItemEventsWriter
 from mhy_ai_rag_data.tools.runtime_feedback import Progress
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "run_rag_eval_batch",
+    "kind": "EVAL_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": True,
+    "supports_selftest": False,
+    "entrypoint": "python tools/run_rag_eval_batch.py",
+}
 
 
 def _ensure_dir(p: Path) -> None:

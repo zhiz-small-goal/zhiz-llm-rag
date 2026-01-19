@@ -8,6 +8,12 @@ repos:
         args: [tools\\rag_python.py, tools\\gate.py, --profile, fast, --root, .]
         language: unsupported
         pass_filenames: false
+      - id: rag-report-tools-contract-static
+        name: check_report_tools_contract --mode static
+        entry: python
+        args: [tools\\rag_python.py, tools\\check_report_tools_contract.py, --root, ., --mode, static, --strict=1]
+        language: unsupported
+        pass_filenames: false
       - id: rag-ruff
         name: check_ruff --format
         entry: python

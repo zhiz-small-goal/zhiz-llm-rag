@@ -18,6 +18,7 @@ Notes:
 
 from __future__ import annotations
 
+
 import argparse
 import importlib
 import json
@@ -26,6 +27,19 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "verify_stage1_pipeline",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/verify_stage1_pipeline.py",
+}
+
 
 # 兼容两种运行方式：python -m tools.verify_stage1_pipeline 以及 python tools/verify_stage1_pipeline.py
 try:

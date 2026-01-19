@@ -21,6 +21,7 @@ run_profile_with_timing.py
 
 from __future__ import annotations
 
+
 import argparse
 import json
 import subprocess
@@ -32,6 +33,18 @@ from typing import Any, Dict, List, Sequence, Tuple, TypedDict
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 from mhy_ai_rag_data.tools.runtime_feedback import Progress
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "run_profile_with_timing",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/run_profile_with_timing.py",
+}
 
 
 class StepInfo(TypedDict):

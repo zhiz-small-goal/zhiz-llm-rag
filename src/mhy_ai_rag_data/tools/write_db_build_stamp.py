@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+
 import argparse
 import hashlib
 import json
@@ -29,6 +30,19 @@ from typing import Any, Dict, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
 from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "write_db_build_stamp",
+    "kind": "STATE_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/write_db_build_stamp.py",
+}
+
 
 # Optional: import Chroma only when used
 

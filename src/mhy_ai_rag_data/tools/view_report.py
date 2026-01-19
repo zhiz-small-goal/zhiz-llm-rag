@@ -17,6 +17,7 @@ Contract highlights
 
 from __future__ import annotations
 
+
 import argparse
 import json
 import sys
@@ -27,6 +28,18 @@ from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_f
 from mhy_ai_rag_data.tools.report_events import iter_items
 from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
 from mhy_ai_rag_data.tools.report_render import render_console, render_markdown
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "view_report",
+    "kind": "RENDER_REPORT",
+    "contract_version": 2,
+    "channels": ["console", "file"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/view_report.py",
+}
 
 
 def _load_json(path: Path) -> Optional[Dict[str, Any]]:

@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+
 import argparse
 import json
 import time
@@ -27,6 +28,18 @@ from typing import Any, Dict, List, Set, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_report_bundle
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "validate_eval_cases",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/validate_eval_cases.py",
+}
 
 
 DEFAULT_BUCKET = "official"

@@ -26,6 +26,7 @@ run_eval_rag.py
 
 from __future__ import annotations
 
+
 import argparse
 import importlib
 import json
@@ -39,6 +40,18 @@ from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_
 from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
 from mhy_ai_rag_data.tools.report_events import ItemEventsWriter
 from mhy_ai_rag_data.tools.runtime_feedback import Progress
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "run_eval_rag",
+    "kind": "EVAL_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": True,
+    "supports_selftest": False,
+    "entrypoint": "python tools/run_eval_rag.py",
+}
 
 
 def safe_truncate(s: Any, n: int) -> str:

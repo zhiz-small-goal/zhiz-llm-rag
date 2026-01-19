@@ -17,6 +17,7 @@ tmp_report.json
 .env
 .env.*
 !.env.example
+.claude/
 
 # --- public-release hygiene (auto-added) ---
 data_raw/

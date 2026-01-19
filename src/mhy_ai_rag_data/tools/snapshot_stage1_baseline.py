@@ -20,6 +20,7 @@ snapshot_stage1_baseline.py
 
 from __future__ import annotations
 
+
 import argparse
 import hashlib
 import platform
@@ -31,6 +32,19 @@ from typing import Any, Dict, List, Tuple
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "snapshot_stage1_baseline",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/snapshot_stage1_baseline.py",
+}
+
 
 SMALL_FILE_SHA256_LIMIT = 50 * 1024 * 1024  # 50MB
 

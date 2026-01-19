@@ -32,6 +32,18 @@ from typing import Any, Dict, List
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "compare_stage1_baseline_snapshots",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/compare_stage1_baseline_snapshots.py",
+}
+
+
 def now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 

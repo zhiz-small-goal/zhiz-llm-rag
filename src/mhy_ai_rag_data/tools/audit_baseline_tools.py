@@ -29,6 +29,18 @@ from typing import Dict, List, Any
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "audit_baseline_tools",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/audit_baseline_tools.py",
+}
+
+
 DEFAULT_PATTERNS = [
     r"\bbaseline\b",
     r"\bsnapshot\b",

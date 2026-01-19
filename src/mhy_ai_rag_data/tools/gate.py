@@ -36,10 +36,24 @@ import yaml
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
 from mhy_ai_rag_data.tools.report_contract import compute_summary
+
+
 from mhy_ai_rag_data.tools.report_events import ItemEventsWriter
 from mhy_ai_rag_data.tools.runtime_feedback import Progress
 from mhy_ai_rag_data.tools.vscode_links import to_vscode_file_uri
 from mhy_ai_rag_data.tools.view_gate_report import _render_console, _render_markdown
+
+
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "gate",
+    "kind": "GATE_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console", "events"],
+    "high_cost": True,
+    "supports_selftest": False,
+    "entrypoint": "python tools/gate.py",
+}
 
 
 def _iso_now() -> str:

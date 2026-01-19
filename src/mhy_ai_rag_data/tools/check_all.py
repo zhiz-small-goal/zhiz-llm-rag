@@ -29,6 +29,18 @@ from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
 
 
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "check_all",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/check_all.py",
+}
+
+
 CORE_MODULES: List[str] = [
     "mhy_ai_rag_data.make_inventory",
     "mhy_ai_rag_data.extract_units",

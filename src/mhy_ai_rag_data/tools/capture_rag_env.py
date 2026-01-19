@@ -36,6 +36,18 @@ from typing import Any, Dict
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
+# Tool self-description for report-output-v2 gates (static-AST friendly)
+REPORT_TOOL_META = {
+    "id": "capture_rag_env",
+    "kind": "CHECK_REPORT",
+    "contract_version": 2,
+    "channels": ["file", "console"],
+    "high_cost": False,
+    "supports_selftest": False,
+    "entrypoint": "python tools/capture_rag_env.py",
+}
+
+
 KEY_PACKAGES = [
     "chromadb",
     "FlagEmbedding",
