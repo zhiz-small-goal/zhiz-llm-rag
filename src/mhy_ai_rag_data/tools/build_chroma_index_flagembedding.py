@@ -25,6 +25,7 @@ tools/build_chroma_index_flagembedding.py
 
 from __future__ import annotations
 
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 
 import argparse
 import time
@@ -39,7 +40,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": True,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/build_chroma_index_flagembedding.py",
 }
 
@@ -78,9 +79,27 @@ def _safe_bool(s: str) -> bool:
 
 
 def main() -> int:
+    # Two-pass parse: make `--selftest` work without requiring a subcommand.
+    pre = argparse.ArgumentParser(add_help=False)
+    add_selftest_args(pre)
+    pre.add_argument("--root", default=".", help="Project root")
+    pre_args, _ = pre.parse_known_args()
+
+    _repo_root = Path(getattr(pre_args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=pre_args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
+
     ap = argparse.ArgumentParser(
         description="Build/Upsert Chroma index using FlagEmbedding (BGE-M3) with optional sync."
     )
+    add_selftest_args(ap)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     b = sub.add_parser("build", help="build/upsert collection")

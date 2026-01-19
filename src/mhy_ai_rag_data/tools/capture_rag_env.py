@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 
 
 # Tool self-description for report-output-v2 gates (static-AST friendly)
@@ -43,7 +44,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/capture_rag_env.py",
 }
 
@@ -83,10 +84,25 @@ def _pip_show(name: str) -> Dict[str, str] | None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    add_selftest_args(ap)
+    ap.add_argument("--root", default=".", help="repo root")
     ap.add_argument("--out", default="data_processed/env_report.json")
     args = ap.parse_args()
 
-    out_path = Path(args.out).resolve()
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
+
+    repo_root = Path(getattr(args, "root", ".")).resolve()
+    out_arg = str(args.out)
+    out_path = (repo_root / out_arg).resolve() if not Path(out_arg).is_absolute() else Path(out_arg).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     packages: Dict[str, Any] = {}
@@ -185,20 +201,23 @@ def main() -> int:
         "schema_version": 2,
         "generated_at": report.get("generated_at"),
         "tool": "capture_rag_env",
-        "root": str(Path(".").resolve().as_posix()),
+        "root": str(repo_root.resolve().as_posix()),
         "summary": {},
         "items": items,
         "data": report,
     }
 
-    write_report_bundle(
+    normalized = write_report_bundle(
         report=bundle_report,
         report_json=out_path,
-        repo_root=Path(".").resolve(),
+        repo_root=repo_root.resolve(),
         console_title="capture_rag_env",
         emit_console=True,
     )
-    return 0
+    try:
+        return int(normalized.get("summary", {}).get("overall_rc", 0))
+    except Exception:
+        return 0
 
 
 if __name__ == "__main__":

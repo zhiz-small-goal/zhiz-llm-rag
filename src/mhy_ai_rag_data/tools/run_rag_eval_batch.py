@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
 from mhy_ai_rag_data.tools.report_events import ItemEventsWriter
 from mhy_ai_rag_data.tools.runtime_feedback import Progress
@@ -42,7 +43,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": True,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/run_rag_eval_batch.py",
 }
 
@@ -126,6 +127,7 @@ def _status_from_keywords(score: Dict[str, Any]) -> Tuple[str, int]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument("--queries", default="tests/rag_queries_v1.json")
     ap.add_argument("--k", type=int, default=5)
@@ -142,18 +144,9 @@ def main() -> int:
         default="off",
         help="item events output (jsonl): auto|off|<path> (relative to root). Used for recovery/rebuild.",
     )
-    ap.add_argument(
-        "--durability-mode",
-        default="flush",
-        choices=["none", "flush", "fsync"],
-        help="events durability: none|flush|fsync (fsync is throttled by --fsync-interval-ms)",
-    )
-    ap.add_argument(
-        "--fsync-interval-ms",
-        type=int,
-        default=1000,
-        help="fsync throttle interval in ms when durability_mode=fsync",
-    )
+    # durability knobs are provided by add_selftest_args:
+    #   --durability-mode none|flush|fsync
+    #   --fsync-interval-ms <int>
     ap.add_argument(
         "--progress",
         default="auto",
@@ -167,6 +160,17 @@ def main() -> int:
         help="min progress update interval in ms (throttling)",
     )
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     root = Path(args.root).resolve()
     qpath = (root / args.queries).resolve()

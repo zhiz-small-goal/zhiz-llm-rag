@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
@@ -28,6 +30,7 @@ except Exception:  # noqa: BLE001
     from llm_http_client import resolve_trust_env, get_session, resolve_model_id  # type: ignore
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
 
 
@@ -38,7 +41,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/probe_llm_server.py",
 }
 
@@ -87,7 +90,26 @@ def _post(
 
 
 def main() -> int:
+    # Two-pass parse: selftest must work without providing required --base.
+    pre = argparse.ArgumentParser(add_help=False)
+    add_selftest_args(pre)
+    pre.add_argument("--root", default=".", help="repo root")
+    pre_args, _ = pre.parse_known_args()
+
+    _repo_root = Path(getattr(pre_args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=pre_args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
+
     ap = argparse.ArgumentParser()
+    add_selftest_args(ap)
+    ap.add_argument("--root", default=".", help="repo root")
     ap.add_argument("--base", required=True, help="例如 http://localhost:8000 或 http://localhost:8000/v1")
     ap.add_argument("--connect-timeout", type=float, default=5.0, help="连接超时秒（requests connect timeout）")
     ap.add_argument(
@@ -102,6 +124,8 @@ def main() -> int:
     ap.add_argument("--json-out", default=None, help="JSON 报告输出路径（提供则只写这一份）")
     ap.add_argument("--json-stdout", action="store_true", help="将 JSON 报告打印到 stdout（可与 --json-out 同时使用）")
     args = ap.parse_args()
+
+    repo_root = Path(args.root).resolve()
 
     base = args.base.rstrip("/") + "/"
     trust_env = resolve_trust_env(args.base, args.trust_env)
@@ -138,7 +162,7 @@ def main() -> int:
         "temperature": 0,
     }
 
-    print("== GET probes ==")
+    sys.stderr.write("== GET probes ==\n")
     report["get"] = []
     for path in GET_CANDIDATES:
         url = urljoin(base, path.lstrip("/"))
@@ -206,7 +230,7 @@ def main() -> int:
         "schema_version": 2,
         "generated_at": iso_now(),
         "tool": "probe_llm_server",
-        "root": "",
+        "root": str(repo_root.as_posix()),
         "summary": summary.to_dict(),
         "items": items,
         "data": {
@@ -223,18 +247,17 @@ def main() -> int:
         },
     }
 
-    default_name = f"llm_probe_report_{int(time.time())}.json"
+    default_name = f"data_processed/build_reports/llm_probe_report_{int(time.time())}.json"
     if args.json_stdout:
         print(json.dumps(final_report, ensure_ascii=False, indent=2))
 
-    from pathlib import Path
-
-    out_path = Path(args.json_out) if args.json_out else Path(default_name)
+    out_arg = str(args.json_out) if args.json_out else str(default_name)
+    out_path = (repo_root / out_arg).resolve() if not Path(out_arg).is_absolute() else Path(out_arg).resolve()
 
     write_report_bundle(
         report=final_report,
         report_json=out_path,
-        repo_root=None,
+        repo_root=repo_root,
         console_title="probe_llm_server",
         emit_console=(not bool(args.json_stdout)),
     )

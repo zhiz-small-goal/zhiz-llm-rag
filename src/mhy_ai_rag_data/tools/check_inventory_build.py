@@ -35,6 +35,7 @@ from typing import Any, Dict, Iterable, List
 
 from mhy_ai_rag_data.project_paths import find_project_root
 from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
 
 
@@ -45,7 +46,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/check_inventory_build.py",
 }
 
@@ -264,6 +265,7 @@ def _write_json(path: Path, payload: Dict[str, Any]) -> None:
 
 def _parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
+    add_selftest_args(ap)
     ap.add_argument("--root", default=None, help="project root (default: auto-detect from CWD)")
     ap.add_argument("--inventory", default="inventory.csv", help="inventory.csv path (relative to root by default)")
     ap.add_argument("--snapshot-out", default="", help="write snapshot json to this path")
@@ -278,6 +280,18 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     args = _parse_args()
     root = find_project_root(args.root)
+
+    _repo_root = Path(root).resolve() if not isinstance(root, Path) else root.resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
+
     inv_path = Path(args.inventory)
     if not inv_path.is_absolute():
         inv_path = root / inv_path

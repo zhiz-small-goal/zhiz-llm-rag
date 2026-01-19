@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 
 
 # Tool self-description for report-output-v2 gates (static-AST friendly)
@@ -34,7 +35,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/plan_chunks_from_units.py",
 }
 
@@ -47,6 +48,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Dry-run chunk planning from text_units.jsonl (same logic as build_chroma_index.py)"
     )
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="Project root")
     ap.add_argument("--units", default="data_processed/text_units.jsonl", help="Units JSONL path (relative to root)")
     ap.add_argument("--chunk-chars", type=int, default=1200)
@@ -59,6 +61,17 @@ def main() -> int:
     )
     ap.add_argument("--out", default="data_processed/chunk_plan.json", help="Output json path (relative to root)")
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     root = Path(args.root).resolve()
     units_path = (root / args.units).resolve()

@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 
 
 # Tool self-description for report-output-v2 gates (static-AST friendly)
@@ -42,7 +43,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/check_tools_layout.py",
 }
 
@@ -103,6 +104,7 @@ def ensure_dir(p: Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Audit tools/ layout contract (wrappers vs repo-only tools).")
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="Repo root")
     ap.add_argument("--mode", default="warn", choices=["warn", "fail"], help="warn: exit 0; fail: exit 2 on issues")
     ap.add_argument("--recursive", action="store_true", help="Scan tools/ recursively")
@@ -112,6 +114,17 @@ def main() -> int:
         help="Write JSON report to this path (relative to repo root). Empty -> no JSON.",
     )
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     repo = Path(args.root).resolve()
     tools_dir = repo / "tools"

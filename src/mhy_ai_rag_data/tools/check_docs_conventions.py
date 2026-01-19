@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 
 
 # Tool self-description for report-output-v2 gates (static-AST friendly)
@@ -40,7 +41,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/check_docs_conventions.py",
 }
 
@@ -233,6 +234,7 @@ def check_one(path: Path, fix: bool = False) -> Dict[str, Any]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument(
         "--config",
@@ -270,6 +272,17 @@ def main() -> int:
         help="auto-insert missing blank lines after title (in-place)",
     )
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     root = Path(args.root).resolve()
     cfg_path = (root / args.config) if args.config else (root / DEFAULT_CONFIG)

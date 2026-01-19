@@ -37,6 +37,7 @@ from types import ModuleType
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_contract import compute_summary, iso_now
 
 
@@ -47,7 +48,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/update_postmortems_index.py",
 }
 
@@ -469,6 +470,7 @@ def build_report(
 
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Generate/check docs/postmortems/INDEX.md from docs/postmortems/*.md.")
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="Repo root (default: current directory)")
     ap.add_argument("--postmortems-dir", default="docs/postmortems", help="Postmortems dir under repo root")
     ap.add_argument("--index-file", default="docs/postmortems/INDEX.md", help="Index file under repo root")
@@ -482,6 +484,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--json-out", default=None, help="Write JSON report to this path")
     ap.add_argument("--json-stdout", action="store_true", help="Print JSON report to stdout")
     args = ap.parse_args(argv)
+
+    # selftest branch: avoid touching filesystem beyond artifacts
+    _repo_root = Path(args.root).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     if args.check and args.write:
         return _fail("choose only one: --check or --write")

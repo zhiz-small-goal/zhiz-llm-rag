@@ -35,6 +35,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from mhy_ai_rag_data.tools.report_order import write_json_report
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_contract import compute_summary
 
 
@@ -51,7 +52,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console", "events"],
     "high_cost": True,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/gate.py",
 }
 
@@ -366,6 +367,7 @@ def _validate_self_schema(repo: Path, ssot: Dict[str, Any], gate_report_path: Pa
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repo gate runner (SSOT-driven).")
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="Repo root")
     ap.add_argument("--profile", default="ci", choices=["fast", "ci", "release"], help="Gate profile")
     ap.add_argument("--ssot", default="docs/reference/reference.yaml", help="SSOT yaml path (relative to root)")
@@ -382,18 +384,9 @@ def main() -> int:
         default="",
         help="Override item events jsonl output path (default: alongside json report)",
     )
-    ap.add_argument(
-        "--durability-mode",
-        default="flush",
-        choices=["none", "flush", "fsync"],
-        help="events durability: none|flush|fsync (default: flush)",
-    )
-    ap.add_argument(
-        "--fsync-interval-ms",
-        default=1000,
-        type=int,
-        help="when durability_mode=fsync, fsync at most once per interval (ms)",
-    )
+    # durability knobs are provided by add_selftest_args:
+    #   --durability-mode none|flush|fsync
+    #   --fsync-interval-ms <int>
 
     # Runtime feedback (progress) - to stderr only
     ap.add_argument(
@@ -410,6 +403,17 @@ def main() -> int:
     )
 
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     repo = Path(args.root).resolve()
     ssot_path = (repo / args.ssot).resolve()

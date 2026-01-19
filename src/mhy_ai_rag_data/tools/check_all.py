@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
 
 
@@ -36,7 +37,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/check_all.py",
 }
 
@@ -152,6 +153,7 @@ def _mk_item(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="One-click repository gate check (src-layout, imports, TOC).")
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="Repo root (default: current directory)")
     ap.add_argument("--mode", default="fast", choices=["fast"], help="Check mode (currently only fast).")
     ap.add_argument(
@@ -171,6 +173,17 @@ def main() -> int:
         help="optional report.md path (relative to root); default: <out>.md",
     )
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     repo = Path(args.root).resolve()
     out_path = (repo / str(args.out)).resolve()

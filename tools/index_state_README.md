@@ -1,11 +1,10 @@
 ---
 title: index_state.py 使用说明（索引状态管理模块）
-version: v1.0
-last_updated: 2026-01-16
+version: v1.1
+last_updated: 2026-01-19
 ---
 
 # index_state.py 使用说明
-
 
 > 目标：为增量构建 + 强一致验收提供最小状态文件（manifest）管理，记录每个文档的 doc_id、content_sha256、n_chunks，支持新增/变更/删除判定。
 
@@ -13,9 +12,10 @@ last_updated: 2026-01-16
 
 本模块是工具库模块（非命令行工具），提供：
 
-- **schema_hash 计算**：embed_model/chunk_conf/include_media_stub 变化时生成新hash
-- **状态文件读写**：index_state.json 原子写入
+- **schema_hash 计算**：embed_model/chunk_conf/include_media_stub 变化时生成新 hash
+- **状态文件读写**：index_state.json 原子写入（tmp -> replace）
 - **LATEST 指针管理**：跟踪最新 schema_hash
+- **Report v2 兼容读取**：读取 legacy v1（缺 schema_version）时，在内存中转换为 `schema_version=2` 的 v2 envelope
 
 ## 主要API
 
@@ -31,20 +31,39 @@ schema_hash = compute_schema_hash(
 )
 ```
 
-### 2) load_index_state / save_json_atomic
+### 2) load_index_state（兼容 v1 -> v2）
 ```python
-from mhy_ai_rag_data.tools.index_state import load_index_state, save_json_atomic
+from mhy_ai_rag_data.tools.index_state import load_index_state
 
-state = load_index_state(state_file)
+state = load_index_state(state_file, root=repo_root)
 if state is None:
     # 首次构建
     pass
 
-# 更新后保存
-save_json_atomic(state_file, new_state)
+# state 是 dict；当输入为 v1 时会被规整为 v2 report（schema_version=2）
 ```
 
-### 3) read_latest_pointer /write_latest_pointer
+### 3) write_index_state_report（v2 写入推荐入口）
+```python
+from mhy_ai_rag_data.tools.index_state import write_index_state_report
+
+out = write_index_state_report(
+    root=repo_root,
+    state_root=repo_root / "data_processed/index_state",
+    collection="rag_chunks",
+    schema_hash=schema_hash,
+    db=repo_root / "chroma_db",
+    embed_model="BAAI/bge-m3",
+    chunk_conf={"chunk_chars": 1200, "overlap_chars": 120, "min_chunk_chars": 200},
+    include_media_stub=False,
+    docs={},
+    last_build={"sync_mode": "full", "expected_chunks": 0, "collection_count": 0},
+    items=[{"tool": "index_state", "title": "index_state written", "status_label": "PASS", "severity_level": 0, "message": "wrote"}],
+)
+print(out)
+```
+
+### 4) read_latest_pointer / write_latest_pointer
 ```python
 from mhy_ai_rag_data.tools.index_state import read_latest_pointer, write_latest_pointer
 
@@ -52,25 +71,37 @@ latest = read_latest_pointer(state_root, collection)
 write_latest_pointer(state_root, collection, schema_hash)
 ```
 
-## 状态文件结构
+## 状态文件结构（v2 示例）
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "generated_at": "2026-01-19T00:00:00Z",
+  "tool": "index_state",
+  "root": "/abs/path/to/repo",
+  "summary": {"overall_label": "PASS", "overall_rc": 0, "counts": {"PASS": 1, "INFO": 0, "WARN": 0, "FAIL": 0, "ERROR": 0}},
+  "items": [
+    {"tool": "index_state", "key": "state_written", "title": "index_state written", "status_label": "PASS", "severity_level": 0, "message": "..."}
+  ],
+
   "schema_hash": "abc123...",
+  "db": "data_processed/chroma_db",
+  "collection": "rag_chunks",
   "embed_model": "BAAI/bge-m3",
-  "chunk_conf": {...},
+  "chunk_conf": {"chunk_chars": 1200, "overlap_chars": 120, "min_chunk_chars": 200},
   "include_media_stub": false,
-  "updated_at": "2026-01-16T00:00:00Z",
+  "updated_at": "2026-01-19T00:00:00Z",
+
   "docs": {
     "path/to/doc.md": {
       "doc_id": "md_abc123",
       "source_uri": "path/to/doc.md",
       "content_sha256": "def456...",
       "n_chunks": 5,
-      "updated_at": "2026-01-16T00:00:00Z"
+      "updated_at": "2026-01-19T00:00:00Z"
     }
-  }
+  },
+  "last_build": {"sync_mode": "upsert", "expected_chunks": 5, "collection_count": 5, "build_seconds": 0.2}
 }
 ```
 
@@ -86,6 +117,12 @@ data_processed/index_state/
 │       └── index_state.json
 ```
 
+## 关联自检
+
+如果需要对 index_state / db_build_stamp 这类“状态元数据报告”的 v2 契约进行固定样例校验，可运行：
+
+- `python tools/verify_state_reports_samples.py`
+
 ---
 
-**注意**：本模块是**工具库模块**，通常被其他工具（如 `build_chroma_index_flagembedding.py`）导入使用，不直接作为命令行工具运行。
+**注意**：本模块是工具库模块，通常被其他工具导入使用；不建议把 `tools/index_state.py` 视作稳定的命令行接口。

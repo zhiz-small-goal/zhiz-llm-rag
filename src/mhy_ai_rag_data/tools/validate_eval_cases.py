@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 from mhy_ai_rag_data.tools.report_bundle import default_md_path_for_json, write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
 
 
@@ -37,7 +38,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/validate_eval_cases.py",
 }
 
@@ -66,6 +67,7 @@ def is_probably_dir(s: str) -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument(
         "--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)"
@@ -85,6 +87,17 @@ def main() -> int:
         help="check each must_include appears in at least one expected_source file (only for file paths)",
     )
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     root = Path(args.root).resolve()
     cases_path = (root / args.cases).resolve()

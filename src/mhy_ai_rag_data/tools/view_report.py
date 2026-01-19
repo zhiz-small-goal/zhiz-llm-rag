@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, ensure_report_v2, iso_now
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_events import iter_items
 from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
 from mhy_ai_rag_data.tools.report_render import render_console, render_markdown
@@ -37,7 +38,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["console", "file"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/view_report.py",
 }
 
@@ -89,6 +90,7 @@ def _atomic_write_text(path: Path, content: str) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="View/render report.json or report.events.jsonl (schema_version=2)")
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="project root")
     ap.add_argument("--report", default="", help="report.json path (relative to root)")
     ap.add_argument("--events", default="", help="item events jsonl (relative to root); used for recovery/rebuild")
@@ -96,6 +98,17 @@ def main() -> int:
     ap.add_argument("--md-out", default="", help="optional markdown output path (relative to root)")
 
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     root = Path(args.root).resolve()
     report_path = (root / args.report).resolve() if args.report else None

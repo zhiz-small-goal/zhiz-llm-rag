@@ -174,7 +174,8 @@ def ensure_index_state_report_v2(
     if sv_i == 2 and isinstance(raw.get("items"), list) and isinstance(raw.get("summary"), dict):
         normalized = ensure_report_v2(raw)
         normalized["root"] = str(root.resolve().as_posix())
-        return normalized
+        prepared = prepare_report_for_file_output(normalized)
+        return prepared if isinstance(prepared, dict) else normalized
 
     tool_name = "index_state"
 
@@ -216,7 +217,8 @@ def ensure_index_state_report_v2(
             continue
         out.setdefault(k, v)
 
-    return out
+    prepared = prepare_report_for_file_output(out)
+    return prepared if isinstance(prepared, dict) else out
 
 
 def load_index_state(path: Path, *, root: Optional[Path] = None) -> Optional[Dict[str, Any]]:

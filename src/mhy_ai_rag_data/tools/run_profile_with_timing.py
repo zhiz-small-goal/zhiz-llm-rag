@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple, TypedDict
 
 from mhy_ai_rag_data.tools.report_bundle import write_report_bundle
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.runtime_feedback import Progress
 
 
@@ -42,7 +43,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/run_profile_with_timing.py",
 }
 
@@ -86,14 +87,33 @@ def _get(d: Dict[str, Any], *keys: str, default: Any = None) -> Any:
 
 
 def main() -> int:
+    # Two-pass parse: selftest must work without providing required --profile.
+    pre = argparse.ArgumentParser(add_help=False)
+    add_selftest_args(pre)
+    pre.add_argument("--root", default=".", help="repo root")
+    pre_args, _ = pre.parse_known_args()
+
+    _repo_root = Path(getattr(pre_args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=pre_args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
+
     ap = argparse.ArgumentParser()
+    add_selftest_args(ap)
+    ap.add_argument("--root", default=".", help="repo root")
     ap.add_argument("--profile", required=True, help="Profile JSON path, e.g. build_profile_schemeB.json")
     ap.add_argument("--smoke", action="store_true", help="Run retriever_chroma.py and check_rag_pipeline.py after PASS")
     ap.add_argument("--progress", default="auto", choices=["auto", "on", "off"], help="runtime feedback to stderr")
     ap.add_argument("--max-samples", type=int, default=20, help="validate_rag_units.py --max-samples")
     args = ap.parse_args()
 
-    cwd = Path(".").resolve()
+    cwd = Path(args.root).resolve()
     profile_path = (cwd / args.profile).resolve()
     if not profile_path.exists():
         print(f"[FATAL] profile not found: {profile_path}")

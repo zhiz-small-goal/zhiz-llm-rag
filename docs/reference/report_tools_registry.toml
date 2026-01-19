@@ -33,7 +33,7 @@ entrypoint = "python tools/audit_baseline_tools.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -43,7 +43,7 @@ entrypoint = "python tools/build_chroma_index_flagembedding.py"
 kind = "INDEX_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = true
 artifacts = [
   "data_processed/index_state/<collection>/<schema_hash>/index_state.json",
@@ -57,7 +57,7 @@ entrypoint = "python tools/capture_rag_env.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -67,7 +67,7 @@ entrypoint = "python tools/check_all.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -77,7 +77,7 @@ entrypoint = "python tools/check_docs_conventions.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -87,7 +87,7 @@ entrypoint = "python tools/check_inventory_build.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -97,7 +97,7 @@ entrypoint = "python tools/check_repo_health_files.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -107,7 +107,7 @@ entrypoint = "python tools/check_report_tools_contract.py"
 kind = "VERIFY_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 artifacts = [
   "data_processed/build_reports/check_report_tools_contract.json",
@@ -121,7 +121,7 @@ entrypoint = "python tools/check_tools_layout.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -131,7 +131,7 @@ entrypoint = "python tools/compare_stage1_baseline_snapshots.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -141,7 +141,7 @@ entrypoint = "python tools/gate.py"
 kind = "GATE_REPORT"
 contract_version = 2
 channels = ["file", "console", "events"]
-supports_selftest = false
+supports_selftest = true
 high_cost = true
 artifacts = [
   "data_processed/build_reports/gate_report.json",
@@ -157,7 +157,7 @@ entrypoint = "python tools/plan_chunks_from_units.py"
 kind = "INDEX_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 artifacts = [
   "data_processed/chunk_plan.json",
@@ -172,7 +172,7 @@ entrypoint = "python tools/probe_llm_server.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -182,7 +182,7 @@ entrypoint = "python tools/run_eval_rag.py"
 kind = "EVAL_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = true
 
 [[tool]]
@@ -192,7 +192,7 @@ entrypoint = "python tools/run_eval_retrieval.py"
 kind = "EVAL_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = true
 
 [[tool]]
@@ -202,7 +202,7 @@ entrypoint = "python tools/run_profile_with_timing.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -212,7 +212,7 @@ entrypoint = "python tools/run_rag_eval_batch.py"
 kind = "EVAL_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = true
 
 [[tool]]
@@ -222,7 +222,7 @@ entrypoint = "python tools/snapshot_stage1_baseline.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -232,7 +232,7 @@ entrypoint = "python tools/update_postmortems_index.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -242,7 +242,7 @@ entrypoint = "python tools/validate_eval_cases.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -252,7 +252,7 @@ entrypoint = "python tools/verify_report_output_contract.py"
 kind = "VERIFY_REPORT"
 contract_version = 2
 channels = ["console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -262,7 +262,7 @@ entrypoint = "python tools/verify_stage1_pipeline.py"
 kind = "CHECK_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -272,7 +272,7 @@ entrypoint = "python tools/view_report.py"
 kind = "RENDER_REPORT"
 contract_version = 2
 channels = ["console", "file"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 
 [[tool]]
@@ -282,7 +282,7 @@ entrypoint = "python tools/write_db_build_stamp.py"
 kind = "STATE_REPORT"
 contract_version = 2
 channels = ["file", "console"]
-supports_selftest = false
+supports_selftest = true
 high_cost = false
 artifacts = [
   "data_processed/index_state/db_build_stamp.json",

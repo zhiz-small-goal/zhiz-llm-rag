@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, iso_now
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
 
 
@@ -39,7 +40,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["file", "console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/write_db_build_stamp.py",
 }
 
@@ -272,6 +273,7 @@ def write_db_build_stamp(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Write db_build_stamp.json (state metadata, schema_version=2 report)")
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".")
     ap.add_argument("--db", default="chroma_db")
     ap.add_argument("--collection", default="rag_chunks")
@@ -286,6 +288,17 @@ def main() -> int:
         help="optional: provide collection.count snapshot to avoid opening Chroma (int)",
     )
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     root = Path(args.root).resolve()
     db = (root / args.db).resolve() if not Path(args.db).is_absolute() else Path(args.db).resolve()

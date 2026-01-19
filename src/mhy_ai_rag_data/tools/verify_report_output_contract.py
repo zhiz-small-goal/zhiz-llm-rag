@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from mhy_ai_rag_data.tools.report_contract import compute_summary, ensure_item_fields, ensure_report_v2, iso_now
+from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_selftest_from_args
 from mhy_ai_rag_data.tools.report_events import iter_items
 from mhy_ai_rag_data.tools.report_order import prepare_report_for_file_output
 from mhy_ai_rag_data.tools.report_render import render_console, render_markdown
@@ -53,7 +54,7 @@ REPORT_TOOL_META = {
     "contract_version": 2,
     "channels": ["console"],
     "high_cost": False,
-    "supports_selftest": False,
+    "supports_selftest": True,
     "entrypoint": "python tools/verify_report_output_contract.py",
 }
 
@@ -285,12 +286,24 @@ def verify(*, report: Dict[str, Any], report_path: Path, repo_root: Path, strict
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Verify report output contract (schema_version=2)")
+    add_selftest_args(ap)
     ap.add_argument("--root", default=".", help="repo root")
     ap.add_argument("--report", default="", help="report.json path (relative to root)")
     ap.add_argument("--events", default="", help="events jsonl path (relative to root)")
     ap.add_argument("--tool-default", default="report", help="tool name used when rebuilding from events")
     ap.add_argument("--strict", action="store_true", help="treat warnings as errors")
     args = ap.parse_args()
+
+    _repo_root = Path(getattr(args, "root", ".")).resolve()
+    _loc = Path(__file__).resolve()
+    try:
+        _loc = _loc.relative_to(_repo_root)
+    except Exception:
+        pass
+
+    _rc = maybe_run_selftest_from_args(args=args, meta=REPORT_TOOL_META, repo_root=_repo_root, loc_source=_loc)
+    if _rc is not None:
+        return _rc
 
     repo_root = Path(args.root).resolve()
     report_path: Optional[Path] = (repo_root / args.report).resolve() if args.report else None

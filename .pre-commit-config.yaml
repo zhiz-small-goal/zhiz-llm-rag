@@ -5,33 +5,40 @@ repos:
       - id: rag-gate-fast
         name: rag-gate --profile fast
         entry: python
-        args: [tools\\rag_python.py, tools\\gate.py, --profile, fast, --root, .]
+        args: [tools/rag_python.py, tools/gate.py, --profile, fast, --root, .]
         language: unsupported
         pass_filenames: false
       - id: rag-report-tools-contract-static
         name: check_report_tools_contract --mode static
         entry: python
-        args: [tools\\rag_python.py, tools\\check_report_tools_contract.py, --root, ., --mode, static, --strict=1]
+        args: [tools/rag_python.py, tools/check_report_tools_contract.py, --root, ., --mode, static, --strict]
         language: unsupported
         pass_filenames: false
+      - id: rag-report-tools-contract-dynamic
+        name: check_report_tools_contract --mode all --scope changed
+        entry: python
+        args: [tools/rag_python.py, tools/check_report_tools_contract.py, --root, ., --mode, all, --scope, changed, --timeout-s=120]
+        language: unsupported
+        pass_filenames: false
+        stages: [manual]
       - id: rag-ruff
         name: check_ruff --format
         entry: python
-        args: [tools\\rag_python.py, tools\\check_ruff.py, --root, ., --format]
+        args: [tools/rag_python.py, tools/check_ruff.py, --root, ., --format]
         language: unsupported
         pass_filenames: true
         types: [python]
       - id: rag-mypy
         name: check_mypy --root .
         entry: python
-        args: [tools\\rag_python.py, tools\\check_mypy.py, --root, .]
+        args: [tools/rag_python.py, tools/check_mypy.py, --root, .]
         language: unsupported
         pass_filenames: false
       - id: show-python
         name: show python used bey entry
         language: unsupported
         entry: python
-        args: [tools\\rag_python.py, -c, "import sys; print(sys.executable); print(sys.version)"]
+        args: [tools/rag_python.py, -c, "import sys; print(sys.executable); print(sys.version)"]
         pass_filenames: false
         always_run: true
 
