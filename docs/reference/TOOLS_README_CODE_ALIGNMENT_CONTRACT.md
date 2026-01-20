@@ -53,6 +53,21 @@ timezone: America/Los_Angeles
 - `docs/` 下的 Diátaxis 文档（除非它们显式声明自己受本契约约束）。
 - `src/` 下库 API 文档（其对齐策略属于库文档治理，不归入本契约）。
 
+### 1.3 与现有文档检测工具的关系
+
+当前仓库已存在至少两类“文档相关门禁/检测”工具：
+
+- `tools/check_docs_conventions.py`：对 `docs/` 与 `tools/` 下的 Markdown 做工程约定检查（例如 H1 + 标题后空行），并产出 `docs_conventions_report.json`（report-output-v2）。
+- `tools/check_md_refs_contract.py`：对 `md_refs` 的引用抽取 API 做契约门禁（signature + keyword-only callsites），用于防止“文档引用解析接口”在重构时静默漂移。
+
+本契约对应的“README↔源码对齐门禁”属于 **独立职责**：它关注的是 *工具 README 的参数/输出/产物描述是否与实现一致*，而不是 Markdown 版式或引用抽取 API。
+
+因此默认策略是：
+
+1) **不扩大既有工具职责边界**（避免把 style check / API contract gate 与 README 对齐混在同一工具里）。
+2) **新建一个专用门禁工具**（本计划的 `--check/--write`），并在 `tools/gate.py` / `tools/check_all.py` 的 gate 链中组合调用。
+3) 现有工具保持原语义与输出路径不变；README 对齐门禁只新增其自身报告（若需要），并遵循同一 report-output-v2 规范。
+
 ---
 
 ## 2. 角色划分（SSOT vs 生成产物）

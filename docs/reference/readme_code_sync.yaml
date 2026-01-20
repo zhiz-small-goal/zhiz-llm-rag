@@ -5,6 +5,23 @@ version: 1
 last_updated: "2026-01-20"
 timezone: "America/Los_Angeles"
 
+# Notes: this repo already has other doc-related gates.
+# This SSOT focuses on README<->code alignment for tools/, and is designed to be composed
+# with existing gates rather than replacing them.
+related_gates:
+  existing:
+    - id: "check_docs_conventions"
+      entrypoint: "python tools/check_docs_conventions.py"
+      scope: "docs/, tools/"
+      purpose: "Markdown 工程约定检查（H1 + 空行等），并生成 docs_conventions_report.json（report-output-v2）。"
+    - id: "check_md_refs_contract"
+      entrypoint: "python tools/check_md_refs_contract.py"
+      scope: "repo (*.py callsites)"
+      purpose: "md_refs API 契约门禁（signature + keyword-only callsites），防止引用解析接口漂移。"
+  integration_policy:
+    approach: "new_gate_tool"
+    rationale: "README↔源码对齐属于独立职责；建议新建 gate（本计划的 check/write 工具）并在 gate.py/check_all.py 中组合调用，避免扩大既有工具职责边界。"
+
 scope:
   # NOTE: keep globs stable; downstream tools may rely on these defaults.
   readme_globs:
