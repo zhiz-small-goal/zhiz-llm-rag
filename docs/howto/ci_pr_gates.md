@@ -89,6 +89,9 @@ python tools\check_pyproject_preflight.py --ascii-only && pip install -e ".[ci]"
 - `rag-* not found`：优先检查当前解释器与 Scripts 是否在 PATH；必要时重新 `pip install -e ...`
 - `tools layout FAIL`：通常是新增脚本缺 marker，或 tools↔src 出现同名但 tools 侧不是 wrapper；优先按 `check_tools_layout` 输出修复 marker/转发关系
 - `contract gate FAIL`：按输出定位违规调用点，改为 `md_path=.../md_text=...` 的关键字参数
+- `check_readme_code_sync FAIL`：
+  - 先运行 `python tools/check_readme_code_sync.py --root . --write`，把 README 的 AUTO blocks 刷新后再重跑 gate（推荐把 README diff 与代码改动放在同一提交便于回溯）
+  - 若某工具无法确定性生成/校验（动态参数/运行期依赖等），必须在 `docs/reference/readme_code_sync_exceptions.yaml` 登记例外（含 reason/owner/review.trigger），避免隐式放行
 - `check_ruff FAIL`：若为 format 相关，先执行 `python -m ruff format .`（或 `ruff format .`）再重跑 `check_ruff`
 - `pytest FAIL`：查看失败的断言与临时目录产物，通常是路径/产物名/入口点问题
 

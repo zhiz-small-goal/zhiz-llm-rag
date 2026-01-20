@@ -278,6 +278,18 @@ generation:
 3) 有替代：说明替代校验方式（例如 help 快照回归、语义测试、手工 checklist）。
 4) 可复审：定义复审触发条件（例如契约版本升级、工具重构、输出格式升级等）。
 
+例外条目必须在 `docs/reference/readme_code_sync_exceptions.yaml` 中登记，且至少包含：
+
+- `path` / `tool_id`
+- `reason`（根因）
+- `owner`（负责清理该例外的人/小组）
+- `review.trigger`（复审触发器）
+- `checks.skip`（仅允许：`options` / `output_contract` / `artifacts`）
+
+约束：
+
+- 例外条目缺少上述字段时，`check_readme_code_sync` 应视为配置错误并 FAIL（避免例外无限扩散）。
+
 例外登记位置由 SSOT 指定（见 `docs/reference/readme_code_sync.yaml`）。
 
 ---

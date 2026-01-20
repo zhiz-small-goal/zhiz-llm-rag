@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -146,6 +147,13 @@ def test_check_readme_code_sync_write_is_idempotent(tmp_path: Path) -> None:
     assert "`--foo`" in after_first
     assert "`--bar`" in after_first
 
+    report_json = repo / "data_processed/build_reports/readme_code_sync_report.json"
+    report_md = report_json.with_suffix(".md")
+    assert report_json.exists()
+    assert report_md.exists()
+    payload = json.loads(report_json.read_text(encoding="utf-8"))
+    assert int(payload.get("schema_version") or 0) == 2
+
     cmd_check = [
         sys.executable,
         "-m",
@@ -161,6 +169,158 @@ def test_check_readme_code_sync_write_is_idempotent(tmp_path: Path) -> None:
     _run(cmd, cwd=repo)
     after_second = readme.read_text(encoding="utf-8")
     assert after_second == after_first, "second --write should be idempotent"
+
+
+def test_help_snapshot_options_block_is_generated(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "docs/reference").mkdir(parents=True, exist_ok=True)
+    (repo / "tools").mkdir(parents=True, exist_ok=True)
+    (repo / "src/mhy_ai_rag_data/tools").mkdir(parents=True, exist_ok=True)
+    (repo / "src/mhy_ai_rag_data/__init__.py").write_text("", encoding="utf-8")
+    (repo / "src/mhy_ai_rag_data/tools/__init__.py").write_text("", encoding="utf-8")
+
+    (repo / "docs/reference/readme_code_sync.yaml").write_text(
+        "\n".join(
+            [
+                "version: 1",
+                "scope:",
+                "  readme_globs:",
+                "    - tools/*README*.md",
+                "frontmatter:",
+                "  required_keys: [title, version, last_updated]",
+                "auto_blocks:",
+                "  markers:",
+                "    options:",
+                "      begin: '<!-- AUTO:BEGIN options -->'",
+                "      end: '<!-- AUTO:END options -->'",
+                "    output_contract:",
+                "      begin: '<!-- AUTO:BEGIN output-contract -->'",
+                "      end: '<!-- AUTO:END output-contract -->'",
+                "    artifacts:",
+                "      begin: '<!-- AUTO:BEGIN artifacts -->'",
+                "      end: '<!-- AUTO:END artifacts -->'",
+                "checks:",
+                "  enforce:",
+                "    - frontmatter_present",
+                "    - frontmatter_required_keys",
+                "    - auto_block_markers_well_formed",
+                "    - options_match_when_present",
+                "    - output_contract_match_when_present",
+                "    - artifacts_match_when_present",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    (repo / "docs/reference/readme_code_sync_index.yaml").write_text(
+        "\n".join(
+            [
+                "version: 1",
+                "readmes:",
+                "  - path: tools/demo_help_tool_README.md",
+                "    tool_id: demo_help_tool",
+                "    cli_framework: other",
+                "    impl:",
+                "      module: mhy_ai_rag_data.tools.demo_help_tool",
+                "    contracts:",
+                "      output: none",
+                "    generation:",
+                "      options: help-snapshot",
+                "      output_contract: none",
+                "    mapping_status: ok",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    (repo / "src/mhy_ai_rag_data/tools/demo_help_tool.py").write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "",
+                "import argparse",
+                "",
+                "",
+                "def main(argv: list[str] | None = None) -> int:",
+                "    ap = argparse.ArgumentParser(description='demo help tool')",
+                "    ap.add_argument('--foo', required=True, help='foo flag')",
+                "    ap.add_argument('--bar', default='x', help='bar flag')",
+                "    ap.parse_args(argv)",
+                "    return 0",
+                "",
+                "",
+                "if __name__ == '__main__':",
+                "    raise SystemExit(main())",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readme = repo / "tools/demo_help_tool_README.md"
+    readme.write_text(
+        "\n".join(
+            [
+                "---",
+                'title: "demo_help_tool 使用说明"',
+                "version: v0.1",
+                "last_updated: 2026-01-20",
+                "tool_id: demo_help_tool",
+                "impl:",
+                "  module: mhy_ai_rag_data.tools.demo_help_tool",
+                "contracts:",
+                "  output: none",
+                "generation:",
+                "  options: help-snapshot",
+                "mapping_status: ok",
+                "---",
+                "",
+                "# demo_help_tool",
+                "",
+                "manual text",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "mhy_ai_rag_data.tools.check_readme_code_sync",
+        "--root",
+        str(repo),
+        "--write",
+        "--out",
+        "",
+    ]
+    _run(cmd, cwd=repo)
+
+    after_first = readme.read_text(encoding="utf-8")
+    assert "<!-- AUTO:BEGIN options -->" in after_first
+    assert "`--foo`" in after_first
+    assert "`--bar`" in after_first
+    assert "foo flag" in after_first
+    assert "bar flag" in after_first
+
+    # idempotent
+    _run(cmd, cwd=repo)
+    after_second = readme.read_text(encoding="utf-8")
+    assert after_second == after_first
+
+    cmd_check = [
+        sys.executable,
+        "-m",
+        "mhy_ai_rag_data.tools.check_readme_code_sync",
+        "--root",
+        str(repo),
+        "--check",
+        "--out",
+        "",
+    ]
+    _run(cmd_check, cwd=repo)
 
 
 def test_write_skips_non_tool_readme(tmp_path: Path) -> None:

@@ -35,7 +35,10 @@ import ast
 import difflib
 import fnmatch
 import json
+import os
 import re
+import subprocess
+import sys
 import time
 import traceback
 from dataclasses import dataclass
@@ -398,6 +401,67 @@ def build_options_block_from_ast(opts: List[ArgparseOption], *, sort_flags: str 
     return "\n".join(out).rstrip() + "\n"
 
 
+HELP_SNAPSHOT_TIMEOUT_SECS = 5.0
+
+
+def _looks_like_cli_help_snapshot_source(text: str) -> bool:
+    """Heuristic guard: only run `--help` for sources that appear to implement a CLI parser.
+
+    This avoids executing arbitrary scripts (which may have side effects) just to obtain help text.
+    """
+    t = text or ""
+    if ("argparse" in t) and ("ArgumentParser" in t) and ("parse_args" in t):
+        return True
+    if "click" in t or "typer" in t:
+        return True
+    return False
+
+
+def extract_argparse_options_from_help_output(help_text: str) -> List[ArgparseOption]:
+    """Best-effort extraction from normalized `--help` output.
+
+    We only keep options that have at least one long flag (`--...`). Continuation/wrapped
+    help lines are ignored on purpose (terminal width makes them unstable).
+    """
+    if not help_text:
+        return []
+    out: List[ArgparseOption] = []
+    for raw in normalize_newlines(help_text).splitlines():
+        line = raw.strip()
+        if not line or not line.startswith("-"):
+            continue
+        # Split "flags<2+spaces>help text"
+        parts = re.split(r"\s{2,}", line, maxsplit=1)
+        left = parts[0]
+        desc = parts[1].strip() if len(parts) > 1 else ""
+
+        left = left.replace(",", " ").replace("/", " ")
+        flags = [tok for tok in left.split() if tok.startswith("-")]
+        if not any(f.startswith("--") for f in flags):
+            continue
+
+        uniq: List[str] = []
+        seen: Set[str] = set()
+        for f in flags:
+            if f not in seen:
+                uniq.append(f)
+                seen.add(f)
+
+        out.append(
+            ArgparseOption(
+                flags=tuple(uniq),
+                required=None,
+                default_repr=None,
+                action=None,
+                type_repr=None,
+                nargs_repr=None,
+                help=desc or None,
+            )
+        )
+
+    return sorted(out, key=lambda x: (x.sort_key, x.flags))
+
+
 def _normalize_block_content(s: str) -> str:
     s = normalize_newlines(s or "")
     if s and not s.endswith("\n"):
@@ -485,6 +549,118 @@ def build_options_block_from_flags(flags: Set[str]) -> str:
     for f in sorted(flags):
         lines.append(f"| `{f}` |")
     return "\n".join(lines) + "\n"
+
+
+def build_options_block_help_snapshot(
+    *,
+    repo: Path,
+    idx_entry: Optional[Dict[str, Any]],
+    frontmatter: Dict[str, Any],
+    sort_flags: str = "lexicographic",
+) -> Tuple[str, Set[str], bool, Optional[str]]:
+    """Return (options_md, flags, has_out_flag, error).
+
+    Notes:
+    - The snapshot is *best-effort* and only extracts long flags (`--...`) from `--help`.
+    - If the source doesn't look like a CLI entrypoint, we do NOT execute it (avoid side effects).
+    """
+    mod: Optional[str] = None
+    wrapper_rel: Optional[str] = None
+    if idx_entry:
+        mod = nested_get(as_dict(idx_entry.get("impl")), "module")
+        wrapper_rel = nested_get(as_dict(idx_entry.get("impl")), "wrapper")
+    mod = nested_get(as_dict(frontmatter.get("impl")), "module") or mod
+    wrapper_rel = nested_get(as_dict(frontmatter.get("impl")), "wrapper") or wrapper_rel
+
+    module_path: Optional[Path] = None
+    if isinstance(mod, str) and mod:
+        p = module_to_file(repo, mod)
+        if p.exists():
+            module_path = p
+
+    wrapper_path: Optional[Path] = None
+    if isinstance(wrapper_rel, str) and wrapper_rel:
+        p = (repo / wrapper_rel).resolve()
+        if p.exists():
+            wrapper_path = p
+
+    probe_path = module_path or wrapper_path
+    probe_text = read_text(probe_path) if probe_path else ""
+    if not _looks_like_cli_help_snapshot_source(probe_text):
+        return "_(no long flags detected by help-snapshot)_\n", set(), False, None
+
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["COLUMNS"] = "120"
+    env["NO_COLOR"] = "1"
+
+    argv: List[str] = []
+    if wrapper_path is not None:
+        argv = [sys.executable, str(wrapper_path), "--help"]
+    elif isinstance(mod, str) and mod:
+        argv = [sys.executable, "-m", mod, "--help"]
+        src = repo / "src"
+        if src.exists():
+            prev = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = str(src) if not prev else (str(src) + os.pathsep + prev)
+    else:
+        return "_(help-snapshot: impl source missing)_\n", set(), False, "impl source missing"
+
+    try:
+        proc = subprocess.run(
+            argv,
+            cwd=str(repo),
+            env=env,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=HELP_SNAPSHOT_TIMEOUT_SECS,
+        )
+    except subprocess.TimeoutExpired:
+        return "_(help-snapshot: timeout)_\n", set(), False, "timeout"
+    except Exception:
+        return "_(help-snapshot: execution error)_\n", set(), False, "execution error"
+
+    out_text = proc.stdout if proc.stdout.strip() else proc.stderr
+    opts = extract_argparse_options_from_help_output(out_text)
+    opts = [o for o in opts if ("--help" not in o.flags and "-h" not in o.flags)]
+    if not opts:
+        return "_(no long flags detected by help-snapshot)_\n", set(), False, None
+
+    flags: Set[str] = set()
+    for o in opts:
+        for f in o.flags:
+            if f.startswith("--"):
+                flags.add(f)
+    flags.discard("--help")
+
+    md = build_options_block_from_ast(opts, sort_flags=sort_flags)
+    return md, flags, _detect_has_out_flag_from_opts(opts), None
+
+
+def build_options_block_for_tool(
+    *,
+    repo: Path,
+    idx_entry: Optional[Dict[str, Any]],
+    frontmatter: Dict[str, Any],
+    gen_mode: str,
+    sort_flags: str = "lexicographic",
+) -> Tuple[str, Set[str], bool, Optional[str]]:
+    """Unified options block generator for all modes."""
+    if gen_mode == "static-ast":
+        code_path = _resolve_impl_source(repo, idx_entry, frontmatter)
+        md, flags, has_out = build_options_block(gen_mode=gen_mode, code_path=code_path, sort_flags=sort_flags)
+        if code_path is None:
+            return md, flags, has_out, "impl source missing"
+        return md, flags, has_out, None
+    if gen_mode == "help-snapshot":
+        return build_options_block_help_snapshot(
+            repo=repo, idx_entry=idx_entry, frontmatter=frontmatter, sort_flags=sort_flags
+        )
+    return f"_(generation.options={gen_mode!r}; not generated)_\n", set(), False, None
 
 
 def build_options_block(
@@ -658,6 +834,60 @@ def _load_exceptions(repo: Path, cfg: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         return {}
     return obj if isinstance(obj, dict) else {}
+
+
+_ALLOWED_EXCEPTION_CHECKS = {"options", "output_contract", "artifacts"}
+
+
+def _validate_exceptions(ex: Dict[str, Any]) -> List[str]:
+    """Return a list of human-readable validation errors (empty => OK)."""
+    if not ex:
+        return []
+
+    errs: List[str] = []
+    items = ex.get("exceptions")
+    if items is None:
+        return []
+    if not isinstance(items, list):
+        return ["exceptions: expected a list"]
+
+    for i, it in enumerate(items):
+        if not isinstance(it, dict):
+            errs.append(f"exceptions[{i}]: expected a dict")
+            continue
+        path = str(it.get("path") or "").strip()
+        if not path:
+            errs.append(f"exceptions[{i}].path: required")
+
+        reason = str(it.get("reason") or "").strip()
+        if not reason:
+            errs.append(f"exceptions[{i}].reason: required")
+
+        owner = str(it.get("owner") or "").strip()
+        if not owner:
+            errs.append(f"exceptions[{i}].owner: required")
+
+        review = it.get("review")
+        if not isinstance(review, dict):
+            errs.append(f"exceptions[{i}].review: required (dict)")
+        else:
+            trigger = str(review.get("trigger") or "").strip()
+            if not trigger:
+                errs.append(f"exceptions[{i}].review.trigger: required")
+
+        checks = it.get("checks") or {}
+        if not isinstance(checks, dict):
+            errs.append(f"exceptions[{i}].checks: expected a dict")
+            continue
+        skip = checks.get("skip") or []
+        if not isinstance(skip, list):
+            errs.append(f"exceptions[{i}].checks.skip: expected a list")
+            continue
+        unknown = [str(x) for x in skip if str(x) not in _ALLOWED_EXCEPTION_CHECKS]
+        if unknown:
+            errs.append(f"exceptions[{i}].checks.skip: unknown checks={unknown}")
+
+    return errs
 
 
 def _is_skip_by_exception(ex: Dict[str, Any], rel: str, check: str) -> bool:
@@ -834,6 +1064,7 @@ def main() -> int:
 
         cfg = load_yaml_dict(cfg_path)
         exceptions = _load_exceptions(repo, cfg)
+        exceptions_errors = _validate_exceptions(exceptions)
         globs = list(as_dict(cfg.get("scope")).get("readme_globs") or [])
         excludes = list(as_dict(cfg.get("scope")).get("exclude_globs") or [])
 
@@ -857,6 +1088,19 @@ def main() -> int:
 
             write_items: List[Dict[str, Any]] = []
             changed = 0
+
+            if exceptions_errors:
+                for msg in exceptions_errors:
+                    write_items.append(
+                        {
+                            "tool": "check_readme_code_sync",
+                            "title": "exceptions_invalid",
+                            "status_label": "FAIL",
+                            "severity_level": 3,
+                            "message": f"exceptions invalid: {msg}",
+                            "detail": {"error": msg},
+                        }
+                    )
 
             for p_readme in readmes:
                 rel = p_readme.relative_to(repo).as_posix()
@@ -954,9 +1198,24 @@ def main() -> int:
                 if code_path is not None:
                     default_out = extract_default_out_from_file(code_path)
 
-                options_md, _, has_out_flag = build_options_block(
-                    gen_mode=gen_mode, code_path=code_path, sort_flags=sort_flags
+                options_md, _, has_out_flag, opt_err = build_options_block_for_tool(
+                    repo=repo,
+                    idx_entry=idx_entry,
+                    frontmatter=frontmatter,
+                    gen_mode=gen_mode,
+                    sort_flags=sort_flags,
                 )
+                if opt_err:
+                    write_items.append(
+                        {
+                            "tool": "check_readme_code_sync",
+                            "title": "options_generation_failed",
+                            "status_label": "FAIL",
+                            "severity_level": 3,
+                            "message": f"{rel}: options generation failed ({gen_mode})",
+                            "detail": {"file": rel, "gen_mode": gen_mode, "error": opt_err},
+                        }
+                    )
 
                 output_contract_md = build_output_contract_block(
                     contracts_output=contracts_output,
@@ -1091,6 +1350,16 @@ def main() -> int:
         issues: List[Dict[str, Any]] = []
         warnings: List[Dict[str, Any]] = []
 
+        if exceptions_errors:
+            for msg in exceptions_errors:
+                issues.append(
+                    {
+                        "type": "exceptions_invalid",
+                        "file": str(nested_get(as_dict(cfg.get("exceptions")), "path") or ""),
+                        "detail": msg,
+                    }
+                )
+
         for p in readmes:
             rel = p.relative_to(repo).as_posix()
             raw = read_text(p)
@@ -1199,8 +1468,14 @@ def main() -> int:
                                 or nested_get(as_dict(fm.get("generation")), "options")
                                 or "static-ast"
                             )
-                            code_path = _resolve_impl_source(repo, idx_entry, fm) if gen_mode == "static-ast" else None
-                            if gen_mode == "static-ast" and code_path is None:
+                            expected_md, _, _, opt_err = build_options_block_for_tool(
+                                repo=repo,
+                                idx_entry=idx_entry,
+                                frontmatter=fm,
+                                gen_mode=gen_mode,
+                                sort_flags=sort_flags,
+                            )
+                            if gen_mode == "static-ast" and opt_err:
                                 issues.append(
                                     {
                                         "type": "options_source_missing",
@@ -1208,10 +1483,14 @@ def main() -> int:
                                         "detail": f"generation.options={gen_mode!r} requires impl.module or impl.wrapper (existing file)",
                                     }
                                 )
-
-                            expected_md, _, _ = build_options_block(
-                                gen_mode=gen_mode, code_path=code_path, sort_flags=sort_flags
-                            )
+                            if gen_mode == "help-snapshot" and opt_err:
+                                issues.append(
+                                    {
+                                        "type": "options_help_snapshot_failed",
+                                        "file": rel,
+                                        "detail": f"help-snapshot generation failed: {opt_err}",
+                                    }
+                                )
                             if _normalize_block_content(block) != _normalize_block_content(expected_md):
                                 issues.append(
                                     {
@@ -1261,9 +1540,12 @@ def main() -> int:
                                 or nested_get(as_dict(fm.get("generation")), "options")
                                 or "static-ast"
                             )
-                            code_path = src_path if gen_mode == "static-ast" else None
-                            _, _, has_out_flag = build_options_block(
-                                gen_mode=gen_mode, code_path=code_path, sort_flags=sort_flags
+                            _, _, has_out_flag, _ = build_options_block_for_tool(
+                                repo=repo,
+                                idx_entry=idx_entry,
+                                frontmatter=fm,
+                                gen_mode=gen_mode,
+                                sort_flags=sort_flags,
                             )
                             expected = build_output_contract_block(
                                 contracts_output=contracts_output,
@@ -1307,7 +1589,7 @@ def main() -> int:
                         block = extract_auto_block(raw_nl, begin, end)
                         if block is not None:
                             registry = load_report_tools_registry(repo)
-                            tool_id = str(idxd.get("tool_id") or frontmatter.get("tool_id") or "")
+                            tool_id = str(idxd.get("tool_id") or fm.get("tool_id") or "")
                             reg_entry = registry_entry_for_tool(registry, tool_id) if tool_id else None
 
                             contracts_output = str(

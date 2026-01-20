@@ -47,8 +47,8 @@
 | 2026-01-20 | 3 | DONE | `readme_code_alignment_step3_patch.zip`（补丁包）<br>仓库路径：`src/mhy_ai_rag_data/tools/check_readme_code_sync.py`、`tools/check_readme_code_sync.py`、`tools/check_readme_code_sync_README.md`<br>报告默认：`data_processed/build_reports/readme_code_sync_report.json` | 已实现 Step3 的 check-only 门禁：frontmatter/markers 基础校验；仅当存在 `AUTO:BEGIN options` 区块时才做 `argparse.add_argument` 静态 flag 抽取差分；`--write` 预留给 Step4。 |
 | 2026-01-20 | 4 | DONE | 仓库路径：`src/mhy_ai_rag_data/tools/check_readme_code_sync.py`（实现 `--write` + AUTO blocks 校验）<br>`tools/*README*.md`（落地 options/output-contract/artifacts AUTO blocks） | 已实现 `--write` 并保证幂等输出；AUTO markers 以“独立行”识别，避免在反引号/代码块中误触发。 |
 | 2026-01-20 | 5 | DONE | 仓库路径：`docs/reference/reference.yaml`（gate profiles 新增 `check_readme_code_sync`）<br>`tools/run_ci_gates.cmd`、`tools/run_ci_gates_README.md`、`docs/howto/ci_pr_gates.md` | 已接入 Gate runner 与 Windows 一键门禁脚本。 |
-| 2026-01-20 | 6 | IN_PROGRESS | 仓库路径：`tests/test_check_readme_code_sync_write.py`（`--write` 幂等性与最小闭环回归） | 仍需补齐：help 快照归一化 + 语义抽样回归（exit code/stdout/stderr/产物）。 |
-| 2026-01-20 | 7 | IN_PROGRESS | 仓库路径：`docs/reference/readme_code_sync_exceptions.yaml`（例外登记入口） | 仍需补齐：owner/复审触发器与贡献流程写入（避免例外无限扩散）。 |
+| 2026-01-20 | 6 | DONE | 仓库路径：`tests/test_check_readme_code_sync_write.py`（`--write` 幂等性 + help-snapshot 最小回归 + 报告产物断言） | 已补齐：help-snapshot 最小闭环与语义回归（报告产物存在性/基本字段），并保持测试确定性。 |
+| 2026-01-20 | 7 | DONE | 仓库路径：`docs/reference/readme_code_sync_exceptions.yaml`（例外登记入口 + 字段约束说明）<br>`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`、`docs/howto/ci_pr_gates.md`（流程约束补充） | 已补齐：例外条目字段要求（reason/owner/review.trigger）与使用流程（先 `--write`，必要时显式登记例外）。 |
 
 ---
 

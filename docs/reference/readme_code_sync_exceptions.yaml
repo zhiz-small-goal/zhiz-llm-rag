@@ -8,13 +8,20 @@
 # exceptions:
 #   - path: tools/some_tool_README.md
 #     tool_id: some_tool
-#     reason: "why it can't be generated/checked"
+#     reason: "why it can't be generated/checked (root cause, not symptoms)"
 #     checks:
 #       skip: ["options", "output_contract", "artifacts"]
-#     owner: "@team-or-person"
+#     owner: "@team-or-person (who will fix/remove this exception)"
 #     review:
-#       trigger: "when/why to re-check"
+#       trigger: "when/why to re-check (e.g. tool refactor / contract upgrade / quarterly)"
+#       note: "optional extra context"
+#
+# Required fields (enforced by check_readme_code_sync):
+# - path
+# - reason
+# - owner
+# - review.trigger
+# - checks.skip (only: options/output_contract/artifacts)
 version: 1
 last_updated: "2026-01-20"
 exceptions: []
-

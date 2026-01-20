@@ -33,6 +33,7 @@ cli_framework: argparse
 
 - `docs/reference/readme_code_sync.yaml`：一致性规则（required frontmatter keys / AUTO block markers / 默认 enforce 列表）。
 - `docs/reference/readme_code_sync_index.yaml`：README ↔ 工具实现映射（tool_id / impl.module / contracts.output 等）。
+- `docs/reference/readme_code_sync_exceptions.yaml`：例外登记（仅允许显式跳过 options/output-contract/artifacts 的校验；需 reason/owner/review.trigger）。
 
 ## 检查内容（`--check`）
 
@@ -73,8 +74,10 @@ python tools/check_readme_code_sync.py --root . --write
 - `frontmatter_required_keys_missing`：缺少 `title/version/last_updated` 等 required keys。
 - `auto_block_marker_invalid`：AUTO block begin/end 不成对或顺序错。
 - `options_block_mismatch`：AUTO options block 内容与生成器输出不一致（用 `--write` 刷新）。
+- `options_help_snapshot_failed`：`generation.options=help-snapshot` 但无法获取稳定的 help 快照（考虑改用 `static-ast` / 补齐 wrapper / 或登记例外）。
 - `output_contract_block_mismatch`：AUTO output-contract block 内容与生成器输出不一致（用 `--write` 刷新）。
 - `artifacts_block_mismatch`：AUTO artifacts block 内容与生成器输出不一致（用 `--write` 刷新）。
+- `exceptions_invalid`：例外文件结构不合法（缺 reason/owner/review.trigger 或 skip check 名不受支持）。
 
 ## 自动生成区块（AUTO）
 <!-- AUTO:BEGIN options -->
