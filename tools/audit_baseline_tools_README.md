@@ -1,3 +1,28 @@
+---
+title: `audit_baseline_tools.py` 使用说明（全仓静态审计：查找基线/快照/哈希/报告工具，避免冗余）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: audit_baseline_tools
+
+impl:
+  module: mhy_ai_rag_data.tools.audit_baseline_tools
+  wrapper: tools/audit_baseline_tools.py
+
+entrypoints:
+  - python tools/audit_baseline_tools.py
+  - python -m mhy_ai_rag_data.tools.audit_baseline_tools
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `audit_baseline_tools.py` 使用说明（全仓静态审计：查找基线/快照/哈希/报告工具，避免冗余）
 
 

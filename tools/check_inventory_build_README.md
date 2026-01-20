@@ -1,3 +1,28 @@
+---
+title: check_inventory_build_README
+version: v1.0
+last_updated: 2026-01-20
+tool_id: check_inventory_build
+
+impl:
+  module: mhy_ai_rag_data.tools.check_inventory_build
+  wrapper: tools/check_inventory_build.py
+
+entrypoints:
+  - python tools/check_inventory_build.py
+  - python -m mhy_ai_rag_data.tools.check_inventory_build
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_inventory_build_README
 
 

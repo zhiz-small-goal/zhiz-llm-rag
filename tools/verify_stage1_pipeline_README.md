@@ -1,3 +1,28 @@
+---
+title: `verify_stage1_pipeline.py` 使用说明（Stage-1 一键验收/回归）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: verify_stage1_pipeline
+
+impl:
+  module: mhy_ai_rag_data.tools.verify_stage1_pipeline
+  wrapper: tools/verify_stage1_pipeline.py
+
+entrypoints:
+  - python tools/verify_stage1_pipeline.py
+  - python -m mhy_ai_rag_data.tools.verify_stage1_pipeline
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `verify_stage1_pipeline.py` 使用说明（Stage-1 一键验收/回归）
 
 

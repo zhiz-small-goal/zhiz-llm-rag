@@ -1,3 +1,28 @@
+---
+title: `check_docs_conventions.py` 使用说明（docs Markdown 工程约定门禁）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: check_docs_conventions
+
+impl:
+  module: mhy_ai_rag_data.tools.check_docs_conventions
+  wrapper: tools/check_docs_conventions.py
+
+entrypoints:
+  - python tools/check_docs_conventions.py
+  - python -m mhy_ai_rag_data.tools.check_docs_conventions
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `check_docs_conventions.py` 使用说明（docs Markdown 工程约定门禁）
 
 

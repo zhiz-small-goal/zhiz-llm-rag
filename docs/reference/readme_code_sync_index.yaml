@@ -1,0 +1,846 @@
+version: 1
+generated_at: 2026-01-20
+scope: tools
+readmes:
+  -
+    path: tools/audit_baseline_tools_README.md
+    tool_id: audit_baseline_tools
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.audit_baseline_tools
+      wrapper: tools/audit_baseline_tools.py
+    entrypoints:
+      - "python tools/audit_baseline_tools.py"
+      - "python -m mhy_ai_rag_data.tools.audit_baseline_tools"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/build_chroma_index_flagembedding_README.md
+    tool_id: build_chroma_index_flagembedding
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.build_chroma_index_flagembedding
+      wrapper: tools/build_chroma_index_flagembedding.py
+    entrypoints:
+      - "python tools/build_chroma_index_flagembedding.py"
+      - "python -m mhy_ai_rag_data.tools.build_chroma_index_flagembedding"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/capture_rag_env_README.md
+    tool_id: capture_rag_env
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.capture_rag_env
+      wrapper: tools/capture_rag_env.py
+    entrypoints:
+      - "python tools/capture_rag_env.py"
+      - "python -m mhy_ai_rag_data.tools.capture_rag_env"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/check_all_README.md
+    tool_id: check_all
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_all
+      wrapper: tools/check_all.py
+    entrypoints:
+      - "python tools/check_all.py"
+      - "python -m mhy_ai_rag_data.tools.check_all"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/check_chroma_coverage_vs_units_README.md
+    tool_id: check_chroma_coverage_vs_units
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_chroma_coverage_vs_units
+      wrapper: tools/check_chroma_coverage_vs_units.py
+    entrypoints:
+      - "python tools/check_chroma_coverage_vs_units.py"
+      - "python -m mhy_ai_rag_data.tools.check_chroma_coverage_vs_units"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_chroma_embeddings_sample_README.md
+    tool_id: check_chroma_embeddings_sample
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_chroma_embeddings_sample
+      wrapper: tools/check_chroma_embeddings_sample.py
+    entrypoints:
+      - "python tools/check_chroma_embeddings_sample.py"
+      - "python -m mhy_ai_rag_data.tools.check_chroma_embeddings_sample"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_docs_conventions_README.md
+    tool_id: check_docs_conventions
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_docs_conventions
+      wrapper: tools/check_docs_conventions.py
+    entrypoints:
+      - "python tools/check_docs_conventions.py"
+      - "python -m mhy_ai_rag_data.tools.check_docs_conventions"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/check_exit_code_contract_README.md
+    tool_id: check_exit_code_contract
+    cli_framework: argparse
+    impl:
+      wrapper: tools/check_exit_code_contract.py
+    entrypoints:
+      - "python tools/check_exit_code_contract.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_inventory_build_README.md
+    tool_id: check_inventory_build
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_inventory_build
+      wrapper: tools/check_inventory_build.py
+    entrypoints:
+      - "python tools/check_inventory_build.py"
+      - "python -m mhy_ai_rag_data.tools.check_inventory_build"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/check_md_refs_contract_README.md
+    tool_id: check_md_refs_contract
+    cli_framework: argparse
+    impl:
+      wrapper: tools/check_md_refs_contract.py
+    entrypoints:
+      - "python tools/check_md_refs_contract.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_mypy_README.md
+    tool_id: check_mypy
+    cli_framework: argparse
+    impl:
+      wrapper: tools/check_mypy.py
+    entrypoints:
+      - "python tools/check_mypy.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_public_release_hygiene_README.md
+    tool_id: check_public_release_hygiene
+    cli_framework: argparse
+    impl:
+      wrapper: tools/check_public_release_hygiene.py
+    entrypoints:
+      - "python tools/check_public_release_hygiene.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_pyproject_preflight_README.md
+    tool_id: check_pyproject_preflight
+    cli_framework: argparse
+    impl:
+      wrapper: tools/check_pyproject_preflight.py
+    entrypoints:
+      - "python tools/check_pyproject_preflight.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_repo_health_files_README.md
+    tool_id: check_repo_health_files
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_repo_health_files
+      wrapper: tools/check_repo_health_files.py
+    entrypoints:
+      - "python tools/check_repo_health_files.py"
+      - "python -m mhy_ai_rag_data.tools.check_repo_health_files"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/check_ruff_README.md
+    tool_id: check_ruff
+    cli_framework: argparse
+    impl:
+      wrapper: tools/check_ruff.py
+    entrypoints:
+      - "python tools/check_ruff.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/check_tools_layout_README.md
+    tool_id: check_tools_layout
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_tools_layout
+      wrapper: tools/check_tools_layout.py
+    entrypoints:
+      - "python tools/check_tools_layout.py"
+      - "python -m mhy_ai_rag_data.tools.check_tools_layout"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/compare_stage1_baseline_snapshots_README.md
+    tool_id: compare_stage1_baseline_snapshots
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.compare_stage1_baseline_snapshots
+      wrapper: tools/compare_stage1_baseline_snapshots.py
+    entrypoints:
+      - "python tools/compare_stage1_baseline_snapshots.py"
+      - "python -m mhy_ai_rag_data.tools.compare_stage1_baseline_snapshots"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/diff_units_sources_vs_chroma_sources_README.md
+    tool_id: diff_units_sources_vs_chroma_sources
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.diff_units_sources_vs_chroma_sources
+      wrapper: tools/diff_units_sources_vs_chroma_sources.py
+    entrypoints:
+      - "python tools/diff_units_sources_vs_chroma_sources.py"
+      - "python -m mhy_ai_rag_data.tools.diff_units_sources_vs_chroma_sources"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/fix_public_release_hygiene_README.md
+    tool_id: fix_public_release_hygiene
+    cli_framework: argparse
+    impl:
+      wrapper: tools/fix_public_release_hygiene.py
+    entrypoints:
+      - "python tools/fix_public_release_hygiene.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/gate_README.md
+    tool_id: gate
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.gate
+      wrapper: tools/gate.py
+    entrypoints:
+      - "python tools/gate.py"
+      - "python -m mhy_ai_rag_data.tools.gate"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/generate_review_spec_docs_README.md
+    tool_id: generate_review_spec_docs
+    cli_framework: argparse
+    impl:
+      wrapper: tools/generate_review_spec_docs.py
+    entrypoints:
+      - "python tools/generate_review_spec_docs.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/index_state_README.md
+    tool_id: index_state
+    cli_framework: other
+    impl:
+      module: mhy_ai_rag_data.tools.index_state
+      wrapper: tools/index_state.py
+    entrypoints:
+      - "python tools/index_state.py"
+      - "python -m mhy_ai_rag_data.tools.index_state"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: help-snapshot
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/init_eval_cases_README.md
+    tool_id: init_eval_cases
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.init_eval_cases
+      wrapper: tools/init_eval_cases.py
+    entrypoints:
+      - "python tools/init_eval_cases.py"
+      - "python -m mhy_ai_rag_data.tools.init_eval_cases"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/list_chroma_collections_README.md
+    tool_id: list_chroma_collections
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.list_chroma_collections
+      wrapper: tools/list_chroma_collections.py
+    entrypoints:
+      - "python tools/list_chroma_collections.py"
+      - "python -m mhy_ai_rag_data.tools.list_chroma_collections"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/llm_http_client_README.md
+    tool_id: llm_http_client
+    cli_framework: other
+    impl:
+      module: mhy_ai_rag_data.tools.llm_http_client
+      wrapper: tools/llm_http_client.py
+    entrypoints:
+      - "python tools/llm_http_client.py"
+      - "python -m mhy_ai_rag_data.tools.llm_http_client"
+    contracts:
+      output: none
+    generation:
+      options: help-snapshot
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/plan_chunks_from_units_README.md
+    tool_id: plan_chunks_from_units
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.plan_chunks_from_units
+      wrapper: tools/plan_chunks_from_units.py
+    entrypoints:
+      - "python tools/plan_chunks_from_units.py"
+      - "python -m mhy_ai_rag_data.tools.plan_chunks_from_units"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/probe_llm_server_README.md
+    tool_id: probe_llm_server
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.probe_llm_server
+      wrapper: tools/probe_llm_server.py
+    entrypoints:
+      - "python tools/probe_llm_server.py"
+      - "python -m mhy_ai_rag_data.tools.probe_llm_server"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/rag_accept_README.md
+    tool_id: rag_accept
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.rag_accept
+      wrapper: tools/rag_accept.py
+    entrypoints:
+      - "python tools/rag_accept.py"
+      - "python -m mhy_ai_rag_data.tools.rag_accept"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/rag_status_README.md
+    tool_id: rag_status
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.rag_status
+      wrapper: tools/rag_status.py
+    entrypoints:
+      - "python tools/rag_status.py"
+      - "python -m mhy_ai_rag_data.tools.rag_status"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/reporting_README.md
+    tool_id: reporting
+    cli_framework: other
+    impl:
+      module: mhy_ai_rag_data.tools.reporting
+      wrapper: tools/reporting.py
+    entrypoints:
+      - "python tools/reporting.py"
+      - "python -m mhy_ai_rag_data.tools.reporting"
+    contracts:
+      output: none
+    generation:
+      options: help-snapshot
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/reset_chroma_db_README.md
+    tool_id: reset_chroma_db
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.reset_chroma_db
+      wrapper: tools/reset_chroma_db.py
+    entrypoints:
+      - "python tools/reset_chroma_db.py"
+      - "python -m mhy_ai_rag_data.tools.reset_chroma_db"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/run_build_profile_README.md
+    tool_id: run_build_profile
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.run_build_profile
+      wrapper: tools/run_build_profile.py
+    entrypoints:
+      - "python tools/run_build_profile.py"
+      - "python -m mhy_ai_rag_data.tools.run_build_profile"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/run_ci_gates_README.md
+    tool_id: run_ci_gates
+    cli_framework: other
+    impl:
+
+    entrypoints:
+
+    contracts:
+      output: unknown
+    generation:
+      options: help-snapshot
+      output_contract: none
+    mapping_status: needs-manual-mapping
+  -
+    path: tools/run_eval_rag_README.md
+    tool_id: run_eval_rag
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.run_eval_rag
+      wrapper: tools/run_eval_rag.py
+    entrypoints:
+      - "python tools/run_eval_rag.py"
+      - "python -m mhy_ai_rag_data.tools.run_eval_rag"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/run_eval_retrieval_README.md
+    tool_id: run_eval_retrieval
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.run_eval_retrieval
+      wrapper: tools/run_eval_retrieval.py
+    entrypoints:
+      - "python tools/run_eval_retrieval.py"
+      - "python -m mhy_ai_rag_data.tools.run_eval_retrieval"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/run_profile_with_timing_README.md
+    tool_id: run_profile_with_timing
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.run_profile_with_timing
+      wrapper: tools/run_profile_with_timing.py
+    entrypoints:
+      - "python tools/run_profile_with_timing.py"
+      - "python -m mhy_ai_rag_data.tools.run_profile_with_timing"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/run_rag_eval_batch_README.md
+    tool_id: run_rag_eval_batch
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.run_rag_eval_batch
+      wrapper: tools/run_rag_eval_batch.py
+    entrypoints:
+      - "python tools/run_rag_eval_batch.py"
+      - "python -m mhy_ai_rag_data.tools.run_rag_eval_batch"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/schema_validate_README.md
+    tool_id: schema_validate
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.schema_validate
+      wrapper: tools/schema_validate.py
+    entrypoints:
+      - "python tools/schema_validate.py"
+      - "python -m mhy_ai_rag_data.tools.schema_validate"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/smoke_test_pipeline_README.md
+    tool_id: smoke_test_pipeline
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.smoke_test_pipeline
+      wrapper: tools/smoke_test_pipeline.py
+    entrypoints:
+      - "python tools/smoke_test_pipeline.py"
+      - "python -m mhy_ai_rag_data.tools.smoke_test_pipeline"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/snapshot_stage1_baseline_README.md
+    tool_id: snapshot_stage1_baseline
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.snapshot_stage1_baseline
+      wrapper: tools/snapshot_stage1_baseline.py
+    entrypoints:
+      - "python tools/snapshot_stage1_baseline.py"
+      - "python -m mhy_ai_rag_data.tools.snapshot_stage1_baseline"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/suggest_eval_case_README.md
+    tool_id: suggest_eval_case
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.suggest_eval_case
+      wrapper: tools/suggest_eval_case.py
+    entrypoints:
+      - "python tools/suggest_eval_case.py"
+      - "python -m mhy_ai_rag_data.tools.suggest_eval_case"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/suggest_expected_sources_README_v2.md
+    tool_id: suggest_expected_sources__v2
+    cli_framework: other
+    impl:
+
+    entrypoints:
+
+    contracts:
+      output: unknown
+    generation:
+      options: help-snapshot
+      output_contract: none
+    mapping_status: needs-manual-mapping
+  -
+    path: tools/update_postmortems_index_README.md
+    tool_id: update_postmortems_index
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.update_postmortems_index
+      wrapper: tools/update_postmortems_index.py
+    entrypoints:
+      - "python tools/update_postmortems_index.py"
+      - "python -m mhy_ai_rag_data.tools.update_postmortems_index"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/validate_eval_cases_README.md
+    tool_id: validate_eval_cases
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.validate_eval_cases
+      wrapper: tools/validate_eval_cases.py
+    entrypoints:
+      - "python tools/validate_eval_cases.py"
+      - "python -m mhy_ai_rag_data.tools.validate_eval_cases"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/validate_review_spec_README.md
+    tool_id: validate_review_spec
+    cli_framework: argparse
+    impl:
+      wrapper: tools/validate_review_spec.py
+    entrypoints:
+      - "python tools/validate_review_spec.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/verify_postmortems_and_troubleshooting_README.md
+    tool_id: verify_postmortems_and_troubleshooting
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.verify_postmortems_and_troubleshooting
+      wrapper: tools/verify_postmortems_and_troubleshooting.py
+    entrypoints:
+      - "python tools/verify_postmortems_and_troubleshooting.py"
+      - "python -m mhy_ai_rag_data.tools.verify_postmortems_and_troubleshooting"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/verify_reports_schema_README.md
+    tool_id: verify_reports_schema
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.verify_reports_schema
+      wrapper: tools/verify_reports_schema.py
+    entrypoints:
+      - "python tools/verify_reports_schema.py"
+      - "python -m mhy_ai_rag_data.tools.verify_reports_schema"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/verify_sentence_transformer_cuda_README.md
+    tool_id: verify_sentence_transformer_cuda
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.verify_sentence_transformer_cuda
+      wrapper: tools/verify_sentence_transformer_cuda.py
+    entrypoints:
+      - "python tools/verify_sentence_transformer_cuda.py"
+      - "python -m mhy_ai_rag_data.tools.verify_sentence_transformer_cuda"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/verify_single_report_output_README.md
+    tool_id: verify_single_report_output
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.verify_single_report_output
+      wrapper: tools/verify_single_report_output.py
+    entrypoints:
+      - "python tools/verify_single_report_output.py"
+      - "python -m mhy_ai_rag_data.tools.verify_single_report_output"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/verify_stage1_pipeline_README.md
+    tool_id: verify_stage1_pipeline
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.verify_stage1_pipeline
+      wrapper: tools/verify_stage1_pipeline.py
+    entrypoints:
+      - "python tools/verify_stage1_pipeline.py"
+      - "python -m mhy_ai_rag_data.tools.verify_stage1_pipeline"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/verify_torch_cuda_README.md
+    tool_id: verify_torch_cuda
+    cli_framework: other
+    impl:
+      module: mhy_ai_rag_data.tools.verify_torch_cuda
+      wrapper: tools/verify_torch_cuda.py
+    entrypoints:
+      - "python tools/verify_torch_cuda.py"
+      - "python -m mhy_ai_rag_data.tools.verify_torch_cuda"
+    contracts:
+      output: none
+    generation:
+      options: help-snapshot
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/view_gate_report_README.md
+    tool_id: view_gate_report
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.view_gate_report
+      wrapper: tools/view_gate_report.py
+    entrypoints:
+      - "python tools/view_gate_report.py"
+      - "python -m mhy_ai_rag_data.tools.view_gate_report"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/view_stage2_reports_README.md
+    tool_id: view_stage2_reports
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.view_stage2_reports
+      wrapper: tools/view_stage2_reports.py
+    entrypoints:
+      - "python tools/view_stage2_reports.py"
+      - "python -m mhy_ai_rag_data.tools.view_stage2_reports"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
+    mapping_status: ok
+  -
+    path: tools/write_db_build_stamp_README.md
+    tool_id: write_db_build_stamp
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.write_db_build_stamp
+      wrapper: tools/write_db_build_stamp.py
+    entrypoints:
+      - "python tools/write_db_build_stamp.py"
+      - "python -m mhy_ai_rag_data.tools.write_db_build_stamp"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok

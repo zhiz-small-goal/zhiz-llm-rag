@@ -2,8 +2,27 @@
 title: check_chroma_embeddings_sample.py 使用说明（检查 Chroma 嵌入向量质量）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: check_chroma_embeddings_sample
 
+impl:
+  module: mhy_ai_rag_data.tools.check_chroma_embeddings_sample
+  wrapper: tools/check_chroma_embeddings_sample.py
+
+entrypoints:
+  - python tools/check_chroma_embeddings_sample.py
+  - python -m mhy_ai_rag_data.tools.check_chroma_embeddings_sample
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_chroma_embeddings_sample.py 使用说明
 
 

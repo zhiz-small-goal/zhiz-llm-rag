@@ -2,8 +2,27 @@
 title: run_rag_eval_batch.py 使用说明（批量 RAG 评估）
 version: v2.0
 last_updated: 2026-01-16
----
+tool_id: run_rag_eval_batch
 
+impl:
+  module: mhy_ai_rag_data.tools.run_rag_eval_batch
+  wrapper: tools/run_rag_eval_batch.py
+
+entrypoints:
+  - python tools/run_rag_eval_batch.py
+  - python -m mhy_ai_rag_data.tools.run_rag_eval_batch
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # run_rag_eval_batch.py 使用说明
 
 

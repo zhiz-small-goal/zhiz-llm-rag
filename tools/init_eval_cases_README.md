@@ -1,3 +1,28 @@
+---
+title: `init_eval_cases.py` 使用说明（Stage-2：初始化评测用例集 JSONL）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: init_eval_cases
+
+impl:
+  module: mhy_ai_rag_data.tools.init_eval_cases
+  wrapper: tools/init_eval_cases.py
+
+entrypoints:
+  - python tools/init_eval_cases.py
+  - python -m mhy_ai_rag_data.tools.init_eval_cases
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `init_eval_cases.py` 使用说明（Stage-2：初始化评测用例集 JSONL）
 
 

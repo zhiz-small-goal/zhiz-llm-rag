@@ -2,8 +2,27 @@
 title: check_chroma_coverage_vs_units.py 使用说明（检查 Chroma 覆盖率）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: check_chroma_coverage_vs_units
 
+impl:
+  module: mhy_ai_rag_data.tools.check_chroma_coverage_vs_units
+  wrapper: tools/check_chroma_coverage_vs_units.py
+
+entrypoints:
+  - python tools/check_chroma_coverage_vs_units.py
+  - python -m mhy_ai_rag_data.tools.check_chroma_coverage_vs_units
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_chroma_coverage_vs_units.py 使用说明
 
 

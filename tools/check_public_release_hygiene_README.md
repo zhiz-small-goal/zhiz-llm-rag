@@ -2,8 +2,25 @@
 title: check_public_release_hygiene.py 使用说明（Public Release Hygiene Audit v3）
 version: v3.0
 last_updated: 2026-01-11
----
+tool_id: check_public_release_hygiene
 
+impl:
+  wrapper: tools/check_public_release_hygiene.py
+
+entrypoints:
+  - python tools/check_public_release_hygiene.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_public_release_hygiene.py 使用说明（Public Release Hygiene Audit v3）
 
 

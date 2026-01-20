@@ -2,8 +2,27 @@
 title: rag_status.py 使用说明（RAG 状态/新鲜度检查）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: rag_status
 
+impl:
+  module: mhy_ai_rag_data.tools.rag_status
+  wrapper: tools/rag_status.py
+
+entrypoints:
+  - python tools/rag_status.py
+  - python -m mhy_ai_rag_data.tools.rag_status
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # rag_status.py 使用说明
 
 > 目标：基于本地真实产物+报告，给出当前状态与下一步建议，解决"多机/重复构建后忘记进度"的痛点。

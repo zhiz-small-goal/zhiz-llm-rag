@@ -2,8 +2,27 @@
 title: verify_postmortems_and_troubleshooting 使用说明
 version: v1
 last_updated: 2026-01-07
----
+tool_id: verify_postmortems_and_troubleshooting
 
+impl:
+  module: mhy_ai_rag_data.tools.verify_postmortems_and_troubleshooting
+  wrapper: tools/verify_postmortems_and_troubleshooting.py
+
+entrypoints:
+  - python tools/verify_postmortems_and_troubleshooting.py
+  - python -m mhy_ai_rag_data.tools.verify_postmortems_and_troubleshooting
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # verify_postmortems_and_troubleshooting_README目录：
 
 

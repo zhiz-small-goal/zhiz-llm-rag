@@ -2,8 +2,27 @@
 title: run_build_profile.py 使用说明（运行构建性能分析）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: run_build_profile
 
+impl:
+  module: mhy_ai_rag_data.tools.run_build_profile
+  wrapper: tools/run_build_profile.py
+
+entrypoints:
+  - python tools/run_build_profile.py
+  - python -m mhy_ai_rag_data.tools.run_build_profile
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # run_build_profile.py 使用说明
 
 > 目标：用 JSON profile 驱动 plan → build → check 的一致性执行，把"口径"从手工命令行升级为可复现的配置文件。

@@ -1,3 +1,28 @@
+---
+title: `view_stage2_reports.py` 使用说明（Stage-2 输出文件一键解读）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: view_stage2_reports
+
+impl:
+  module: mhy_ai_rag_data.tools.view_stage2_reports
+  wrapper: tools/view_stage2_reports.py
+
+entrypoints:
+  - python tools/view_stage2_reports.py
+  - python -m mhy_ai_rag_data.tools.view_stage2_reports
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `view_stage2_reports.py` 使用说明（Stage-2 输出文件一键解读）
 
 

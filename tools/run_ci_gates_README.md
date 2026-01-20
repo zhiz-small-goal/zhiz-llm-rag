@@ -2,8 +2,25 @@
 title: run_ci_gates.cmd 使用说明
 version: v1.0
 last_updated: 2026-01-10
----
+tool_id: run_ci_gates
 
+impl:
+  module: null
+
+entrypoints:
+  - TBD
+
+contracts:
+  output: unknown
+
+generation:
+  options: help-snapshot
+  output_contract: none
+
+mapping_status: needs_manual_mapping
+timezone: America/Los_Angeles
+cli_framework: other
+---
 # run_ci_gates.cmd 使用说明
 
 

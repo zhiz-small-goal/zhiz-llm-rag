@@ -2,8 +2,27 @@
 title: gate.py / rag-gate 使用说明（单入口 Gate：Schema + Policy + 可审计报告）
 version: v1.3
 last_updated: 2026-01-16
----
+tool_id: gate
 
+impl:
+  module: mhy_ai_rag_data.tools.gate
+  wrapper: tools/gate.py
+
+entrypoints:
+  - python tools/gate.py
+  - python -m mhy_ai_rag_data.tools.gate
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # gate.py / rag-gate 使用说明（单入口 Gate）
 
 

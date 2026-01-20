@@ -2,8 +2,25 @@
 title: check_mypy.py 使用说明
 version: v1.1
 last_updated: 2026-01-12
----
+tool_id: check_mypy
 
+impl:
+  wrapper: tools/check_mypy.py
+
+entrypoints:
+  - python tools/check_mypy.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_mypy.py 使用说明
 
 

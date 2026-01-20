@@ -1,3 +1,28 @@
+---
+title: `validate_eval_cases.py` 使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: validate_eval_cases
+
+impl:
+  module: mhy_ai_rag_data.tools.validate_eval_cases
+  wrapper: tools/validate_eval_cases.py
+
+entrypoints:
+  - python tools/validate_eval_cases.py
+  - python -m mhy_ai_rag_data.tools.validate_eval_cases
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `validate_eval_cases.py` 使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）
 
 

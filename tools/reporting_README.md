@@ -2,8 +2,27 @@
 title: reporting.py 使用说明（报告生成工具模块）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: reporting
 
+impl:
+  module: mhy_ai_rag_data.tools.reporting
+  wrapper: tools/reporting.py
+
+entrypoints:
+  - python tools/reporting.py
+  - python -m mhy_ai_rag_data.tools.reporting
+
+contracts:
+  output: none
+
+generation:
+  options: help-snapshot
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: other
+---
 # reporting.py 使用说明
 
 

@@ -2,8 +2,27 @@
 title: build_chroma_index_flagembedding.py 使用说明（FlagEmbedding 构建 Chroma 索引）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: build_chroma_index_flagembedding
 
+impl:
+  module: mhy_ai_rag_data.tools.build_chroma_index_flagembedding
+  wrapper: tools/build_chroma_index_flagembedding.py
+
+entrypoints:
+  - python tools/build_chroma_index_flagembedding.py
+  - python -m mhy_ai_rag_data.tools.build_chroma_index_flagembedding
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # build_chroma_index_flagembedding.py 使用说明
 
 

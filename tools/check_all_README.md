@@ -2,8 +2,27 @@
 title: check_all.py 使用说明（一键自检/工程门禁脚本）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: check_all
 
+impl:
+  module: mhy_ai_rag_data.tools.check_all
+  wrapper: tools/check_all.py
+
+entrypoints:
+  - python tools/check_all.py
+  - python -m mhy_ai_rag_data.tools.check_all
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_all.py 使用说明
 
 

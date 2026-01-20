@@ -2,8 +2,27 @@
 title: rag_accept.py 使用说明（RAG 一键验收工具）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: rag_accept
 
+impl:
+  module: mhy_ai_rag_data.tools.rag_accept
+  wrapper: tools/rag_accept.py
+
+entrypoints:
+  - python tools/rag_accept.py
+  - python -m mhy_ai_rag_data.tools.rag_accept
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # rag_accept.py 使用说明
 
 > 目标：一键验收入口，默认跑核心序列（stamp → check → snapshot → rag-status --strict），可选开启 verify/Stage-2 评测。

@@ -22,14 +22,14 @@
 
 ## 进度记录
 
-> 记录格式：日期 / Step / 状态 / 产出（可下载补丁或仓库路径）/ 备注  
+> 记录格式：日期 / Step / 状态 / 产出（补丁或仓库路径）/ 备注  
 > 状态枚举：`DONE` / `IN_PROGRESS` / `TODO` / `BLOCKED`
 
 | 日期 | Step | 状态 | 产出 | 备注 |
 |---|---:|---|---|---|
-| 2026-01-20 | 1 | DONE | `ssot_contract_step1_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync.yaml`、`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`、`docs/INDEX.md`、`docs/reference/REFERENCE.md` | 已按项目文档结构先落地 SSOT 契约（机器可读 + Reference 页面）并补齐导航；后续 Step 2 将以该 YAML 作为检验/生成脚本的配置入口。 |
-| 2026-01-20 | 2 | TODO | — | 计划按 SSOT 元数据模板，为 `tools/` 下 README 批量补齐 frontmatter，并建立 README↔入口脚本映射索引。 |
-| 2026-01-20 | 3 | TODO | — | 计划实现 `tools/check_readme_code_sync.py --check` 的最小闭环（flags 差分 + 契约信号一致性）。 |
+| 2026-01-20 | 1 | DONE | `ssot_contract_step1_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync.yaml`、`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`、`docs/INDEX.md`、`docs/reference/REFERENCE.md` | SSOT 契约（机器可读 + Reference）已落地，并补齐导航入口。 |
+| 2026-01-20 | 2 | DONE | `readme_code_alignment_step2_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync_index.yaml`、`docs/reference/TOOLS_README_CODE_SYNC_INDEX.md`、`docs/INDEX.md`、`docs/reference/REFERENCE.md`、`tools/*README*.md`（54 个） | 为 tools README 补齐/统一映射元数据（frontmatter），并建立 README↔入口脚本/模块的索引；同时补齐 Reference 导航。 |
+| 2026-01-20 | 3 | TODO | — | 计划实现 `--check` 最小闭环（flags 差分 + 契约信号一致性）。 |
 | 2026-01-20 | 4 | TODO | — | 计划实现 `--write` 写回 README 自动区块，并保证幂等输出。 |
 | 2026-01-20 | 5 | TODO | — | 计划接入 pre-commit 与 CI 门禁（分阶段覆盖）。 |
 | 2026-01-20 | 6 | TODO | — | 计划引入抽样语义测试与 help/输出快照回归（含归一化规则）。 |
@@ -41,11 +41,10 @@
 
 ### Step 1 — 明确 SSOT 与对齐目标分层（接口 / 语义 / 产物） [STD]
 
-
 **进度（2026-01-20）**
 
 - 状态：DONE
-- 可复用入口：后续所有校验/生成脚本优先读取 `docs/reference/readme_code_sync.yaml`，避免把规则散落在多个脚本与 README 中。
+- 产出：SSOT 契约与导航（见上方进度记录表）
 
 
 **做什么**
@@ -76,14 +75,24 @@
 
 ### Step 2 — README 顶部增加可机读“映射元数据”（消除脚本猜测与误报） [CON]
 
+**进度（2026-01-20）**
+
+- 状态：DONE
+- 产出：tools README frontmatter 映射 + `docs/reference/readme_code_sync_index.yaml` 索引（见上方进度记录表）
+
+
 **做什么**
 
-- 在每个工具 README 顶部增加极小的 YAML frontmatter（或注释块），至少包含：
-  - `tool_script`: 源码入口（脚本路径或模块入口）
-  - `cli_framework`: `argparse|click|typer|other`
-  - `output_contract`: `report-output-v2|legacy|none`
-  - 可选：`generation_mode`: `static-ast|help-snapshot|custom`
-  - 可选：`entrypoints`: 多入口数组（一个 README 覆盖多个工具时）
+- 在每个工具 README 顶部增加 YAML frontmatter（或在已有 frontmatter 中补齐字段），优先按 SSOT 的推荐键组织：
+  - `tool_id`: 稳定工具标识（默认取 `<tool_id>_README.md` 前缀）
+  - `impl.module`: 实现模块（优先指向 `src/mhy_ai_rag_data/tools/<tool_id>.py`）
+  - `impl.wrapper`: wrapper 脚本（若存在，通常为 `tools/<tool_id>.py`）
+  - `entrypoints`: 建议运行入口（脚本 / `-m` 模块）
+  - `contracts.output`: 输出契约分类（`report-output-v2` / `legacy` / `none`）
+  - `generation.options`: 参数表生成策略（`static-ast` / `help-snapshot`）
+  - `generation.output_contract`: 输出契约生成策略（`ssot` / `none`）
+  - （可选）`cli_framework`: `argparse|click|typer|other`
+  - （建议）`timezone`: `America/Los_Angeles`（若缺失）
 
 **为何（因果）**
 
@@ -289,8 +298,10 @@ repos:
 ## 交付物清单（建议）
 
 - `docs/reference/readme_code_sync.yaml`（机器可读 SSOT：对齐范围/优先级/markers/checks/exceptions）
-- `docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`（Reference：契约说明与演进规则）
-- `docs/engineering/readme-sync-exceptions.yml`（例外登记）
+- `docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`（Reference：对齐契约说明与演进规则）
+- `docs/reference/readme_code_sync_index.yaml`（README↔入口映射索引，Step2 已落地）
+- `docs/reference/TOOLS_README_CODE_SYNC_INDEX.md`（映射索引说明页）
+- `docs/reference/readme_code_sync_exceptions.yaml`（例外登记；按需创建）
 - `tools/check_readme_code_sync.py`（`--check/--write`）
 - README 自动区块模板（各工具 README 内）
 - `.pre-commit-config.yaml` hook（可选）

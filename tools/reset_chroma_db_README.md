@@ -2,8 +2,27 @@
 title: reset_chroma_db.py 使用说明（重置 Chroma 数据库）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: reset_chroma_db
 
+impl:
+  module: mhy_ai_rag_data.tools.reset_chroma_db
+  wrapper: tools/reset_chroma_db.py
+
+entrypoints:
+  - python tools/reset_chroma_db.py
+  - python -m mhy_ai_rag_data.tools.reset_chroma_db
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # reset_chroma_db.py 使用说明
 
 

@@ -2,8 +2,25 @@
 title: check_pyproject_preflight.py 使用说明（pyproject.toml 预检）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: check_pyproject_preflight
 
+impl:
+  wrapper: tools/check_pyproject_preflight.py
+
+entrypoints:
+  - python tools/check_pyproject_preflight.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_pyproject_preflight.py 使用说明
 
 

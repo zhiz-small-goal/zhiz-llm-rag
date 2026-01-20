@@ -2,8 +2,25 @@
 title: check_ruff.py 使用说明
 version: v1.4
 last_updated: 2026-01-14
----
+tool_id: check_ruff
 
+impl:
+  wrapper: tools/check_ruff.py
+
+entrypoints:
+  - python tools/check_ruff.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_ruff.py 使用说明
 
 

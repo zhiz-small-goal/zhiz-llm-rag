@@ -2,8 +2,27 @@
 title: run_profile_with_timing.py 使用说明（带时间统计的性能分析）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: run_profile_with_timing
 
+impl:
+  module: mhy_ai_rag_data.tools.run_profile_with_timing
+  wrapper: tools/run_profile_with_timing.py
+
+entrypoints:
+  - python tools/run_profile_with_timing.py
+  - python -m mhy_ai_rag_data.tools.run_profile_with_timing
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # run_profile_with_timing.py 使用说明
 
 > 目标：运行 build profile 并记录每步耗时，生成性能报告。

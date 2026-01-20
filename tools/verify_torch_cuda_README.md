@@ -2,8 +2,27 @@
 title: verify_torch_cuda.py 使用说明
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: verify_torch_cuda
 
+impl:
+  module: mhy_ai_rag_data.tools.verify_torch_cuda
+  wrapper: tools/verify_torch_cuda.py
+
+entrypoints:
+  - python tools/verify_torch_cuda.py
+  - python -m mhy_ai_rag_data.tools.verify_torch_cuda
+
+contracts:
+  output: none
+
+generation:
+  options: help-snapshot
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: other
+---
 # verify_torch_cuda.py 使用说明
 
 > 目标：验证 PyTorch 的 CUDA 可用性，用于 GPU 加速环境检查。

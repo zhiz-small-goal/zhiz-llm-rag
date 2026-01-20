@@ -2,8 +2,27 @@
 title: verify_reports_schema.py 使用说明
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: verify_reports_schema
 
+impl:
+  module: mhy_ai_rag_data.tools.verify_reports_schema
+  wrapper: tools/verify_reports_schema.py
+
+entrypoints:
+  - python tools/verify_reports_schema.py
+  - python -m mhy_ai_rag_data.tools.verify_reports_schema
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # verify_reports_schema.py 使用说明
 
 > 目标：验证单个 JSON 报告文件的格式和必需字段，可选地使用 JSON Schema 进行严格验证。

@@ -2,8 +2,25 @@
 title: check_exit_code_contract.py 使用说明（检查退出码契约）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: check_exit_code_contract
 
+impl:
+  wrapper: tools/check_exit_code_contract.py
+
+entrypoints:
+  - python tools/check_exit_code_contract.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # check_exit_code_contract.py 使用说明
 
 

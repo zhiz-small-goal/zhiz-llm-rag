@@ -2,8 +2,27 @@
 title: verify_sentence_transformer_cuda.py 使用说明
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: verify_sentence_transformer_cuda
 
+impl:
+  module: mhy_ai_rag_data.tools.verify_sentence_transformer_cuda
+  wrapper: tools/verify_sentence_transformer_cuda.py
+
+entrypoints:
+  - python tools/verify_sentence_transformer_cuda.py
+  - python -m mhy_ai_rag_data.tools.verify_sentence_transformer_cuda
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # verify_sentence_transformer_cuda.py 使用说明
 
 > 目标：验证 sentence-transformers 库能否使用 CUDA 加速，用于 Stage-2 embedding 环境检查。

@@ -1,3 +1,28 @@
+---
+title: `compare_stage1_baseline_snapshots.py` 使用说明（对比两份 Stage-1 基线快照）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: compare_stage1_baseline_snapshots
+
+impl:
+  module: mhy_ai_rag_data.tools.compare_stage1_baseline_snapshots
+  wrapper: tools/compare_stage1_baseline_snapshots.py
+
+entrypoints:
+  - python tools/compare_stage1_baseline_snapshots.py
+  - python -m mhy_ai_rag_data.tools.compare_stage1_baseline_snapshots
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `compare_stage1_baseline_snapshots.py` 使用说明（对比两份 Stage-1 基线快照）
 
 

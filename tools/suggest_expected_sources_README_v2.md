@@ -1,3 +1,28 @@
+---
+title: `suggest_expected_sources.py` 使用说明（expected_sources 取证与推荐：基于 Chroma topK）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: suggest_expected_sources
+
+impl:
+  module: mhy_ai_rag_data.tools.suggest_expected_sources
+  wrapper: tools/suggest_expected_sources.py
+
+entrypoints:
+  - python tools/suggest_expected_sources.py
+  - python -m mhy_ai_rag_data.tools.suggest_expected_sources
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `suggest_expected_sources.py` 使用说明（expected_sources 取证与推荐：基于 Chroma topK）
 
 

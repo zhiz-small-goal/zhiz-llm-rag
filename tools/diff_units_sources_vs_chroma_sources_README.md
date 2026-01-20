@@ -2,8 +2,27 @@
 title: diff_units_sources_vs_chroma_sources.py 使用说明（对比文本单元与 Chroma 源）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: diff_units_sources_vs_chroma_sources
 
+impl:
+  module: mhy_ai_rag_data.tools.diff_units_sources_vs_chroma_sources
+  wrapper: tools/diff_units_sources_vs_chroma_sources.py
+
+entrypoints:
+  - python tools/diff_units_sources_vs_chroma_sources.py
+  - python -m mhy_ai_rag_data.tools.diff_units_sources_vs_chroma_sources
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # diff_units_sources_vs_chroma_sources.py 使用说明
 
 

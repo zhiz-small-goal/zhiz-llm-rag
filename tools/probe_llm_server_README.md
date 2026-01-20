@@ -2,8 +2,27 @@
 title: probe_llm_server.py 使用说明（探测 LLM 服务器可用性）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: probe_llm_server
 
+impl:
+  module: mhy_ai_rag_data.tools.probe_llm_server
+  wrapper: tools/probe_llm_server.py
+
+entrypoints:
+  - python tools/probe_llm_server.py
+  - python -m mhy_ai_rag_data.tools.probe_llm_server
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # probe_llm_server.py 使用说明
 
 

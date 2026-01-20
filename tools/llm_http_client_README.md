@@ -1,3 +1,28 @@
+---
+title: tools/llm_http_client.py 使用说明（替代方案 B：统一 LLM HTTP Client）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: llm_http_client
+
+impl:
+  module: mhy_ai_rag_data.tools.llm_http_client
+  wrapper: tools/llm_http_client.py
+
+entrypoints:
+  - python tools/llm_http_client.py
+  - python -m mhy_ai_rag_data.tools.llm_http_client
+
+contracts:
+  output: none
+
+generation:
+  options: help-snapshot
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: other
+---
 # tools/llm_http_client.py 使用说明（替代方案 B：统一 LLM HTTP Client）
 
 

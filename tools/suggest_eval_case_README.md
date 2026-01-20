@@ -1,3 +1,28 @@
+---
+title: `suggest_eval_case.py` 使用说明（半自动生成 eval case：expected_sources + must_include + bucket/pair_id）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: suggest_eval_case
+
+impl:
+  module: mhy_ai_rag_data.tools.suggest_eval_case
+  wrapper: tools/suggest_eval_case.py
+
+entrypoints:
+  - python tools/suggest_eval_case.py
+  - python -m mhy_ai_rag_data.tools.suggest_eval_case
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `suggest_eval_case.py` 使用说明（半自动生成 eval case：expected_sources + must_include + bucket/pair_id）
 
 

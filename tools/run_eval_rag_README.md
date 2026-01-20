@@ -1,3 +1,28 @@
+---
+title: `run_eval_rag.py` 使用说明（Stage-2：端到端 RAG 回归 must_include 断言）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: run_eval_rag
+
+impl:
+  module: mhy_ai_rag_data.tools.run_eval_rag
+  wrapper: tools/run_eval_rag.py
+
+entrypoints:
+  - python tools/run_eval_rag.py
+  - python -m mhy_ai_rag_data.tools.run_eval_rag
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `run_eval_rag.py` 使用说明（Stage-2：端到端 RAG 回归 must_include 断言）
 
 

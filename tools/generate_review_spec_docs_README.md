@@ -2,8 +2,25 @@
 title: generate_review_spec_docs 使用说明
 version: v1.0
 last_updated: 2026-01-12
----
+tool_id: generate_review_spec_docs
 
+impl:
+  wrapper: tools/generate_review_spec_docs.py
+
+entrypoints:
+  - python tools/generate_review_spec_docs.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # generate_review_spec_docs 使用说明
 
 

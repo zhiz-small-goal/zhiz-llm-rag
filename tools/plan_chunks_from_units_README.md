@@ -1,9 +1,28 @@
 ---
 title: plan_chunks_from_units.py 使用说明（从文本单元规划分块）
-version: v1.0 
+version: v1.0
 last_updated: 2026-01-16
----
+tool_id: plan_chunks_from_units
 
+impl:
+  module: mhy_ai_rag_data.tools.plan_chunks_from_units
+  wrapper: tools/plan_chunks_from_units.py
+
+entrypoints:
+  - python tools/plan_chunks_from_units.py
+  - python -m mhy_ai_rag_data.tools.plan_chunks_from_units
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # plan_chunks_from_units.py 使用说明
 
 

@@ -2,8 +2,27 @@
 title: index_state.py 使用说明（索引状态管理模块）
 version: v1.1
 last_updated: 2026-01-19
----
+tool_id: index_state
 
+impl:
+  module: mhy_ai_rag_data.tools.index_state
+  wrapper: tools/index_state.py
+
+entrypoints:
+  - python tools/index_state.py
+  - python -m mhy_ai_rag_data.tools.index_state
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: help-snapshot
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: other
+---
 # index_state.py 使用说明
 
 > 目标：为增量构建 + 强一致验收提供最小状态文件（manifest）管理，记录每个文档的 doc_id、content_sha256、n_chunks，支持新增/变更/删除判定。

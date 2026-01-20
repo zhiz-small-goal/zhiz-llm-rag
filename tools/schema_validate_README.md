@@ -2,8 +2,27 @@
 title: schema_validate.py / rag-schema-validate 使用说明（JSON Schema 校验工具）
 version: v1.0
 last_updated: 2026-01-11
----
+tool_id: schema_validate
 
+impl:
+  module: mhy_ai_rag_data.tools.schema_validate
+  wrapper: tools/schema_validate.py
+
+entrypoints:
+  - python tools/schema_validate.py
+  - python -m mhy_ai_rag_data.tools.schema_validate
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # schema_validate.py / rag-schema-validate 使用说明（JSON Schema 校验工具）
 
 

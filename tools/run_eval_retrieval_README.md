@@ -1,3 +1,28 @@
+---
+title: `run_eval_retrieval.py` 使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: run_eval_retrieval
+
+impl:
+  module: mhy_ai_rag_data.tools.run_eval_retrieval
+  wrapper: tools/run_eval_retrieval.py
+
+entrypoints:
+  - python tools/run_eval_retrieval.py
+  - python -m mhy_ai_rag_data.tools.run_eval_retrieval
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `run_eval_retrieval.py` 使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）
 
 

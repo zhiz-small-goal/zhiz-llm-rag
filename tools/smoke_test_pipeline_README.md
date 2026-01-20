@@ -2,8 +2,27 @@
 title: smoke_test_pipeline.py 使用说明（烟雾测试管道）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: smoke_test_pipeline
 
+impl:
+  module: mhy_ai_rag_data.tools.smoke_test_pipeline
+  wrapper: tools/smoke_test_pipeline.py
+
+entrypoints:
+  - python tools/smoke_test_pipeline.py
+  - python -m mhy_ai_rag_data.tools.smoke_test_pipeline
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # smoke_test_pipeline.py 使用说明
 
 > 目标：快速烟雾测试管道，验证核心流程可用性。

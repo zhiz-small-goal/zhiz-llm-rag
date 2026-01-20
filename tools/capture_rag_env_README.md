@@ -2,8 +2,27 @@
 title: capture_rag_env.py 使用说明（捕获 RAG 环境信息报告）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: capture_rag_env
 
+impl:
+  module: mhy_ai_rag_data.tools.capture_rag_env
+  wrapper: tools/capture_rag_env.py
+
+entrypoints:
+  - python tools/capture_rag_env.py
+  - python -m mhy_ai_rag_data.tools.capture_rag_env
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # capture_rag_env.py 使用说明
 
 

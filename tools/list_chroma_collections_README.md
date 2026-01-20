@@ -2,8 +2,27 @@
 title: list_chroma_collections.py 使用说明（列出 Chroma 集合）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: list_chroma_collections
 
+impl:
+  module: mhy_ai_rag_data.tools.list_chroma_collections
+  wrapper: tools/list_chroma_collections.py
+
+entrypoints:
+  - python tools/list_chroma_collections.py
+  - python -m mhy_ai_rag_data.tools.list_chroma_collections
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # list_chroma_collections.py 使用说明
 
 

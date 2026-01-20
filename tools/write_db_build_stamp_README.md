@@ -2,8 +2,27 @@
 title: write_db_build_stamp.py 使用说明（写入数据库构建戳）
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: write_db_build_stamp
 
+impl:
+  module: mhy_ai_rag_data.tools.write_db_build_stamp
+  wrapper: tools/write_db_build_stamp.py
+
+entrypoints:
+  - python tools/write_db_build_stamp.py
+  - python -m mhy_ai_rag_data.tools.write_db_build_stamp
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # write_db_build_stamp.py 使用说明
 
 > 目标：写入 db_build_stamp.json，记录数据库构建时间戳和元数据，为 rag-status 提供稳定的 freshness 判定基础。

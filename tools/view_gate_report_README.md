@@ -2,8 +2,27 @@
 title: view_gate_report.py 使用说明
 version: v1.1
 last_updated: 2026-01-16
----
+tool_id: view_gate_report
 
+impl:
+  module: mhy_ai_rag_data.tools.view_gate_report
+  wrapper: tools/view_gate_report.py
+
+entrypoints:
+  - python tools/view_gate_report.py
+  - python -m mhy_ai_rag_data.tools.view_gate_report
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # view_gate_report.py 使用说明
 
 ## 目录

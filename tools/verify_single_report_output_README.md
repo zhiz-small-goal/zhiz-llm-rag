@@ -2,8 +2,27 @@
 title: verify_single_report_output.py 使用说明
 version: v1.0
 last_updated: 2026-01-16
----
+tool_id: verify_single_report_output
 
+impl:
+  module: mhy_ai_rag_data.tools.verify_single_report_output
+  wrapper: tools/verify_single_report_output.py
+
+entrypoints:
+  - python tools/verify_single_report_output.py
+  - python -m mhy_ai_rag_data.tools.verify_single_report_output
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # verify_single_report_output.py 使用说明
 
 > 目标：检查当前目录是否存在不应出现的默认报告文件（用于验证工具正确使用了 `--json-out` 参数）。

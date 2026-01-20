@@ -1,3 +1,28 @@
+---
+title: update_postmortems_index_README
+version: v1.0
+last_updated: 2026-01-20
+tool_id: update_postmortems_index
+
+impl:
+  module: mhy_ai_rag_data.tools.update_postmortems_index
+  wrapper: tools/update_postmortems_index.py
+
+entrypoints:
+  - python tools/update_postmortems_index.py
+  - python -m mhy_ai_rag_data.tools.update_postmortems_index
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # update_postmortems_index_README
 
 

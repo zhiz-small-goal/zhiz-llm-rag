@@ -1,3 +1,28 @@
+---
+title: `snapshot_stage1_baseline.py` 使用说明（Stage-1 基线快照：产物指纹 + Chroma 落盘状态）
+version: v1.0
+last_updated: 2026-01-20
+tool_id: snapshot_stage1_baseline
+
+impl:
+  module: mhy_ai_rag_data.tools.snapshot_stage1_baseline
+  wrapper: tools/snapshot_stage1_baseline.py
+
+entrypoints:
+  - python tools/snapshot_stage1_baseline.py
+  - python -m mhy_ai_rag_data.tools.snapshot_stage1_baseline
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # `snapshot_stage1_baseline.py` 使用说明（Stage-1 基线快照：产物指纹 + Chroma 落盘状态）
 
 

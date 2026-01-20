@@ -2,8 +2,25 @@
 title: validate_review_spec 使用说明
 version: v1.0
 last_updated: 2026-01-12
----
+tool_id: validate_review_spec
 
+impl:
+  wrapper: tools/validate_review_spec.py
+
+entrypoints:
+  - python tools/validate_review_spec.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+---
 # validate_review_spec 使用说明
 
 
