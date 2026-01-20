@@ -16,7 +16,7 @@ contracts:
   output: none
 
 generation:
-  options: help-snapshot
+  options: static-ast
   output_contract: none
 
 mapping_status: ok
@@ -75,7 +75,7 @@ STATUS: FAIL (CUDA not available)
 
 ## 自动生成区块（AUTO）
 <!-- AUTO:BEGIN options -->
-_(no long flags detected by help-snapshot)_
+_(no long flags detected by static AST)_
 <!-- AUTO:END options -->
 <!-- AUTO:BEGIN output-contract -->
 - `contracts.output`: `none`

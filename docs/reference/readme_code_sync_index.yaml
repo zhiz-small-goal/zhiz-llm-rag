@@ -813,7 +813,7 @@ readmes:
     contracts:
       output: none
     generation:
-      options: help-snapshot
+      options: static-ast
       output_contract: none
     mapping_status: ok
   -
