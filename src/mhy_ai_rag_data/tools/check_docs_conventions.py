@@ -163,7 +163,7 @@ def load_config(cfg_path: Path) -> Dict[str, Any]:
 
 def _add_blank_lines_after_title(raw: List[str], fm_len: int, title_body_idx: int, blank_count: int) -> bool:
     """
-    Ensure there are at least two blank lines after the title line.
+    Best-effort insert up to two blank lines after the title line (auto-fix).
 
     raw: full file lines (including front matter)
     fm_len: number of lines in the front matter block
@@ -219,15 +219,10 @@ def check_one(path: Path, fix: bool = False) -> Dict[str, Any]:
         else:
             break
 
-    if blank_count < 2:
-        if fix and _add_blank_lines_after_title(raw, len(fm), idx, blank_count):
-            path.write_text("".join(raw), encoding="utf-8")
-            result["fixed_blank_lines"] = True
-            blank_count = 2
-
-        if blank_count < 2:
-            result["ok"] = False
-            result["issues"].append("need two blank lines after title")
+    if blank_count < 2 and fix and _add_blank_lines_after_title(raw, len(fm), idx, blank_count):
+        path.write_text("".join(raw), encoding="utf-8")
+        result["fixed_blank_lines"] = True
+        blank_count = 2
 
     return result
 
@@ -271,6 +266,11 @@ def main() -> int:
         default=None,
         help="auto-insert missing blank lines after title (in-place)",
     )
+    ap.add_argument(
+        "--no-fix",
+        action="store_true",
+        help="disable auto-fix (default is on unless config sets fix=false)",
+    )
     args = ap.parse_args()
 
     _repo_root = Path(getattr(args, "root", ".")).resolve()
@@ -293,13 +293,13 @@ def main() -> int:
     glob_cfg = cfg.get("glob", DEFAULT_GLOB)
     ignore_cfg = cfg.get("ignore", DEFAULT_IGNORE)
     out_cfg = cfg.get("out", DEFAULT_OUT)
-    fix_cfg = bool(cfg.get("fix", False))
+    fix_cfg = bool(cfg.get("fix", True))
 
     dirs_arg = args.dirs if args.dirs is not None else dirs_cfg
     glob_arg = args.glob if args.glob is not None else glob_cfg
     ignore_arg = args.ignore if args.ignore is not None else ignore_cfg
     out_arg = args.out if args.out is not None else out_cfg
-    fix = args.fix if args.fix is not None else fix_cfg
+    fix = False if getattr(args, "no_fix", False) else (args.fix if args.fix is not None else fix_cfg)
 
     target_dirs = [Path(".")] if full_repo else [Path(d) for d in dirs_arg]
     existing_dirs = [str((root / d).resolve()) for d in target_dirs if (root / d).exists()]

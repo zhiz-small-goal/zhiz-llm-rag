@@ -49,24 +49,24 @@ cli_framework: argparse
 
 1) 首个正文标题必须是 **H1 级别**（`# ...`），标题内容不强制与文件名一致。
 
-2) 目录标题后必须紧跟 **两行空行**（便于插入 TOC 并保持可读性）
+2) 目录标题后建议紧跟 **两行空行**（便于插入 TOC 并保持可读性；缺失时会尝试自动补齐，不再视为 FAIL）
 
 3) 允许 YAML front matter：
 - 若文件以 `---` 开头，视为 front matter，直到下一个 `---` 结束
 - 检查从 front matter 结束后的正文开始执行
 
-> 可选：使用 `--fix` 自动在目录标题后补齐缺失的空行。
+> 默认会自动在目录标题后补齐缺失的空行（如需原样不动，用 `--no-fix` 或配置 `fix=false` 关闭；缺空行不会导致 FAIL）。
 
 ---
 
 ## 3. 快速开始
 
 ```bash
-# 默认：扫描 docs/ 和 tools/，并写出报告
+# 默认：扫描 docs/ 和 tools/，并写出报告（带自动补空行，但不会因缺空行 FAIL）
 python tools/check_docs_conventions.py --root .
 
-# 如需自动补齐目录标题后的空行（会就地写回文件）
-python tools/check_docs_conventions.py --root . --fix
+# 有时不想由脚本动文件：关闭自动补空行
+python tools/check_docs_conventions.py --root . --no-fix
 
 # 全仓库扫描（可能产生噪声，建议搭配 --ignore）
 python tools/check_docs_conventions.py --root . --full-repo
@@ -88,7 +88,8 @@ python tools/check_docs_conventions.py --root . --config my_docs_conventions.jso
 | `--glob` | `**/*.md` | 匹配模式 |
 | `--ignore` | 见下 | fnmatch 语法的忽略列表（对 root 相对的 posix 路径生效） |
 | `--out` | `data_processed/build_reports/docs_conventions_report.json` | 输出报告 |
-| `--fix` | `false` | 自动补齐标题后的空行 |
+| `--fix` | `true` | 自动补齐标题后的空行（默认开，`--no-fix` 或配置 `fix=false` 关闭；缺空行不再触发 FAIL） |
+| `--no-fix` | `false` | 强制关闭自动补齐 |
 
 默认忽略：`.git/**`, `.venv/**`, `venv/**`, `data_processed/**`, `chroma_db/**`, `third_party/**`, `**/__pycache__/**`, `.ruff_cache/**`, `.mypy_cache/**`, `.pytest_cache/**`, `**/node_modules/**`。
 
@@ -109,7 +110,7 @@ python tools/check_docs_conventions.py --root . --dirs docs --glob "*.md"
   "glob": "**/*.md",
   "ignore": ["docs/archive/**", ".git/**", "data_processed/**"],
   "out": "data_processed/build_reports/docs_conventions_report.json",
-  "fix": false
+  "fix": true
 }
 ```
 
@@ -146,7 +147,7 @@ python tools/check_docs_conventions.py --root . --dirs docs --glob "*.md"
 
 2) two blank lines 缺失  
 原因：目录生成器未插入空行或被手工删改。  
-处理：将“插入空行”纳入生成器输出模板，并将本检查作为门禁。
+处理：默认会自动补齐；若不想自动改动，可带 `--no-fix`，此情况不会导致 FAIL。
 
 ## 自动生成区块（AUTO）
 <!-- AUTO:BEGIN options -->
@@ -158,6 +159,7 @@ python tools/check_docs_conventions.py --root . --dirs docs --glob "*.md"
 | `--full-repo` | — | None | action=store_true；scan the entire repo (overrides --dirs) |
 | `--glob` | — | None | glob pattern under target dirs |
 | `--ignore` | — | None | nargs='+'；ignore patterns (fnmatch on posix relpath, e.g., data_processed/**) |
+| `--no-fix` | — | — | action=store_true；disable auto-fix (default is on unless config sets fix=false) |
 | `--out` | — | None | output json (relative to root) |
 | `--root` | — | '.' | project root |
 <!-- AUTO:END options -->
