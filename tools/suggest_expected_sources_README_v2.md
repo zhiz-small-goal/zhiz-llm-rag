@@ -172,3 +172,31 @@ python tools/suggest_expected_sources.py --root . --query "如何检查 Chroma �
 2) 用 `validate_eval_cases.py --check-sources-exist` 做门禁  
 3) 跑 `run_eval_retrieval.py`（hit@k）  
 4) 再跑 `run_eval_rag.py`（must_include）
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--append-to` | — | '' | append a full eval case to jsonl (with suggested must_include) |
+| `--auto-must-include` | — | — | action=store_true；write suggested must_include even if empty (no TODO) |
+| `--collection` | — | 'rag_chunks' | chroma collection name |
+| `--db` | — | 'chroma_db' | chroma db directory relative to root |
+| `--device` | — | 'cpu' | embedding device: cpu/cuda |
+| `--embed-backend` | — | 'auto' | embedding backend |
+| `--embed-model` | — | 'BAAI/bge-m3' | embedding model name |
+| `--k` | — | 8 | type=int；topK retrieval |
+| `--meta-field` | — | 'source_uri\|source\|path\|file' | metadata source field priority, separated by \| |
+| `--must-pick` | — | 2 | type=int；how many must_include terms to suggest when appending |
+| `--out` | — | '' | write a JSON with candidates and recommendation |
+| `--pick` | — | 2 | type=int；how many unique sources to recommend as expected_sources |
+| `--query` | true | — | user query |
+| `--root` | — | '.' | project root |
+| `--show-snippet-chars` | — | 260 | type=int；print snippet chars per hit |
+| `--tags` | — | 'suggested' | comma separated tags (only for --append-to) |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

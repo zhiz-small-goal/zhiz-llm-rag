@@ -414,6 +414,9 @@ def _looks_like_cli_help_snapshot_source(text: str) -> bool:
         return True
     if "click" in t or "typer" in t:
         return True
+    # Windows CMD/BAT scripts: only allow if they clearly have an early-exit usage path.
+    if ("usage:" in t.lower()) and ("unknown arg" in t.lower()) and ("exit /b" in t.lower()):
+        return True
     return False
 
 
@@ -596,7 +599,12 @@ def build_options_block_help_snapshot(
 
     argv: List[str] = []
     if wrapper_path is not None:
-        argv = [sys.executable, str(wrapper_path), "--help"]
+        if wrapper_path.suffix.lower() in (".cmd", ".bat"):
+            # Use a sentinel arg that is unlikely to become a real option; this should trigger
+            # an early "unknown arg + Usage" path before any side effects.
+            argv = ["cmd.exe", "/c", str(wrapper_path), "--__help_snapshot__"]
+        else:
+            argv = [sys.executable, str(wrapper_path), "--help"]
     elif isinstance(mod, str) and mod:
         argv = [sys.executable, "-m", mod, "--help"]
         src = repo / "src"
@@ -625,10 +633,27 @@ def build_options_block_help_snapshot(
         return "_(help-snapshot: execution error)_\n", set(), False, "execution error"
 
     out_text = proc.stdout if proc.stdout.strip() else proc.stderr
+
+    # Prefer structured parsing; if it yields nothing, fall back to simple flag extraction.
     opts = extract_argparse_options_from_help_output(out_text)
     opts = [o for o in opts if ("--help" not in o.flags and "-h" not in o.flags)]
     if not opts:
-        return "_(no long flags detected by help-snapshot)_\n", set(), False, None
+        snap_flags = extract_flags_from_text(out_text)
+        snap_flags = {f for f in snap_flags if f not in {"--help"} and not f.startswith("--__help_snapshot__")}
+        if not snap_flags:
+            return "_(no long flags detected by help-snapshot)_\n", set(), False, None
+        opts = [
+            ArgparseOption(
+                flags=(f,),
+                required=None,
+                default_repr=None,
+                action=None,
+                type_repr=None,
+                nargs_repr=None,
+                help=None,
+            )
+            for f in sorted(snap_flags)
+        ]
 
     flags: Set[str] = set()
     for o in opts:

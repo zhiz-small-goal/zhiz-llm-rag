@@ -520,15 +520,16 @@ readmes:
     tool_id: run_ci_gates
     cli_framework: other
     impl:
-
+      wrapper: tools/run_ci_gates.cmd
     entrypoints:
-
+      - "tools/run_ci_gates.cmd"
+      - "cmd /c tools/run_ci_gates.cmd"
     contracts:
-      output: unknown
+      output: none
     generation:
       options: help-snapshot
       output_contract: none
-    mapping_status: needs-manual-mapping
+    mapping_status: ok
   -
     path: tools/run_eval_rag_README.md
     tool_id: run_eval_rag
@@ -659,18 +660,20 @@ readmes:
     mapping_status: ok
   -
     path: tools/suggest_expected_sources_README_v2.md
-    tool_id: suggest_expected_sources__v2
-    cli_framework: other
+    tool_id: suggest_expected_sources
+    cli_framework: argparse
     impl:
-
+      module: mhy_ai_rag_data.tools.suggest_expected_sources
+      wrapper: tools/suggest_expected_sources.py
     entrypoints:
-
+      - "python tools/suggest_expected_sources.py"
+      - "python -m mhy_ai_rag_data.tools.suggest_expected_sources"
     contracts:
-      output: unknown
+      output: none
     generation:
-      options: help-snapshot
+      options: static-ast
       output_contract: none
-    mapping_status: needs-manual-mapping
+    mapping_status: ok
   -
     path: tools/update_postmortems_index_README.md
     tool_id: update_postmortems_index

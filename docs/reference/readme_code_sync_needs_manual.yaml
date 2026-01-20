@@ -2,26 +2,4 @@ version: 1
 generated_at: '2026-01-20'
 note: 'Auto-derived from readme_code_sync_index.yaml: entries whose mapping_status
   != ok. Keep this file human-editable if you want to add notes.'
-needs_manual:
-- path: tools/run_ci_gates_README.md
-  tool_id: run_ci_gates
-  cli_framework: other
-  impl: null
-  entrypoints: null
-  contracts:
-    output: unknown
-  generation:
-    options: help-snapshot
-    output_contract: none
-  mapping_status: needs-manual-mapping
-- path: tools/suggest_expected_sources_README_v2.md
-  tool_id: suggest_expected_sources__v2
-  cli_framework: other
-  impl: null
-  entrypoints: null
-  contracts:
-    output: unknown
-  generation:
-    options: help-snapshot
-    output_contract: none
-  mapping_status: needs-manual-mapping
+needs_manual: []
