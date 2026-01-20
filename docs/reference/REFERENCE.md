@@ -1,7 +1,7 @@
 ---
 title: 参考与契约（REFERENCE）
-version: v1.2
-last_updated: 2026-01-15
+version: v1.3
+last_updated: 2026-01-20
 ---
 
 > SSOT（机器可读）: `docs/reference/reference.yaml`。CI 与 gate runner 以此为准。
@@ -34,6 +34,7 @@ last_updated: 2026-01-15
 
 - 报告输出契约与工程规则（schema_version=2，SSOT）：[`REPORT_OUTPUT_ENGINEERING_RULES.md`](REPORT_OUTPUT_ENGINEERING_RULES.md)
   - 兼容入口：[`REPORT_OUTPUT_CONTRACT.md`](REPORT_OUTPUT_CONTRACT.md)
+- tools/ README ↔ 源码对齐契约（Reference + SSOT）：[`TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`](TOOLS_README_CODE_ALIGNMENT_CONTRACT.md)
 - 依赖策略（默认/可选 extras）：[`deps_policy.md`](deps_policy.md)
 - Index State 与 Stamps：[`index_state_and_stamps.md`](index_state_and_stamps.md)
 - Stage-2 评测契约：[`EVAL_CASES_SCHEMA.md`](EVAL_CASES_SCHEMA.md)

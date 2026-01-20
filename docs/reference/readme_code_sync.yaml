@@ -1,0 +1,89 @@
+# Machine-readable SSOT for README <-> code alignment (tools/).
+# Consumers (future): tools/check_tools_readme_sync.py (check/write) + CI/gate.
+
+version: 1
+last_updated: "2026-01-20"
+timezone: "America/Los_Angeles"
+
+scope:
+  # NOTE: keep globs stable; downstream tools may rely on these defaults.
+  readme_globs:
+    - "tools/README.md"
+    - "tools/*_README.md"
+    - "tools/*README*.md"
+  exclude_globs:
+    - "tools/**/__pycache__/**"
+
+frontmatter:
+  required_keys:
+    - title
+    - version
+    - last_updated
+  recommended_keys:
+    - timezone
+
+alignment_meta:
+  # Migration note:
+  # - Existing README files may not contain these keys yet.
+  # - New/modified tools SHOULD add at least tool_id + impl.module.
+  recommended_keys:
+    - tool_id
+    - impl.module
+    - impl.wrapper
+    - entrypoints
+    - contracts.output
+    - generation.options
+    - generation.output_contract
+
+sources_of_truth:
+  interface:
+    precedence:
+      - "code:cli_definition"      # argparse/click/typer definitions
+      - "code:help_snapshot"       # runtime `--help` output (when needed)
+      - "readme:auto_blocks"
+      - "readme:free_text"
+  output_contract:
+    ssot_docs:
+      - "docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md"
+      - "docs/reference/report_tools_registry.toml"
+      - "docs/reference/reference.yaml"  # exit_codes + gate paths
+    precedence:
+      - "ssot_docs"
+      - "code:reporting"          # unified reporting helpers
+      - "readme:auto_blocks"
+      - "readme:free_text"
+
+auto_blocks:
+  # README generation zones. These blocks are treated as derived content.
+  markers:
+    options:
+      begin: "<!-- AUTO:BEGIN options -->"
+      end: "<!-- AUTO:END options -->"
+      purpose: "CLI 参数表（flag/default/required/notes）"
+    output_contract:
+      begin: "<!-- AUTO:BEGIN output-contract -->"
+      end: "<!-- AUTO:END output-contract -->"
+      purpose: "输出契约摘要（schema_version/paths/channel rules）"
+    artifacts:
+      begin: "<!-- AUTO:BEGIN artifacts -->"
+      end: "<!-- AUTO:END artifacts -->"
+      purpose: "产物与副作用清单（落盘文件/目录/覆盖策略）"
+
+normalization:
+  path_separator: "/"
+  sort_flags: "lexicographic"
+  line_ending: "\n"
+
+checks:
+  # Default checks to enforce when running in --check mode.
+  enforce:
+    - frontmatter_present
+    - frontmatter_required_keys
+    - auto_block_markers_well_formed
+    - options_match_when_present
+    - output_contract_refs_when_v2
+
+exceptions:
+  # Where exceptions live (if used). Tools may choose to keep this empty.
+  # The file itself is not required to exist until the first exception is added.
+  path: "docs/reference/readme_code_sync_exceptions.yaml"

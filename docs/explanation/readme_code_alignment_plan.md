@@ -20,13 +20,42 @@
 
 ---
 
+## 进度记录
+
+> 记录格式：日期 / Step / 状态 / 产出（可下载补丁或仓库路径）/ 备注  
+> 状态枚举：`DONE` / `IN_PROGRESS` / `TODO` / `BLOCKED`
+
+| 日期 | Step | 状态 | 产出 | 备注 |
+|---|---:|---|---|---|
+| 2026-01-20 | 1 | DONE | `ssot_contract_step1_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync.yaml`、`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`、`docs/INDEX.md`、`docs/reference/REFERENCE.md` | 已按项目文档结构先落地 SSOT 契约（机器可读 + Reference 页面）并补齐导航；后续 Step 2 将以该 YAML 作为检验/生成脚本的配置入口。 |
+| 2026-01-20 | 2 | TODO | — | 计划按 SSOT 元数据模板，为 `tools/` 下 README 批量补齐 frontmatter，并建立 README↔入口脚本映射索引。 |
+| 2026-01-20 | 3 | TODO | — | 计划实现 `tools/check_readme_code_sync.py --check` 的最小闭环（flags 差分 + 契约信号一致性）。 |
+| 2026-01-20 | 4 | TODO | — | 计划实现 `--write` 写回 README 自动区块，并保证幂等输出。 |
+| 2026-01-20 | 5 | TODO | — | 计划接入 pre-commit 与 CI 门禁（分阶段覆盖）。 |
+| 2026-01-20 | 6 | TODO | — | 计划引入抽样语义测试与 help/输出快照回归（含归一化规则）。 |
+| 2026-01-20 | 7 | TODO | — | 计划补齐例外登记、变更流程与 owner 规则。 |
+
+---
+
 ## 1) 详细指导（按 Step 组织）
 
 ### Step 1 — 明确 SSOT 与对齐目标分层（接口 / 语义 / 产物） [STD]
 
+
+**进度（2026-01-20）**
+
+- 状态：DONE
+- 可复用入口：后续所有校验/生成脚本优先读取 `docs/reference/readme_code_sync.yaml`，避免把规则散落在多个脚本与 README 中。
+
+
 **做什么**
 
-- 新增一份规则文档（建议：`docs/engineering/readme-sync.md`），声明对齐目标与 SSOT：
+- 新增 SSOT 契约（已落地）：
+  - 机器可读 SSOT：`docs/reference/readme_code_sync.yaml`
+  - Reference 契约页：`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`
+  - 并在 `docs/INDEX.md`、`docs/reference/REFERENCE.md` 增加导航入口
+
+用于声明对齐目标与 SSOT：
   - **接口层**：参数集合、默认值、必填性、互斥关系、子命令树  
     - SSOT：源码 parser 定义（argparse/Click/Typer）
   - **语义层**：关键参数行为、退出码、是否写文件/副作用边界  
@@ -41,7 +70,7 @@
 **关键参数/注意**
 
 - 先覆盖 `tools/` 下 README；其它目录后续按批次纳入。
-- 需要明确 legacy/v1 工具的标注方式与例外策略（见 Step 7）。
+- 需要明确 legacy/v1 工具的标注方式与例外策略（[见 Step 7](#step-7--长期运行机制例外策略变更流程责任归属防止体系退化-std)）。
 
 ---
 
@@ -259,7 +288,8 @@ repos:
 
 ## 交付物清单（建议）
 
-- `docs/engineering/readme-sync.md`（规则与 SSOT）
+- `docs/reference/readme_code_sync.yaml`（机器可读 SSOT：对齐范围/优先级/markers/checks/exceptions）
+- `docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`（Reference：契约说明与演进规则）
 - `docs/engineering/readme-sync-exceptions.yml`（例外登记）
 - `tools/check_readme_code_sync.py`（`--check/--write`）
 - README 自动区块模板（各工具 README 内）
