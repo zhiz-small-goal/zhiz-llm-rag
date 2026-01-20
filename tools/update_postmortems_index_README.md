@@ -150,3 +150,37 @@ git config core.hooksPath .githooks
 
 - “增量 append”在重命名、补写历史复盘、回填日期时容易出现重复/乱序。
 - 本脚本采用“全量重建自动区”策略，保证幂等与可门禁性。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `update_postmortems_index`
+> entrypoints: `python tools/update_postmortems_index.py`, `python -m mhy_ai_rag_data.tools.update_postmortems_index`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--check` | — | — | action=store_true；Check mode: do not write; FAIL if index out-of-date |
+| `--glob` | — | '*.md' | Glob pattern under postmortems dir (default: *.md) |
+| `--index-file` | — | 'docs/postmortems/INDEX.md' | Index file under repo root |
+| `--json-out` | — | None | Write JSON report to this path |
+| `--json-stdout` | — | — | action=store_true；Print JSON report to stdout |
+| `--link-text` | — | 'docs_path' | link text style |
+| `--postmortems-dir` | — | 'docs/postmortems' | Postmortems dir under repo root |
+| `--root` | — | '.' | Repo root (default: current directory) |
+| `--strict` | — | — | action=store_true；FAIL if any postmortem lacks date/title/keywords (see output) |
+| `--write` | — | — | action=store_true；Write mode: update index file if needed |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

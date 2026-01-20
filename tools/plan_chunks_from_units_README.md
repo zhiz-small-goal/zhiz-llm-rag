@@ -102,3 +102,38 @@ python tools\plan_chunks_from_units.py --chunk-chars 800 --overlap-chars 80 --mi
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/plan_chunks_from_units.py`。**重要**：plan 参数必须与 build 保持一致，否则验收会失败。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `plan_chunks_from_units`
+> entrypoints: `python tools/plan_chunks_from_units.py`, `python -m mhy_ai_rag_data.tools.plan_chunks_from_units`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--chunk-chars` | — | 1200 | type=int |
+| `--include-media-stub` | — | 'false' | Whether to index media stubs (true/false). Must match build step. |
+| `--min-chunk-chars` | — | 200 | type=int |
+| `--out` | — | 'data_processed/chunk_plan.json' | Output json path (relative to root) |
+| `--overlap-chars` | — | 120 | type=int |
+| `--root` | — | '.' | Project root |
+| `--units` | — | 'data_processed/text_units.jsonl' | Units JSONL path (relative to root) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+- artifacts（registry）：
+  - `data_processed/chunk_plan.json`
+  - `data_processed/build_reports/chunk_plan_report.json`
+  - `data_processed/build_reports/chunk_plan_report.md`
+<!-- AUTO:END artifacts -->

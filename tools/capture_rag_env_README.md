@@ -198,3 +198,30 @@ print(torch.cuda.is_available())
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/capture_rag_env.py`。推荐使用 console script 或 `python -m mhy_ai_rag_data.tools.capture_rag_env`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `capture_rag_env`
+> entrypoints: `python tools/capture_rag_env.py`, `python -m mhy_ai_rag_data.tools.capture_rag_env`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--out` | — | 'data_processed/env_report.json' | — |
+| `--root` | — | '.' | repo root |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

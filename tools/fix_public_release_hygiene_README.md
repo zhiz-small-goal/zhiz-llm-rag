@@ -129,3 +129,33 @@ python tools\fix_public_release_hygiene.py --repo . --apply --skip-git --skip-gi
 - 运行 `--apply` 前建议确认 `git status` 并准备好回滚方案
 - `.gitignore` 自动追加为一次性动作，已有标记则跳过
 - 生成的 OSS 占位文件需要**人工替换为正式内容**
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `fix_public_release_hygiene`
+> entrypoints: `python tools/fix_public_release_hygiene.py`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--apply` | — | — | action=store_true；apply changes (default: dry-run) |
+| `--out` | — | None | fix report output path; default desktop |
+| `--quarantine` | — | '.public_release_quarantine' | quarantine dir (relative to repo) |
+| `--repo` | — | '.' | repo path (default=.) |
+| `--skip-git` | — | — | action=store_true；skip git untrack step |
+| `--skip-gitignore` | — | — | action=store_true；skip .gitignore update |
+| `--skip-oss` | — | — | action=store_true；skip OSS stub creation |
+| `--skip-redact` | — | — | action=store_true；skip absolute-path redaction |
+| `--skip-screenshots` | — | — | action=store_true；skip root screenshot quarantine |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

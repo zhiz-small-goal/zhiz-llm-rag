@@ -1,5 +1,5 @@
 ---
-title: `run_eval_rag.py` 使用说明（Stage-2：端到端 RAG 回归 must_include 断言）
+title: "`run_eval_rag.py` 使用说明（Stage-2：端到端 RAG 回归 must_include 断言）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: run_eval_rag
@@ -205,3 +205,42 @@ Get-Content -Wait data_processed\build_reports\eval_rag_report.events.jsonl
 ```
 
 注意：最终门禁/统计仍以 `eval_rag_report.json` 为准；stream 仅用于实时观测与调试。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--base-url` | — | 'http://localhost:8000/v1' | OpenAI-compatible base url |
+| `--cases` | — | 'data_processed/eval/eval_cases.jsonl' | eval cases jsonl (relative to root) |
+| `--collection` | — | 'rag_chunks' | collection name |
+| `--connect-timeout` | — | 10.0 | type=float；HTTP connect timeout seconds |
+| `--context-max-chars` | — | 12000 | type=int；max context chars to send to LLM |
+| `--db` | — | 'chroma_db' | chroma db dir (relative to root) |
+| `--device` | — | 'cpu' | cpu\|cuda |
+| `--embed-backend` | — | 'auto' | auto\|flagembedding\|sentence-transformers |
+| `--embed-model` | — | 'BAAI/bge-m3' | embed model name |
+| `--events-out` | — | 'auto' | item events output (jsonl): auto\|off\|<path> (relative to root). Used for recovery/rebuild. |
+| `--k` | — | 5 | type=int；topK for retrieval |
+| `--llm-model` | — | 'auto' | LLM model id to send; default auto: GET /models and prefer *instruct/*chat |
+| `--max-tokens` | — | 256 | type=int；max_tokens for answer |
+| `--md-out` | — | '' | optional report.md path (relative to root); default: <out>.md |
+| `--meta-field` | — | 'source_uri\|source\|path\|file' | metadata field(s) for source path (use \| to separate) |
+| `--out` | — | 'data_processed/build_reports/eval_rag_report.json' | output json (relative to root) |
+| `--print-case-errors` | — | — | action=store_true；print a one-line error per failed case to stderr (for live debugging) |
+| `--progress` | — | 'auto' | runtime progress feedback to stderr: auto\|on\|off |
+| `--progress-min-interval-ms` | — | 200 | type=int；min progress update interval in ms (throttling) |
+| `--root` | — | '.' | project root |
+| `--temperature` | — | 0.0 | type=float；temperature for answer |
+| `--timeout` | — | 300.0 | type=float；HTTP read timeout seconds (legacy name: --timeout) |
+| `--trust-env` | — | 'auto' | trust env proxies: auto(loopback->false), true, false |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

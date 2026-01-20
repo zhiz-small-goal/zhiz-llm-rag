@@ -214,3 +214,51 @@ python tools\build_chroma_index_flagembedding.py build --root . --device cuda --
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/build_chroma_index_flagembedding.py`。推荐使用 console script `rag-*` 或 `python -m mhy_ai_rag_data.tools.build_chroma_index_flagembedding`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `build_chroma_index_flagembedding`
+> entrypoints: `python tools/build_chroma_index_flagembedding.py`, `python -m mhy_ai_rag_data.tools.build_chroma_index_flagembedding`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--chunk-chars` | — | 1200 | type=int |
+| `--collection` | — | 'rag_chunks' | — |
+| `--db` | — | 'chroma_db' | — |
+| `--delete-batch` | — | 5000 | type=int；Batch size for collection.delete(ids=...). |
+| `--device` | — | 'cpu' | — |
+| `--embed-batch` | — | 32 | type=int |
+| `--embed-model` | — | 'BAAI/bge-m3' | — |
+| `--hnsw-space` | — | 'cosine' | cosine/l2/ip (stored in collection metadata) |
+| `--include-media-stub` | — | — | action=store_true；index media stubs too |
+| `--min-chunk-chars` | — | 200 | type=int |
+| `--on-missing-state` | — | 'reset' | If state missing but collection is non-empty: reset collection / fail / proceed with full upsert (may keep stale). |
+| `--overlap-chars` | — | 120 | type=int |
+| `--plan` | — | None | Optional: chunk_plan.json path used only for db_build_stamp traceability. |
+| `--root` | — | '.' | Project root |
+| `--root` | — | '.' | Project root |
+| `--schema-change` | — | 'reset' | If schema_hash differs from LATEST pointer: reset collection (recommended) or fail. |
+| `--state-root` | — | 'data_processed/index_state' | Directory to store index_state/manifest (relative to root). |
+| `--strict-sync` | — | 'true' | true/false: fail if collection.count != expected_chunks after build. |
+| `--sync-mode` | — | 'incremental' | Sync semantics: none/upsert-only; delete-stale=delete old per-doc then full upsert; incremental=delete old per-doc and only embed changed docs. |
+| `--units` | — | 'data_processed/text_units.jsonl' | — |
+| `--upsert-batch` | — | 256 | type=int |
+| `--write-state` | — | 'true' | true/false: write index_state.json after successful build. |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+- artifacts（registry）：
+  - `data_processed/index_state/<collection>/<schema_hash>/index_state.json`
+  - `data_processed/index_state/db_build_stamp.json`
+<!-- AUTO:END artifacts -->

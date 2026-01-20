@@ -25,6 +25,7 @@ cli_framework: argparse
 ---
 # smoke_test_pipeline.py 使用说明
 
+
 > 目标：快速烟雾测试管道，验证核心流程可用性。
 
 ## 快速开始
@@ -47,3 +48,26 @@ python tools\smoke_test_pipeline.py --root .
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/smoke_test_pipeline.py`。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--build-if-missing` | — | 'false' | true/false |
+| `--chunk-chars` | — | 1200 | type=int；Max chars per chunk (must match plan/build/check) |
+| `--device` | — | 'cpu' | cpu/cuda:0 |
+| `--embed-model` | — | 'BAAI/bge-m3' | — |
+| `--include-media-stub` | — | 'true' | true/false; Scheme B default is true. Must match plan/build/check. |
+| `--k` | — | 5 | type=int |
+| `--min-chunk-chars` | — | 200 | type=int |
+| `--overlap-chars` | — | 120 | type=int |
+| `--q` | — | '存档导入与导出怎么做' | — |
+| `--root` | — | '.' | — |
+| `--use-flag-build` | — | 'true' | true/false; if true and build, call build_chroma_index_flagembedding.py |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

@@ -1,5 +1,5 @@
 ---
-title: `audit_baseline_tools.py` 使用说明（全仓静态审计：查找基线/快照/哈希/报告工具，避免冗余）
+title: "`audit_baseline_tools.py` 使用说明（全仓静态审计：查找基线/快照/哈希/报告工具，避免冗余）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: audit_baseline_tools
@@ -142,3 +142,22 @@ python tools/audit_baseline_tools.py --root . --pattern "stage1_baseline_snapsho
 ## 7. 退出码
 
 - 退出码 `0`：完成扫描并写出报告（即使命中为空也算成功）
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--out` | — | 'data_processed/build_reports/audit_baseline_tools.json' | output json relative to root |
+| `--pattern` | — | [] | action=append；additional regex patterns (can repeat) |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

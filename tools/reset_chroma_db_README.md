@@ -89,3 +89,27 @@ rem powershell "Get-ChildItem data_processed\db_backups -Filter 'chroma_db_bak_*
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/reset_chroma_db.py`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `reset_chroma_db`
+> entrypoints: `python tools/reset_chroma_db.py`, `python -m mhy_ai_rag_data.tools.reset_chroma_db`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--backup-dir` | — | 'data_processed/db_backups' | 备份根目录 |
+| `--db` | — | 'chroma_db' | Chroma 持久化目录（相对 root 或绝对） |
+| `--root` | — | '.' | — |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

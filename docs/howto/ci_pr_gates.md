@@ -75,6 +75,7 @@ python tools\check_pyproject_preflight.py --ascii-only && pip install -e ".[ci]"
 - `check_exit_code_contract.py`：静态扫描 `sys.exit(1)` / `SystemExit("...")` / `exit /b 1` 等高频漂移点，保证退出码口径收敛到 {0,2,3}
 - `check_cli_entrypoints.py`：console_scripts 元数据 → venv Scripts wrapper → PATH 可见性的证据链
 - `check_md_refs_contract.py`：`extract_refs_from_md` 的签名绑定与调用点规范（强制关键字参数）
+- `check_readme_code_sync.py`：tools/ README ↔ 源码对齐门禁（AUTO blocks：options/output-contract/artifacts；`--write` 可刷新）
 - `check_ruff.py`：Ruff lint（可选 format --check），用于静态问题与风格一致性
 - `check_mypy.py`：mypy 类型检查（可选 strict）
 - `validate_review_spec.py`：审查规范 SSOT 与生成文档一致性（防止审查口径漂移）

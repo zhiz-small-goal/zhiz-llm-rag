@@ -98,6 +98,8 @@ checks:
     - frontmatter_required_keys
     - auto_block_markers_well_formed
     - options_match_when_present
+    - output_contract_match_when_present
+    - artifacts_match_when_present
     - output_contract_refs_when_v2
 
 exceptions:

@@ -1,5 +1,5 @@
 ---
-title: `init_eval_cases.py` 使用说明（Stage-2：初始化评测用例集 JSONL）
+title: "`init_eval_cases.py` 使用说明（Stage-2：初始化评测用例集 JSONL）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: init_eval_cases
@@ -104,3 +104,18 @@ python tools/init_eval_cases.py --root . --force
   - 你最在意的教程/排障类问题
 - `expected_sources` 建议尽量指向具体文件；目录前缀可作为过渡，但会降低判定信号强度。
 - `must_include` 只做最小断言；后续可升级为结构化输出或引用校验。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--force` | — | — | action=store_true；overwrite if exists |
+| `--out` | — | 'data_processed/eval/eval_cases.jsonl' | output jsonl path relative to root |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

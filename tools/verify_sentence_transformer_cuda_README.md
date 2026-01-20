@@ -25,6 +25,7 @@ cli_framework: argparse
 ---
 # verify_sentence_transformer_cuda.py 使用说明
 
+
 > 目标：验证 sentence-transformers 库能否使用 CUDA 加速，用于 Stage-2 embedding 环境检查。
 
 ## 快速开始
@@ -70,3 +71,18 @@ STATUS: FAIL (CUDA not available)
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/verify_sentence_transformer_cuda.py`。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--device` | — | 'cuda:0' | — |
+| `--model` | — | 'BAAI/bge-m3' | — |
+| `--text` | — | 'hello world' | — |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

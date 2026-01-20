@@ -122,3 +122,26 @@ rag-schema-validate --schema schemas/gate_report_v1.schema.json --instance data_
 - Gate runner：`tools/gate_README.md`
 - SSOT（paths/schemas）：`docs/reference/reference.yaml`
 - Schemas：`schemas/`
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `schema_validate`
+> entrypoints: `python tools/schema_validate.py`, `python -m mhy_ai_rag_data.tools.schema_validate`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--instance` | true | — | Instance path (json) |
+| `--schema` | true | — | Schema path (json) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

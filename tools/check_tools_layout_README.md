@@ -112,3 +112,32 @@ python tools\check_tools_layout.py --recursive --mode warn
 - 现象：标记为 wrapper，但未检测到 runpy 转发。
 - 原因：wrapper 模板不一致或是手写入口。
 - 处理：对齐到项目统一 wrapper 模板（参照现有 `tools/run_eval_rag.py` 等）。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_tools_layout`
+> entrypoints: `python tools/check_tools_layout.py`, `python -m mhy_ai_rag_data.tools.check_tools_layout`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--mode` | — | 'warn' | warn: exit 0; fail: exit 2 on issues |
+| `--out` | — | '' | Write JSON report to this path (relative to repo root). Empty -> no JSON. |
+| `--recursive` | — | — | action=store_true；Scan tools/ recursively |
+| `--root` | — | '.' | Repo root |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

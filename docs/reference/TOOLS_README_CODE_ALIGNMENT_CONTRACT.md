@@ -7,6 +7,7 @@ timezone: America/Los_Angeles
 
 # tools/ README ↔ 源码对齐契约（Reference）
 
+
 > 本文定义“工具 README 与源码一致性”的口径：哪些信息以源码/契约为准，README 应如何承载，以及后续自动校验/生成的边界。  
 > **机器可读 SSOT**：`docs/reference/readme_code_sync.yaml`（后续 gate 与生成脚本以此为准）。
 
@@ -77,6 +78,7 @@ timezone: America/Los_Angeles
 1) **实现（SSOT：代码）**
 
 - 默认实现位置：`src/mhy_ai_rag_data/tools/<tool>.py`。
+- 对于少量 **repo-only 工具**（实现直接位于 `tools/<tool>.py`），`tools/<tool>.py` 本身即为 SSOT（此时 `impl.module` 可为空，仅保留 `impl.wrapper`）。
 - 若 `tools/<tool>.py` 为 wrapper，则其行为应转发到 `src`（参见 `tools/README.md` 的 wrapper 约定）。
 
 2) **输出契约（SSOT：Reference）**

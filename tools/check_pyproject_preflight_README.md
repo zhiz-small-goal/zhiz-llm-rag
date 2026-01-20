@@ -107,3 +107,26 @@ description = "It's a tool"
 ---
 
 **注意**：本工具是**仓库专用工具（REPO-ONLY TOOL）**，仅用于本仓库门禁/审计。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_pyproject_preflight`
+> entrypoints: `python tools/check_pyproject_preflight.py`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--ascii-only` | — | — | action=store_true；Fail if any non-ASCII character exists |
+| `--path` | — | 'pyproject.toml' | Path to TOML (default: pyproject.toml) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

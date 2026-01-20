@@ -25,6 +25,7 @@ cli_framework: argparse
 ---
 # verify_single_report_output.py 使用说明
 
+
 > 目标：检查当前目录是否存在不应出现的默认报告文件（用于验证工具正确使用了 `--json-out` 参数）。
 
 ## 快速开始
@@ -58,3 +59,16 @@ python tools\verify_single_report_output.py
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/verify_single_report_output.py`。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--glob` | — | 'llm_probe_report_*.json' | 检查当前目录中不应出现的默认报告文件匹配模式 |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

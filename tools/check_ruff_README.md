@@ -137,3 +137,29 @@ ruff check --fix src/mhy_ai_rag_data/tools/snapshot_stage1_baseline.py
 python -m ruff format .
 ruff format src/mhy_ai_rag_data/tools/snapshot_stage1_baseline.py
 ```
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_ruff`
+> entrypoints: `python tools/check_ruff.py`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--config` | — | '' | Optional config path (default: auto-discovery) |
+| `--format` | — | — | action=store_true；Enable ruff format --check |
+| `--no-format` | — | — | action=store_false；Disable ruff format --check |
+| `--output-format` | — | 'concise' | Ruff lint output format (default: concise) |
+| `--root` | — | '.' | Repo root (default: .) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

@@ -316,34 +316,34 @@ def main() -> int:
             "reason": "target dirs not found",
             "files": [],
         }
-    # v2 report bundle (missing dirs)
-    report_v2 = {
-        "schema_version": 2,
-        "generated_at": now_iso(),
-        "tool": "check_docs_conventions",
-        "root": root.as_posix(),
-        "summary": {},
-        "items": [
-            {
-                "tool": "check_docs_conventions",
-                "title": "target_dirs_not_found",
-                "status_label": "FAIL",
-                "severity_level": 3,
-                "message": f"target dirs not found: {target_dirs}",
-                "detail": missing_report,
-            }
-        ],
-        "data": missing_report,
-    }
+        # v2 report bundle (missing dirs)
+        report_v2 = {
+            "schema_version": 2,
+            "generated_at": now_iso(),
+            "tool": "check_docs_conventions",
+            "root": root.as_posix(),
+            "summary": {},
+            "items": [
+                {
+                    "tool": "check_docs_conventions",
+                    "title": "target_dirs_not_found",
+                    "status_label": "FAIL",
+                    "severity_level": 3,
+                    "message": f"target dirs not found: {target_dirs}",
+                    "detail": missing_report,
+                }
+            ],
+            "data": missing_report,
+        }
 
-    write_report_bundle(
-        report=report_v2,
-        report_json=out_path,
-        repo_root=root,
-        console_title="check_docs_conventions",
-        emit_console=True,
-    )
-    return 2
+        write_report_bundle(
+            report=report_v2,
+            report_json=out_path,
+            repo_root=root,
+            console_title="check_docs_conventions",
+            emit_console=True,
+        )
+        return 2
 
     files = iter_md_files(root, target_dirs, glob_arg, ignore_arg)
     results = [check_one(p, fix=fix) for p in files]

@@ -1,5 +1,5 @@
 ---
-title: `suggest_eval_case.py` 使用说明（半自动生成 eval case：expected_sources + must_include + bucket/pair_id）
+title: "`suggest_eval_case.py` 使用说明（半自动生成 eval case：expected_sources + must_include + bucket/pair_id）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: suggest_eval_case
@@ -101,3 +101,32 @@ python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_ca
 ```
 
 确保 bucket/pair_id 等字段可被稳定消费。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--append-to` | — | '' | append suggested case to an existing jsonl file (optional) |
+| `--bucket` | — | 'official' | case bucket: official/oral/ambiguous |
+| `--collection` | — | 'rag_chunks' | chroma collection name |
+| `--concept-id` | — | '' | concept grouping id (optional) |
+| `--db` | — | 'chroma_db' | chroma db directory relative to root |
+| `--device` | — | 'cpu' | embedding device: cpu/cuda (backend dependent) |
+| `--embed-backend` | — | 'auto' | embedding backend |
+| `--embed-model` | — | 'BAAI/bge-m3' | embedding model name (should match index) |
+| `--k` | — | 5 | type=int；topK for retrieval |
+| `--max-terms` | — | 8 | type=int；max must_include candidates |
+| `--meta-field` | — | 'source_uri\|source\|path\|file' | metadata source field priority, separated by \| |
+| `--out` | — | '' | write the suggested case json to this path (optional) |
+| `--pair-id` | — | '' | bind oral vs official variants (optional, recommended) |
+| `--pick-sources` | — | 2 | type=int；how many top sources to include into expected_sources |
+| `--query` | true | — | user query to build eval case |
+| `--root` | — | '.' | project root |
+| `--tags` | — | 'suggested' | comma separated tags |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

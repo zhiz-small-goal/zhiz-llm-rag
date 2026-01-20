@@ -1,7 +1,7 @@
 # Machine-readable SSOT for repo gates + schema + policy.
 # Keep this file stable: consumers must treat it as the single source of truth (SSOT).
 version: 2
-last_updated: "2026-01-16"
+last_updated: "2026-01-20"
 timezone: "America/Los_Angeles"
 
 exit_codes:
@@ -36,7 +36,9 @@ gates:
       - gen_tools_wrappers_check
       - check_tools_layout
       - check_cli_entrypoints
+      - check_docs_conventions
       - check_md_refs_contract
+      - check_readme_code_sync
       - validate_review_spec
       - pytest
     ci:
@@ -45,7 +47,9 @@ gates:
       - check_tools_layout
       - check_public_release_hygiene
       - check_cli_entrypoints
+      - check_docs_conventions
       - check_md_refs_contract
+      - check_readme_code_sync
       - check_ruff
       - check_mypy
       - validate_review_spec
@@ -58,7 +62,9 @@ gates:
       - check_public_release_hygiene
       - check_repo_health_files
       - check_cli_entrypoints
+      - check_docs_conventions
       - check_md_refs_contract
+      - check_readme_code_sync
       - check_ruff
       - check_mypy
       - validate_review_spec
@@ -84,8 +90,14 @@ gates:
     check_cli_entrypoints:
       argv: ["tools/check_cli_entrypoints.py"]
 
+    check_docs_conventions:
+      argv: ["tools/check_docs_conventions.py", "--root", ".", "--out", "data_processed/build_reports/docs_conventions_report.json"]
+
     check_md_refs_contract:
       argv: ["tools/check_md_refs_contract.py"]
+
+    check_readme_code_sync:
+      argv: ["tools/check_readme_code_sync.py", "--root", ".", "--check", "--out", "data_processed/build_reports/readme_code_sync_report.json"]
 
     check_ruff:
       argv: ["tools/check_ruff.py", "--root", "."]

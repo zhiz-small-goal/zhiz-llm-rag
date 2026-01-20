@@ -113,3 +113,33 @@ JSON 报告（schema: `repo_health_report_v1`）包含：
 - Preflight Checklist：`docs/howto/PREFLIGHT_CHECKLIST.md`
 - Lessons：`docs/explanation/LESSONS.md`
 - Postmortem：`docs/postmortems/2026-01-09_postmortem_open_source_repo_health_files.md`
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_repo_health_files`
+> entrypoints: `python tools/check_repo_health_files.py`, `python -m mhy_ai_rag_data.tools.check_repo_health_files`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--mode` | — | 'public-release' | public-release: placeholders are FAIL; draft: placeholders are WARN |
+| `--out` | — | '' | Write JSON report to this path (relative to repo root). Empty -> no JSON. |
+| `--placeholder` | — | [] | action=append；Extra placeholder token to flag (repeatable). |
+| `--repo` | — | '.' | (deprecated) same as --root |
+| `--root` | — | '.' | Repo root (default: current directory) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

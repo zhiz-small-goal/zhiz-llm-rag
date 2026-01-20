@@ -121,3 +121,25 @@ result = extract_refs_from_md(md_path=p, md_text=text, project_root=root)
 ---
 
 **注意**：本工具是**仓库专用工具（REPO-ONLY TOOL）**，仅用于本仓库门禁/审计。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_md_refs_contract`
+> entrypoints: `python tools/check_md_refs_contract.py`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--root` | — | None | Repo root (default: auto-detect from this script location) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

@@ -107,6 +107,9 @@ if errorlevel 1 exit /b !ERRORLEVEL!
 call :gate "%PY%" tools\check_md_refs_contract.py
 if errorlevel 1 exit /b !ERRORLEVEL!
 
+call :gate "%PY%" tools\check_readme_code_sync.py --root .
+if errorlevel 1 exit /b !ERRORLEVEL!
+
 call :gate "%PY%" -m pytest -q
 if errorlevel 1 exit /b !ERRORLEVEL!
 

@@ -201,6 +201,23 @@ readmes:
       output_contract: none
     mapping_status: ok
   -
+    path: tools/check_readme_code_sync_README.md
+    tool_id: check_readme_code_sync
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.tools.check_readme_code_sync
+      wrapper: tools/check_readme_code_sync.py
+    entrypoints:
+      - "python tools/check_readme_code_sync.py"
+      - "python -m mhy_ai_rag_data.tools.check_readme_code_sync"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+
+  -
     path: tools/check_repo_health_files_README.md
     tool_id: check_repo_health_files
     cli_framework: argparse

@@ -77,3 +77,35 @@ python tools\check_inventory_build.py --compare-snapshot data_processed\build_re
 3) diff 报告被截断
 - 原因：默认 `--max-details 200` 限制明细体积。
 - 处理：增大 `--max-details`，或只看 `summary.counts` 与 `truncated.*_more`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_inventory_build`
+> entrypoints: `python tools/check_inventory_build.py`, `python -m mhy_ai_rag_data.tools.check_inventory_build`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--compare-snapshot` | — | '' | compare current inventory.csv against a snapshot json |
+| `--compare-updated-at` | — | — | action=store_true；treat updated_at changes as content drift |
+| `--diff-out` | — | '' | write diff json to this path (optional) |
+| `--inventory` | — | 'inventory.csv' | inventory.csv path (relative to root by default) |
+| `--max-details` | — | 200 | type=int；cap details lists in diff report |
+| `--root` | — | None | project root (default: auto-detect from CWD) |
+| `--snapshot-out` | — | '' | write snapshot json to this path |
+| `--strict` | — | — | action=store_true；exit non-zero when diff exists |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

@@ -1,5 +1,5 @@
 ---
-title: `verify_stage1_pipeline.py` 使用说明（Stage-1 一键验收/回归）
+title: "`verify_stage1_pipeline.py` 使用说明（Stage-1 一键验收/回归）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: verify_stage1_pipeline
@@ -322,3 +322,27 @@ python tools/verify_stage1_pipeline.py --root . --skip-chroma --skip-llm
 ```bash
 python tools/verify_stage1_pipeline.py --root . --db chroma_db --collection rag_chunks --base-url http://127.0.0.1:8000/v1 --connect-timeout 10 --timeout 10 --trust-env auto
 ```
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--base-url` | — | 'http://localhost:8000/v1' | OpenAI-compatible base URL |
+| `--collection` | — | 'rag_chunks' | Chroma collection name |
+| `--connect-timeout` | — | 10.0 | type=float；HTTP connect timeout seconds |
+| `--db` | — | 'chroma_db' | Chroma persistent directory name |
+| `--root` | — | '.' | Project root (contains data_processed/ ...) |
+| `--skip-chroma` | — | — | action=store_true；Skip chroma checks |
+| `--skip-llm` | — | — | action=store_true；Skip LLM probe |
+| `--timeout` | — | 10.0 | type=float；HTTP read timeout seconds (legacy name: --timeout) |
+| `--trust-env` | — | 'auto' | trust env proxies: auto(loopback->false), true, false |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

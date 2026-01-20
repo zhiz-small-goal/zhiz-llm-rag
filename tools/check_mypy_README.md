@@ -63,3 +63,28 @@ python tools/check_mypy.py --root . --strict
 - 脚本不会修改文件，仅做检查。
 - mypy 会读取 `pyproject.toml` 的 `[tool.mypy]` 配置（例如 `files=["src"]`）。
 - 诊断输出包含列号，格式为 `file:line:col`，便于 VS Code 跳转。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_mypy`
+> entrypoints: `python tools/check_mypy.py`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--config` | — | '' | Optional config path (default: pyproject.toml) |
+| `--no-strict` | — | — | action=store_false；Disable mypy strict mode |
+| `--root` | — | '.' | Repo root (default: .) |
+| `--strict` | — | — | action=store_true；Enable mypy strict mode |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

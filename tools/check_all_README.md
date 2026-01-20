@@ -200,3 +200,33 @@ python tools\check_mypy.py --root .
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/check_all.py`。推荐使用 console script `rag-check-all` 或 `python -m mhy_ai_rag_data.tools.check_all`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_all`
+> entrypoints: `python tools/check_all.py`, `python -m mhy_ai_rag_data.tools.check_all`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--ignore-toc` | — | [] | nargs='+'；List of filenames to ignore during TOC check (e.g. README.md) |
+| `--md-out` | — | None | optional report.md path (relative to root); default: <out>.md |
+| `--mode` | — | 'fast' | Check mode (currently only fast). |
+| `--out` | — | 'data_processed/build_reports/check_all_report.json' | output report json (relative to root) |
+| `--root` | — | '.' | Repo root (default: current directory) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

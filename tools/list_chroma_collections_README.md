@@ -77,3 +77,26 @@ if %ERRORLEVEL% neq 0 (echo Collection not found! & exit /b 2)
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/list_chroma_collections.py`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `list_chroma_collections`
+> entrypoints: `python tools/list_chroma_collections.py`, `python -m mhy_ai_rag_data.tools.list_chroma_collections`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--db` | — | 'chroma_db' | Chroma persistent directory |
+| `--expect` | — | None | Expected collection name |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

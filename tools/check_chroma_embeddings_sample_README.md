@@ -156,3 +156,27 @@ python tools\list_chroma_collections.py --db chroma_db --expect rag_chunks
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/check_chroma_embeddings_sample.py`。推荐使用 `python -m mhy_ai_rag_data.tools.check_chroma_embeddings_sample`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_chroma_embeddings_sample`
+> entrypoints: `python tools/check_chroma_embeddings_sample.py`, `python -m mhy_ai_rag_data.tools.check_chroma_embeddings_sample`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--collection` | — | 'rag_chunks' | — |
+| `--db` | — | 'chroma_db' | — |
+| `--limit` | — | 50 | type=int |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

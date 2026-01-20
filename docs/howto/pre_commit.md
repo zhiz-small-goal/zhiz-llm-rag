@@ -6,6 +6,7 @@ last_updated: 2026-01-14
 
 # How-to：本地 pre-commit 使用指南
 
+
 > 目标：在提交前用 pre-commit 运行本仓库门禁，并保持与 CI 口径一致。
 
 ## 目录

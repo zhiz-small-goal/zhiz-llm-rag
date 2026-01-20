@@ -1,5 +1,6 @@
 # README 与源码对齐：实施计划（面向本项目）
 
+
 > 目标：持续保证 **指令/说明/描述** 与 **源码行为** 一致，并把漂移前置到提交/合并阶段被发现与阻断。  
 > 范围：优先覆盖仓库根目录 `tools/` 下所有 `README*.md` / `*_README*.md`（后续可扩展到其它目录）。
 
@@ -44,10 +45,10 @@
 | 2026-01-20 | 1 | DONE | `ssot_contract_step1_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync.yaml`、`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`、`docs/INDEX.md`、`docs/reference/REFERENCE.md` | 已按项目文档结构先落地 SSOT 契约（机器可读 + Reference 页面）并补齐导航；后续门禁工具优先读取 YAML。 |
 | 2026-01-20 | 2 | DONE | `readme_code_alignment_step2_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync_index.yaml`、`docs/reference/readme_code_sync_needs_manual.yaml`、`docs/reference/TOOLS_README_CODE_SYNC_INDEX.md` + `tools/*README*.md`（54 个 README 补齐 frontmatter/映射） | 已建立 README↔入口映射索引与“需人工确认”清单，为 Step3 的 `--check` 最小闭环提供输入。 |
 | 2026-01-20 | 3 | DONE | `readme_code_alignment_step3_patch.zip`（补丁包）<br>仓库路径：`src/mhy_ai_rag_data/tools/check_readme_code_sync.py`、`tools/check_readme_code_sync.py`、`tools/check_readme_code_sync_README.md`<br>报告默认：`data_processed/build_reports/readme_code_sync_report.json` | 已实现 Step3 的 check-only 门禁：frontmatter/markers 基础校验；仅当存在 `AUTO:BEGIN options` 区块时才做 `argparse.add_argument` 静态 flag 抽取差分；`--write` 预留给 Step4。 |
-| 2026-01-20 | 4 | TODO | — | 计划实现 `--write` 写回 README 自动区块，并保证幂等输出。 |
-| 2026-01-20 | 5 | TODO | — | 计划接入 pre-commit 与 CI 门禁（并与现有 doc gates 组合）。 |
-| 2026-01-20 | 6 | TODO | — | 计划引入抽样语义测试与 help/输出快照回归（含归一化规则）。 |
-| 2026-01-20 | 7 | TODO | — | 计划补齐例外登记、变更流程与 owner 规则。 |
+| 2026-01-20 | 4 | DONE | 仓库路径：`src/mhy_ai_rag_data/tools/check_readme_code_sync.py`（实现 `--write` + AUTO blocks 校验）<br>`tools/*README*.md`（落地 options/output-contract/artifacts AUTO blocks） | 已实现 `--write` 并保证幂等输出；AUTO markers 以“独立行”识别，避免在反引号/代码块中误触发。 |
+| 2026-01-20 | 5 | DONE | 仓库路径：`docs/reference/reference.yaml`（gate profiles 新增 `check_readme_code_sync`）<br>`tools/run_ci_gates.cmd`、`tools/run_ci_gates_README.md`、`docs/howto/ci_pr_gates.md` | 已接入 Gate runner 与 Windows 一键门禁脚本。 |
+| 2026-01-20 | 6 | IN_PROGRESS | 仓库路径：`tests/test_check_readme_code_sync_write.py`（`--write` 幂等性与最小闭环回归） | 仍需补齐：help 快照归一化 + 语义抽样回归（exit code/stdout/stderr/产物）。 |
+| 2026-01-20 | 7 | IN_PROGRESS | 仓库路径：`docs/reference/readme_code_sync_exceptions.yaml`（例外登记入口） | 仍需补齐：owner/复审触发器与贡献流程写入（避免例外无限扩散）。 |
 
 ---
 
@@ -133,8 +134,8 @@
 
 **关键参数/注意**
 
-- 当前版本是 check-only：`--write` 会提示未实现并返回退出码 3（为 Step4 预留）。
-- 静态 AST 抽取只覆盖 `argparse.add_argument` 的长参数 `--flag`，不对 Click/Typer/动态注册做强校验；此类工具建议在 Step4/Step6 走 `--help` 快照与归一化。
+- 当前版本已支持 `--write`：会就地刷新 README AUTO blocks（幂等输出），用于把修复动作从“手工改文档”降为“一条命令 + diff review”。
+- 静态 AST 抽取以 `argparse.add_argument("--flag", ...)` 的长参数为主；对 Click/Typer/动态注册类工具，建议走 Step6 的 `--help` 快照与归一化回归。
 
 ### Step 4 — 生成脚本 v1：README 自动区块（`--write`） [CON]
 
@@ -156,11 +157,15 @@
 
 ---
 
-### Step 5 — 门禁接入：pre-commit + CI + 与现有 doc gates 组合 [OFF]
+### Step 5 — 门禁接入：pre-commit + CI + 与现有 doc gates 组合 [DONE]
 
 **做什么**
 
 - 在 CI gate 链中新增 README↔源码对齐门禁（本计划的工具），并与现有工具并列执行：
+  - （已接入）`docs/reference/reference.yaml` 的 `gates.profiles.fast/ci/release` 已包含三类 doc gates：
+    - `check_docs_conventions`
+    - `check_md_refs_contract`
+    - `check_readme_code_sync`
   - `check_docs_conventions`（Markdown 工程约定）
   - `check_md_refs_contract`（md_refs API 契约）
   - `check_readme_code_sync`（本计划新增：README↔源码一致性）

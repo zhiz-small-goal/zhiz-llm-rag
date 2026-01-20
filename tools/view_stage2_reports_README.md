@@ -1,5 +1,5 @@
 ---
-title: `view_stage2_reports.py` 使用说明（Stage-2 输出文件一键解读）
+title: "`view_stage2_reports.py` 使用说明（Stage-2 输出文件一键解读）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: view_stage2_reports
@@ -95,3 +95,22 @@ python tools/view_stage2_reports.py --root . --retrieval some/other.json --rag s
 - `eval_cases_validation.json`：看 `overall/errors/warnings`，errors 必须为 0 才建议进入评测。
 - `eval_retrieval_report.json`：看 `hit_rate` 与未命中样例，定位 expected_sources 是否写错或检索退化。
 - `eval_rag_report.json`：看 `pass_rate` 与 missing/answer_snippet，定位 must_include 断言或端到端链路问题。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--cases` | — | 'data_processed/eval/eval_cases.jsonl' | eval cases jsonl (relative to root) |
+| `--md-out` | — | '' | optional: write a markdown summary file |
+| `--rag` | — | 'data_processed/build_reports/eval_rag_report.json' | rag eval report json |
+| `--retrieval` | — | 'data_processed/build_reports/eval_retrieval_report.json' | retrieval eval report json |
+| `--root` | — | '.' | project root |
+| `--show-fails` | — | 5 | type=int；how many failing cases to show per report |
+| `--validation` | — | 'data_processed/build_reports/eval_cases_validation.json' | validation report json |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

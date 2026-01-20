@@ -108,3 +108,29 @@ python tools\reset_chroma_db.py --db chroma_db
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/diff_units_sources_vs_chroma_sources.py`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `diff_units_sources_vs_chroma_sources`
+> entrypoints: `python tools/diff_units_sources_vs_chroma_sources.py`, `python -m mhy_ai_rag_data.tools.diff_units_sources_vs_chroma_sources`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--collection` | — | 'rag_chunks' | — |
+| `--db` | — | 'chroma_db' | — |
+| `--max-sample` | — | 20 | type=int |
+| `--root` | — | '.' | — |
+| `--units` | — | 'data_processed/text_units.jsonl' | — |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

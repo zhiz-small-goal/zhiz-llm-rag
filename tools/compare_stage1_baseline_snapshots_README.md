@@ -1,5 +1,5 @@
 ---
-title: `compare_stage1_baseline_snapshots.py` 使用说明（对比两份 Stage-1 基线快照）
+title: "`compare_stage1_baseline_snapshots.py` 使用说明（对比两份 Stage-1 基线快照）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: compare_stage1_baseline_snapshots
@@ -197,3 +197,24 @@ pip_freeze 文本长，且很多包变化与结果无关，容易制造噪声。
 4) 用本脚本对比“新旧快照”，确定漂移发生在哪一层
 5) 再进入 Stage-2 的检索回归与端到端回归（`run_eval_retrieval.py` / `run_eval_rag.py`）
 
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--a` | true | — | snapshot A json path |
+| `--b` | true | — | snapshot B json path |
+| `--compare-pip-freeze` | — | — | action=store_true；compare pip_freeze content hash (default off) |
+| `--out` | — | '' | output diff report json (optional) |
+| `--root` | — | '.' | repo root |
+| `--root` | — | '.' | repo root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

@@ -1,5 +1,5 @@
 ---
-title: `run_eval_retrieval.py` 使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）
+title: "`run_eval_retrieval.py` 使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: run_eval_retrieval
@@ -183,3 +183,33 @@ python tools/run_eval_retrieval.py ... --progress-every-seconds 0   # 关闭
 - `record_type=summary`：整体汇总（cases_total、hit_rate、elapsed_ms 等）
 
 更完整的字段约定请见：`docs/reference/EVAL_REPORTS_STREAM_SCHEMA.md`。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--cases` | — | 'data_processed/eval/eval_cases.jsonl' | eval cases jsonl (relative to root) |
+| `--collection` | — | 'rag_chunks' | collection name |
+| `--db` | — | 'chroma_db' | chroma db dir (relative to root) |
+| `--device` | — | 'cpu' | cpu\|cuda |
+| `--embed-backend` | — | 'auto' | auto\|flagembedding\|sentence-transformers |
+| `--embed-model` | — | 'BAAI/bge-m3' | embed model name |
+| `--events-out` | — | 'auto' | item events output (jsonl): auto\|off\|<path> (relative to root). Used for recovery/rebuild. |
+| `--k` | — | 5 | type=int；topK for retrieval |
+| `--md-out` | — | '' | optional report.md path (relative to root); default: <out>.md |
+| `--meta-field` | — | 'source_uri\|source\|path\|file' | metadata field(s) for source path (use \| to separate) |
+| `--out` | — | 'data_processed/build_reports/eval_retrieval_report.json' | output json (relative to root) |
+| `--progress` | — | 'auto' | runtime progress feedback to stderr: auto\|on\|off |
+| `--progress-min-interval-ms` | — | 200 | type=int；min progress update interval in ms (throttling) |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

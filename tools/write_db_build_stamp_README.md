@@ -25,6 +25,7 @@ cli_framework: argparse
 ---
 # write_db_build_stamp.py 使用说明
 
+
 > 目标：写入 db_build_stamp.json，记录数据库构建时间戳和元数据，为 rag-status 提供稳定的 freshness 判定基础。
 
 ## 快速开始
@@ -75,3 +76,29 @@ python tools\write_db_build_stamp.py --db chroma_db --collection rag_chunks --pl
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/write_db_build_stamp.py`。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--collection` | — | 'rag_chunks' | — |
+| `--collection-count` | — | None | optional: provide collection.count snapshot to avoid opening Chroma (int) |
+| `--db` | — | 'chroma_db' | — |
+| `--out` | — | None | output path (default: <state_root>/db_build_stamp.json) |
+| `--plan` | — | None | — |
+| `--root` | — | '.' | — |
+| `--schema-hash` | — | None | — |
+| `--state-root` | — | 'data_processed/index_state' | — |
+| `--writer` | — | 'manual' | — |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+- artifacts（registry）：
+  - `data_processed/index_state/db_build_stamp.json`
+<!-- AUTO:END artifacts -->

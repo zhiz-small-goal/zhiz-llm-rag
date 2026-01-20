@@ -25,6 +25,7 @@ cli_framework: argparse
 ---
 # rag_status.py 使用说明
 
+
 > 目标：基于本地真实产物+报告，给出当前状态与下一步建议，解决"多机/重复构建后忘记进度"的痛点。
 
 ## 快速开始
@@ -70,3 +71,29 @@ rag_status 定位为"状态检查工具"而非"诊断报告工具"，因此其�
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/rag_status.py`。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--collection` | — | None | collection 名（可覆盖 profile） |
+| `--db` | — | None | Chroma DB 目录（可覆盖 profile） |
+| `--json-out` | — | None | JSON 报告输出路径（提供则只写这一份） |
+| `--json-stdout` | — | — | action=store_true；将 JSON 报告输出到 stdout（不落盘） |
+| `--plan` | — | None | chunk_plan.json 路径（可覆盖 profile 或默认） |
+| `--profile` | — | None | 构建 profile JSON（推荐，用于对齐 db/units/reports/state_root） |
+| `--reports-dir` | — | None | build_reports 目录（可覆盖 profile 或默认） |
+| `--root` | — | None | 项目根目录（默认自动向上查找） |
+| `--state-root` | — | None | index_state 根目录（可覆盖 profile） |
+| `--strict` | — | — | action=store_true；严格模式：任何 MISS/FAIL/STALE 都返回非 0（FAIL） |
+| `--units` | — | None | text_units.jsonl 路径（可覆盖 profile） |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

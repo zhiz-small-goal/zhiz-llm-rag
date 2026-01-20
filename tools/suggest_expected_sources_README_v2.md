@@ -1,5 +1,5 @@
 ---
-title: `suggest_expected_sources.py` 使用说明（expected_sources 取证与推荐：基于 Chroma topK）
+title: "`suggest_expected_sources.py` 使用说明（expected_sources 取证与推荐：基于 Chroma topK）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: suggest_expected_sources

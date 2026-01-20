@@ -1,5 +1,5 @@
 ---
-title: `validate_eval_cases.py` 使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）
+title: "`validate_eval_cases.py` 使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: validate_eval_cases
@@ -100,3 +100,25 @@ python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_ca
 - 当你开始正式治理“口语 vs 官方术语断桥”时，建议把：
   1) `bucket` 缺省从 warning 升级为 error（在你补齐历史用例之后）
   2) 对 oral/official 的 `pair_id` 缺失从 warning 升级为 error（当你明确要做对照评测之后）
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--cases` | — | 'data_processed/eval/eval_cases.jsonl' | eval cases jsonl (relative to root) |
+| `--check-must-include-in-sources` | — | — | action=store_true；check each must_include appears in at least one expected_source file (only for file paths) |
+| `--check-sources-exist` | — | — | action=store_true；check that expected_sources path exists under root |
+| `--md-out` | — | '' | optional report.md path (relative to root); default: <out>.md |
+| `--out` | — | 'data_processed/build_reports/eval_cases_validation.json' | output report json (relative to root) |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

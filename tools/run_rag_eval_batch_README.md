@@ -320,3 +320,38 @@ python tools\run_rag_eval_batch.py --queries F:\path\to\queries.json
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/run_rag_eval_batch.py`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `run_rag_eval_batch`
+> entrypoints: `python tools/run_rag_eval_batch.py`, `python -m mhy_ai_rag_data.tools.run_rag_eval_batch`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--answer` | — | — | action=store_true |
+| `--events-out` | — | 'off' | item events output (jsonl): auto\|off\|<path> (relative to root). Used for recovery/rebuild. |
+| `--k` | — | 5 | type=int |
+| `--md-out` | — | '' | optional report.md path (relative to root); default: <out>.md |
+| `--out` | — | '' | output json (relative to root). default: data_processed/build_reports/rag_eval_<stamp>.json |
+| `--pipeline` | — | — | action=store_true |
+| `--progress` | — | 'auto' | runtime progress feedback to stderr: auto\|on\|off |
+| `--progress-min-interval-ms` | — | 200 | type=int；min progress update interval in ms (throttling) |
+| `--queries` | — | 'tests/rag_queries_v1.json' | — |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

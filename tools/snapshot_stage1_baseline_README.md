@@ -1,5 +1,5 @@
 ---
-title: `snapshot_stage1_baseline.py` 使用说明（Stage-1 基线快照：产物指纹 + Chroma 落盘状态）
+title: "`snapshot_stage1_baseline.py` 使用说明（Stage-1 基线快照：产物指纹 + Chroma 落盘状态）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: snapshot_stage1_baseline
@@ -143,3 +143,22 @@ python tools/snapshot_stage1_baseline.py --root . --db chroma_db
 
 - 建议在 **每次重建 Chroma** 后执行一次快照，并将输出 commit 到分支或作为构建产物归档。
 - 若你已将环境快照统一交由 `tools/capture_rag_env.py` 管理，可将本脚本裁剪为“只含 artifacts + chroma manifest + git”，避免重复采集依赖信息。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--db` | — | 'chroma_db' | chroma db directory name relative to root |
+| `--out` | — | '' | override output json path (optional) |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

@@ -25,6 +25,7 @@ cli_framework: argparse
 ---
 # view_gate_report.py 使用说明
 
+
 ## 目录
 - [目的](#目的)
 - [适用场景](#适用场景)
@@ -84,3 +85,22 @@ python tools/view_gate_report.py --root . --events data_processed/build_reports/
 2) **定位链接不可点击**
 - 说明：`loc_uri` 以 `vscode://file/...` 形式渲染，依赖本机安装 VS Code 并允许该 scheme 打开。
 - 处理：确认 VS Code 已安装；或在 Markdown 中复制 `loc`（纯文本 `path:line:col`）手动跳转。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--events` | — | '' | optional: item events jsonl to render (relative to root); used for recovery/rebuild |
+| `--md-out` | — | '' | optional markdown output path (relative to root) |
+| `--report` | — | 'data_processed/build_reports/gate_report.json' | gate_report.json path (relative to root) |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

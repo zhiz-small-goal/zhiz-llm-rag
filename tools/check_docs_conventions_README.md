@@ -1,5 +1,5 @@
 ---
-title: `check_docs_conventions.py` 使用说明（docs Markdown 工程约定门禁）
+title: "`check_docs_conventions.py` 使用说明（docs Markdown 工程约定门禁）"
 version: v1.0
 last_updated: 2026-01-20
 tool_id: check_docs_conventions
@@ -147,3 +147,30 @@ python tools/check_docs_conventions.py --root . --dirs docs --glob "*.md"
 2) two blank lines 缺失  
 原因：目录生成器未插入空行或被手工删改。  
 处理：将“插入空行”纳入生成器输出模板，并将本检查作为门禁。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--config` | — | None | f'config json path (relative to root); default {DEFAULT_CONFIG}' |
+| `--dirs` | — | None | nargs='+'；directories to scan (relative to root). default from config or built-in |
+| `--fix` | — | None | action=store_true；auto-insert missing blank lines after title (in-place) |
+| `--full-repo` | — | None | action=store_true；scan the entire repo (overrides --dirs) |
+| `--glob` | — | None | glob pattern under target dirs |
+| `--ignore` | — | None | nargs='+'；ignore patterns (fnmatch on posix relpath, e.g., data_processed/**) |
+| `--out` | — | None | output json (relative to root) |
+| `--root` | — | '.' | project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 默认输出: `data_processed/build_reports/docs_conventions_report.json`（JSON） + `data_processed/build_reports/docs_conventions_report.md`（Markdown）
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+- artifacts（推断自 DEFAULT_OUT）：
+  - `data_processed/build_reports/docs_conventions_report.json`
+  - `data_processed/build_reports/docs_conventions_report.md`
+<!-- AUTO:END artifacts -->

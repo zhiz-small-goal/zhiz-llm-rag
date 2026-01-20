@@ -25,6 +25,7 @@ cli_framework: argparse
 ---
 # run_profile_with_timing.py 使用说明
 
+
 > 目标：运行 build profile 并记录每步耗时，生成性能报告。
 
 ## 快速开始
@@ -48,3 +49,24 @@ python tools\run_profile_with_timing.py --profile build_profile_schemeB.json
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/run_profile_with_timing.py`。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--max-samples` | — | 20 | type=int；validate_rag_units.py --max-samples |
+| `--profile` | true | — | Profile JSON path, e.g. build_profile_schemeB.json |
+| `--progress` | — | 'auto' | runtime feedback to stderr |
+| `--root` | — | '.' | repo root |
+| `--root` | — | '.' | repo root |
+| `--smoke` | — | — | action=store_true；Run retriever_chroma.py and check_rag_pipeline.py after PASS |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

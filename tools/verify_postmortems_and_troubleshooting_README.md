@@ -314,3 +314,28 @@ python tools/verify_postmortems_and_troubleshooting.py --no-fix --strict
 - 优先把示例放入 fenced code block（```），让脚本屏蔽代码样例。
 - 或者保持 `any_local=false`，通过 `extensions` 白名单精确控制检查范围。
 
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `verify_postmortems_and_troubleshooting`
+> entrypoints: `python tools/verify_postmortems_and_troubleshooting.py`, `python -m mhy_ai_rag_data.tools.verify_postmortems_and_troubleshooting`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--any-local` | — | — | action=store_true；忽略扩展名列表，校验所有本地路径 |
+| `--config` | — | str(DEFAULT_CONFIG_PATH) | 扩展名与模式配置文件路径（JSON） |
+| `--fix-missing-tools-to-placeholder` | — | — | action=store_true；当引用 tools/*.py 但文件不存在且无唯一候选时，将其自动改为 tools/<name>.py 占位（避免误导与 strict 误报） |
+| `--no-fix` | — | — | action=store_true；仅检测，不自动修复 |
+| `--strict` | — | — | action=store_true；存在断链/歧义时返回非 0 |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

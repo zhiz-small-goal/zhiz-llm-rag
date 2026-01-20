@@ -62,3 +62,29 @@ python tools/generate_review_spec_docs.py --root . --write
    原因：SSOT 已变更但未刷新生成产物  
    缓解：运行 `--write` 刷新，并把生成文件一并提交  
    备选：在 gate 中启用 `tools/validate_review_spec.py` 强制一致性
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `generate_review_spec_docs`
+> entrypoints: `python tools/generate_review_spec_docs.py`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--check` | — | — | action=store_true；Check if output is up-to-date (do not write). |
+| `--in` | — | None | SSOT JSON path (default: docs/reference/review/review_spec.v1.json) |
+| `--out` | — | None | Output Markdown path (default: docs/reference/review/REVIEW_SPEC.md) |
+| `--root` | — | None | Repo root (default: auto-detect) |
+| `--write` | — | — | action=store_true；Write output file. |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

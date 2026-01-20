@@ -218,3 +218,39 @@ Gate runner 统一遵循项目退出码契约：
 - [SSOT（机器可读）](../docs/reference/reference.yaml)
 - [Gate report schema](../schemas/gate_report_v2.schema.json)
 - [Policy（Conftest/Rego）](../policy/README.md)
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `gate`
+> entrypoints: `python tools/gate.py`, `python -m mhy_ai_rag_data.tools.gate`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--events-out` | — | '' | Override item events jsonl output path (default: alongside json report) |
+| `--json-out` | — | '' | Override gate report output path |
+| `--md-out` | — | '' | Override markdown report output path (default: alongside json report) |
+| `--profile` | — | 'ci' | Gate profile |
+| `--progress` | — | 'auto' | runtime progress feedback to stderr: auto\|on\|off (default: auto) |
+| `--progress-min-interval-ms` | — | 200 | type=int；throttle progress updates (ms) |
+| `--root` | — | '.' | Repo root |
+| `--ssot` | — | 'docs/reference/reference.yaml' | SSOT yaml path (relative to root) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+- artifacts（registry）：
+  - `data_processed/build_reports/gate_report.json`
+  - `data_processed/build_reports/gate_report.md`
+  - `data_processed/build_reports/gate_report.events.jsonl`
+  - `data_processed/build_reports/gate_logs/<step_id>.log`
+<!-- AUTO:END artifacts -->

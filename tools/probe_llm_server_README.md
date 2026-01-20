@@ -112,3 +112,35 @@ python tools\probe_llm_server.py --base http://127.0.0.1:8000\v1 --trust-env fal
 ---
 
 **注意**：本工具是**包装器（AUTO-GENERATED WRAPPER）**，实际实现位于 `src/mhy_ai_rag_data/tools/probe_llm_server.py`。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `probe_llm_server`
+> entrypoints: `python tools/probe_llm_server.py`, `python -m mhy_ai_rag_data.tools.probe_llm_server`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--base` | true | — | 例如 http://localhost:8000 或 http://localhost:8000/v1 |
+| `--connect-timeout` | — | 5.0 | type=float；连接超时秒（requests connect timeout） |
+| `--json-out` | — | None | JSON 报告输出路径（提供则只写这一份） |
+| `--json-stdout` | — | — | action=store_true；将 JSON 报告打印到 stdout（可与 --json-out 同时使用） |
+| `--root` | — | '.' | repo root |
+| `--root` | — | '.' | repo root |
+| `--timeout` | — | 10.0 | type=float；读取超时秒（requests read timeout；legacy 名称 --timeout） |
+| `--trust-env` | — | 'auto' | 是否信任环境代理：auto(loopback->false), true, false |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

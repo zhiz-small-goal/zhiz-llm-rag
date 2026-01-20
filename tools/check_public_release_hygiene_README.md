@@ -169,3 +169,31 @@ python tools\check_public_release_hygiene.py --repo . --history 1 --max-history-
 - 正则编译失败会降级为 INFO，并跳过该类扫描。
 - 二进制/大文件判断基于扩展名与大小阈值，不做内容级检测。
 - Locations 会做截断（不同扫描项上限不同），报告中会标注截断数量。
+
+---
+
+## 自动生成参考（README↔源码对齐）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_public_release_hygiene`
+> entrypoints: `python tools/check_public_release_hygiene.py`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--config` | — | None | optional json config path |
+| `--file-scope` | — | 'tracked_and_untracked_unignored' | file selection scope for content scans (default=tracked_and_untracked_unignored) |
+| `--history` | — | 0 | type=int；history scan 0/1 (default=0) |
+| `--max-history-lines` | — | 200000 | type=int；max lines for history scan (default=200000; <=0 means no limit) |
+| `--out` | — | None | output report path (default: repo-local build_reports) |
+| `--repo` | — | '.' | repo path (default=.) |
+| `--respect-gitignore` | — | True | action=argparse.BooleanOptionalAction；when including untracked files, exclude paths ignored by gitignore (default=True) |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

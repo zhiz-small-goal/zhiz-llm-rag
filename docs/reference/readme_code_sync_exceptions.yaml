@@ -1,0 +1,20 @@
+# README <-> code sync exceptions (tools/).
+#
+# Purpose:
+# - Allow explicit, reviewable exceptions when a README cannot be generated/checked deterministically.
+# - Avoid "implicit skip" logic inside the checker.
+#
+# Format:
+# exceptions:
+#   - path: tools/some_tool_README.md
+#     tool_id: some_tool
+#     reason: "why it can't be generated/checked"
+#     checks:
+#       skip: ["options", "output_contract", "artifacts"]
+#     owner: "@team-or-person"
+#     review:
+#       trigger: "when/why to re-check"
+version: 1
+last_updated: "2026-01-20"
+exceptions: []
+
