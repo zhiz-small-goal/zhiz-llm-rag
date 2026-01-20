@@ -91,7 +91,10 @@ python tools\check_pyproject_preflight.py --ascii-only && pip install -e ".[ci]"
 - `contract gate FAIL`：按输出定位违规调用点，改为 `md_path=.../md_text=...` 的关键字参数
 - `check_readme_code_sync FAIL`：
   - 先运行 `python tools/check_readme_code_sync.py --root . --write`，把 README 的 AUTO blocks 刷新后再重跑 gate（推荐把 README diff 与代码改动放在同一提交便于回溯）
-  - 若某工具无法确定性生成/校验（动态参数/运行期依赖等），必须在 `docs/reference/readme_code_sync_exceptions.yaml` 登记例外（含 reason/owner/review.trigger），避免隐式放行
+  - 内部（solo）开发约定：凡是改了 tools/ 下 **CLI 定义**（argparse/click/typer 参数、默认值、必填/可选、wrapper 参数透传等），都必须：
+    - 跑一次 `python tools/check_readme_code_sync.py --root . --write`
+    - 把 README 的 diff 和 CLI 改动放在同一提交（否则后续回溯很难判断“是代码变了还是文档没刷”）
+  - exceptions 强约束（默认必须为空）：当前 gate 启用了 `exceptions_empty`，因此 `docs/reference/readme_code_sync_exceptions.yaml` 一旦出现非空 `exceptions` 会直接 FAIL；如果你确实需要临时例外，必须在同一提交里 **显式修改** `docs/reference/readme_code_sync.yaml` 的 `checks.enforce`（移除 `exceptions_empty`）并写清楚原因与回滚计划
 - `check_ruff FAIL`：若为 format 相关，先执行 `python -m ruff format .`（或 `ruff format .`）再重跑 `check_ruff`
 - `pytest FAIL`：查看失败的断言与临时目录产物，通常是路径/产物名/入口点问题
 

@@ -394,3 +394,84 @@ def test_write_skips_non_tool_readme(tmp_path: Path) -> None:
     _run(cmd, cwd=repo)
     after = readme.read_text(encoding="utf-8")
     assert after == before, "tools/README.md should not get AUTO blocks introduced"
+
+
+def test_check_fails_when_exceptions_nonempty(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "docs/reference").mkdir(parents=True, exist_ok=True)
+    (repo / "tools").mkdir(parents=True, exist_ok=True)
+
+    (repo / "docs/reference/readme_code_sync.yaml").write_text(
+        "\n".join(
+            [
+                "version: 1",
+                "scope:",
+                "  readme_globs:",
+                "    - tools/*README*.md",
+                "frontmatter:",
+                "  required_keys: [title, version, last_updated]",
+                "auto_blocks:",
+                "  markers:",
+                "    options:",
+                "      begin: '<!-- AUTO:BEGIN options -->'",
+                "      end: '<!-- AUTO:END options -->'",
+                "checks:",
+                "  enforce:",
+                "    - exceptions_empty",
+                "exceptions:",
+                "  path: docs/reference/readme_code_sync_exceptions.yaml",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    (repo / "docs/reference/readme_code_sync_index.yaml").write_text(
+        "version: 1\nreadmes: []\n",
+        encoding="utf-8",
+    )
+
+    (repo / "docs/reference/readme_code_sync_exceptions.yaml").write_text(
+        "\n".join(
+            [
+                "version: 1",
+                "last_updated: 2026-01-20",
+                "exceptions:",
+                "  - path: tools/demo_tool_README.md",
+                "    tool_id: demo_tool",
+                "    reason: test exception",
+                "    checks:",
+                "      skip: [options]",
+                "    owner: '@me'",
+                "    review:",
+                "      trigger: 'test'",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "mhy_ai_rag_data.tools.check_readme_code_sync",
+        "--root",
+        str(repo),
+        "--check",
+        "--out",
+        "data_processed/build_reports/readme_code_sync_report.json",
+    ]
+    p = subprocess.run(cmd, cwd=str(repo), text=True, capture_output=True)
+    assert p.returncode == 2, f"expected FAIL rc=2, got {p.returncode}\nstdout:\n{p.stdout}\nstderr:\n{p.stderr}\n"
+
+    report_json = repo / "data_processed/build_reports/readme_code_sync_report.json"
+    report = json.loads(report_json.read_text(encoding="utf-8"))
+    summary = report.get("summary") or {}
+    assert summary.get("overall_status_label") == "FAIL"
+    assert summary.get("overall_rc") == 2
+
+    items = report.get("items") or []
+    assert any(
+        isinstance(it, dict) and it.get("title") == "exceptions_nonempty" and it.get("status_label") == "FAIL"
+        for it in items
+    ), f"expected exceptions_nonempty FAIL item, got titles={[it.get('title') for it in items if isinstance(it, dict)]}"

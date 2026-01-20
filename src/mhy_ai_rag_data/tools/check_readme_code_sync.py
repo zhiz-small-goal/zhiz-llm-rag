@@ -856,9 +856,11 @@ def _load_exceptions(repo: Path, cfg: Dict[str, Any]) -> Dict[str, Any]:
         return {}
     try:
         obj = yaml.safe_load(ex_path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return obj if isinstance(obj, dict) else {}
+    except Exception as exc:
+        return {"__load_error__": f"{exc!r}", "__path__": ex_rel}
+    if not isinstance(obj, dict):
+        return {"__load_error__": "expected a mapping at YAML top-level", "__path__": ex_rel}
+    return obj
 
 
 _ALLOWED_EXCEPTION_CHECKS = {"options", "output_contract", "artifacts"}
@@ -870,6 +872,15 @@ def _validate_exceptions(ex: Dict[str, Any]) -> List[str]:
         return []
 
     errs: List[str] = []
+    if isinstance(ex.get("__load_error__"), str):
+        p = str(ex.get("__path__") or "").strip()
+        msg = str(ex.get("__load_error__") or "").strip()
+        if p and msg:
+            return [f"{p}: {msg}"]
+        if msg:
+            return [msg]
+        return ["failed to load exceptions file"]
+
     items = ex.get("exceptions")
     if items is None:
         return []
@@ -1124,6 +1135,28 @@ def main() -> int:
                             "severity_level": 3,
                             "message": f"exceptions invalid: {msg}",
                             "detail": {"error": msg},
+                        }
+                    )
+            elif "exceptions_empty" in enforce:
+                ex_items = exceptions.get("exceptions") or []
+                if isinstance(ex_items, list) and ex_items:
+                    ex_path = str(nested_get(as_dict(cfg.get("exceptions")), "path") or "")
+                    write_items.append(
+                        {
+                            "tool": "check_readme_code_sync",
+                            "title": "exceptions_nonempty",
+                            "status_label": "FAIL",
+                            "severity_level": 3,
+                            "message": f"{ex_path}: exceptions must be empty (found {len(ex_items)})",
+                            "detail": {
+                                "file": ex_path,
+                                "count": len(ex_items),
+                                "paths": [
+                                    str(it.get("path"))
+                                    for it in ex_items
+                                    if isinstance(it, dict) and isinstance(it.get("path"), str)
+                                ][:50],
+                            },
                         }
                     )
 
@@ -1382,6 +1415,23 @@ def main() -> int:
                         "type": "exceptions_invalid",
                         "file": str(nested_get(as_dict(cfg.get("exceptions")), "path") or ""),
                         "detail": msg,
+                    }
+                )
+        elif "exceptions_empty" in enforce:
+            ex_items = exceptions.get("exceptions") or []
+            if isinstance(ex_items, list) and ex_items:
+                ex_path = str(nested_get(as_dict(cfg.get("exceptions")), "path") or "")
+                issues.append(
+                    {
+                        "type": "exceptions_nonempty",
+                        "file": ex_path,
+                        "detail": f"exceptions must be empty (found {len(ex_items)})",
+                        "count": len(ex_items),
+                        "paths": [
+                            str(it.get("path"))
+                            for it in ex_items
+                            if isinstance(it, dict) and isinstance(it.get("path"), str)
+                        ][:50],
                     }
                 )
 

@@ -101,6 +101,7 @@ checks:
     - output_contract_match_when_present
     - artifacts_match_when_present
     - output_contract_refs_when_v2
+    - exceptions_empty
 
 exceptions:
   # Where exceptions live (if used). Tools may choose to keep this empty.
