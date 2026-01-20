@@ -7,7 +7,7 @@
 # Contract: Report Output v2 (schema_version=2) unless explicitly stated.
 
 schema_version = 1
-last_updated = "2026-01-19"
+last_updated = "2026-01-20"
 source_timezone = "America/Los_Angeles"
 
 # ---------------------------
@@ -79,6 +79,20 @@ contract_version = 2
 channels = ["file", "console"]
 supports_selftest = true
 high_cost = false
+
+[[tool]]
+id = "check_readme_code_sync"
+module = "mhy_ai_rag_data.tools.check_readme_code_sync"
+entrypoint = "python tools/check_readme_code_sync.py"
+kind = "CHECK_REPORT"
+contract_version = 2
+channels = ["file", "console"]
+supports_selftest = true
+high_cost = false
+artifacts = [
+  "data_processed/build_reports/readme_code_sync_report.json",
+  "data_processed/build_reports/readme_code_sync_report.md",
+]
 
 [[tool]]
 id = "check_inventory_build"

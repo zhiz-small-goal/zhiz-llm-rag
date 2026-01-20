@@ -43,7 +43,7 @@
 |---|---:|---|---|---|
 | 2026-01-20 | 1 | DONE | `ssot_contract_step1_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync.yaml`、`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`、`docs/INDEX.md`、`docs/reference/REFERENCE.md` | 已按项目文档结构先落地 SSOT 契约（机器可读 + Reference 页面）并补齐导航；后续门禁工具优先读取 YAML。 |
 | 2026-01-20 | 2 | DONE | `readme_code_alignment_step2_patch.zip`（补丁包）<br>仓库路径：`docs/reference/readme_code_sync_index.yaml`、`docs/reference/readme_code_sync_needs_manual.yaml`、`docs/reference/TOOLS_README_CODE_SYNC_INDEX.md` + `tools/*README*.md`（54 个 README 补齐 frontmatter/映射） | 已建立 README↔入口映射索引与“需人工确认”清单，为 Step3 的 `--check` 最小闭环提供输入。 |
-| 2026-01-20 | 3 | TODO | — | 计划实现 `tools/check_readme_code_sync.py --check` 最小闭环（flags 差分 + 输出契约信号一致性）。 |
+| 2026-01-20 | 3 | DONE | `readme_code_alignment_step3_patch.zip`（补丁包）<br>仓库路径：`src/mhy_ai_rag_data/tools/check_readme_code_sync.py`、`tools/check_readme_code_sync.py`、`tools/check_readme_code_sync_README.md`<br>报告默认：`data_processed/build_reports/readme_code_sync_report.json` | 已实现 Step3 的 check-only 门禁：frontmatter/markers 基础校验；仅当存在 `AUTO:BEGIN options` 区块时才做 `argparse.add_argument` 静态 flag 抽取差分；`--write` 预留给 Step4。 |
 | 2026-01-20 | 4 | TODO | — | 计划实现 `--write` 写回 README 自动区块，并保证幂等输出。 |
 | 2026-01-20 | 5 | TODO | — | 计划接入 pre-commit 与 CI 门禁（并与现有 doc gates 组合）。 |
 | 2026-01-20 | 6 | TODO | — | 计划引入抽样语义测试与 help/输出快照回归（含归一化规则）。 |
@@ -61,15 +61,11 @@
 - 落地文件：
   - 机器可读 SSOT：`docs/reference/readme_code_sync.yaml`
   - Reference 契约页：`docs/reference/TOOLS_README_CODE_ALIGNMENT_CONTRACT.md`
-  - 并在 `docs/INDEX.md`、`docs/reference/REFERENCE.md` 增加导航入口
+  - 导航入口：`docs/INDEX.md`、`docs/reference/REFERENCE.md`
 
-用于声明对齐目标与 SSOT：
-  - **接口层**：参数集合、默认值、必填性、互斥关系、子命令树  
-    - SSOT：源码 parser 定义（argparse/Click/Typer）
-  - **语义层**：关键参数行为、退出码、是否写文件/副作用边界  
-    - SSOT：语义测试（黑盒/runner）
-  - **产物层**：输出契约（schema_version 等）、产物路径/命名规则  
-    - SSOT：契约文档 / registry / schema / contract gate 脚本
+**做什么**
+
+- 以“接口层 / 语义层 / 产物层”拆分对齐目标，并在 SSOT 内声明优先级（详见 YAML 的 `sources_of_truth`）。
 
 **为何（因果）**
 
@@ -109,27 +105,36 @@
 
 ### Step 3 — 校验脚本 v1：接口差分 + 契约信号一致性（`--check`） [OFF]
 
+**进度（2026-01-20）**
+
+- 状态：DONE  
+- 落地文件：
+  - 实现：`src/mhy_ai_rag_data/tools/check_readme_code_sync.py`
+  - wrapper：`tools/check_readme_code_sync.py`
+  - 工具说明：`tools/check_readme_code_sync_README.md`
+- 默认报告：`data_processed/build_reports/readme_code_sync_report.json`（report-output-v2）
+
 **做什么**
 
-- 新增 `tools/check_readme_code_sync.py`（建议与 `docs/reference/readme_code_sync.yaml` 同名一致），提供：
-  - `--check`：失败即退出码 2（契约违例）
-  - `--root` / `--config`：定位 repo root 与 SSOT YAML
-- 核心检查：
-  1) frontmatter 存在与 required keys
-  2) AUTO 区块 marker 合法（BEGIN/END 成对）
-  3) options 区块存在时：README flags ≈ 源码 flags（按 generation 模式抽取）
-  4) 输出契约：若工具为 report-output-v2/contract_version=2，则 README 必须包含契约引用（或自动区块中出现 schema_version=2 要点）
+- 提供 `--check`（默认）模式：发现契约违例即退出码 2。
+- 读取配置：
+  - SSOT：`docs/reference/readme_code_sync.yaml`
+  - 映射索引：`docs/reference/readme_code_sync_index.yaml`
+- 核心检查（Step3 范围：保守、偏结构）：
+  1) frontmatter 存在
+  2) frontmatter 必填键（SSOT `frontmatter.required_keys`）
+  3) AUTO 区块 markers 成对且顺序正确（SSOT `auto_blocks.markers`）
+  4) 当且仅当 README 含 `AUTO:BEGIN options` 时：做 `argparse.add_argument("--...")` 静态抽取并与 README options block 的 flag 集合做差分（`generation.options=static-ast` 时启用）
+  5) 当 `contracts.output=report-output-v2` 时：至少要求 README 可见该契约信号（Step4 再升级为强约束的 generated output-contract block）
 
 **为何（因果）**
 
-- 先上线 `--check` 能把漂移前置为可阻断事件，为 Step4 的 `--write` 与后续门禁组合铺路。
+- Step3 先把“漂移”变成可阻断事件，并保证失败原因可定位到具体 README 与入口映射；随后 Step4 再把修复成本降为一条 `--write` 命令。
 
 **关键参数/注意**
 
-- 输出差异必须可定位：README 文件、对应 tool_id/入口、差异列表、建议修复动作（`--write` / 更新映射 / 登记例外）。
-- 抽取策略优先“静态 AST”；对动态 CLI 退化到 `--help` 快照（并做归一化）。
-
----
+- 当前版本是 check-only：`--write` 会提示未实现并返回退出码 3（为 Step4 预留）。
+- 静态 AST 抽取只覆盖 `argparse.add_argument` 的长参数 `--flag`，不对 Click/Typer/动态注册做强校验；此类工具建议在 Step4/Step6 走 `--help` 快照与归一化。
 
 ### Step 4 — 生成脚本 v1：README 自动区块（`--write`） [CON]
 
