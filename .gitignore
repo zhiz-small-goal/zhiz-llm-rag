@@ -40,3 +40,5 @@ chroma_db/
 # --- end public-release hygiene ---
 
 AGENTS.md
+.tmp/ 
+.tmp/evernote-dump 
