@@ -66,28 +66,15 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --b
 
 ## 4. 参数详解
 
-| 参数 | 默认值 | 说明 |
-|---|---:|---|
-| `--root` | `.` | 项目根目录 |
-| `--db` | `chroma_db` | Chroma 落盘目录 |
-| `--collection` | `rag_chunks` | collection 名 |
-| `--cases` | `data_processed/eval/eval_cases.jsonl` | 用例集 |
-| `--k` | `5` | topK |
-| `--meta-field` | `source_uri|source|path|file` | 来源字段候选 |
-| `--embed-backend` | `auto` | embedding 后端 |
-| `--embed-model` | `BAAI/bge-m3` | embedding 模型 |
-| `--device` | `cpu` | embedding 设备 |
-| `--base-url` | `http://localhost:8000/v1` | LLM base url |
-| `--timeout` | `30` | HTTP timeout 秒 |
-| `--llm-model` | `auto` | model id（默认 auto：GET `/v1/models` 并优先选择 instruct/chat） |
-| `--context-max-chars` | `12000` | 发送给 LLM 的上下文最大字符数 |
-| `--max-tokens` | `256` | 生成 token 上限 |
-| `--temperature` | `0.0` | 生成温度 |
-| `--stream-out` | *(empty)* | 可选：实时事件流输出路径（JSONL/json-seq），用于长任务观测 |
-| `--stream-format` | `jsonl` | `jsonl`（推荐）或 `json-seq`（RFC 7464） |
-| `--progress-every-seconds` | `10` | 控制台进度摘要节流输出；0 表示关闭 |
-| `--stream-answer-chars` | `0` | 若 >0，则在 stream 的 case 记录中写入截断答案片段（便于实时定位） |
-| `--out` | `data_processed/build_reports/eval_rag_report.json` | 输出报告 |
+
+本 README 中的 **完整参数清单与默认值** 以文末 **自动生成区块（AUTO）** 的 `options` 表为准（由 `check_readme_code_sync` 从源码生成并做一致性校验）。本节只解释影响运行行为的关键参数与取舍：
+
+- `--k` / `--context-max-chars` / `--max-tokens`：共同决定一次调用的“检索覆盖 + 上下文预算 + 生成预算”。三者一起影响超时、上下文超限、以及 must_include 命中率（因果：可用证据不足 → missing 增多）。
+- `--connect-timeout` / `--timeout`：分别控制 HTTP 连接与读取超时；当服务端吞吐下降或上下文较长时，应优先通过降低 `--k`/`--context-max-chars`/`--max-tokens` 缩短单次请求，再按需调整超时上限。
+- `--trust-env`：是否信任环境代理变量；在回环地址（127.0.0.1/localhost）场景，推荐保持 `auto` 以避免被系统代理劫持。
+- `--events-out`：输出 **v2 items 事件流（jsonl）**，用于“即时落盘 + 中断后重放/恢复”。取值约定：`auto|off|<path>`（相对 root）。
+- `--progress` / `--progress-min-interval-ms`：控制台进度反馈（stderr）与节流；用于长任务观测但不改变最终报告内容。
+- `--print-case-errors`：对失败 case 立即输出一行摘要到 stderr，用于快速判因；不影响 report.json。
 
 ---
 
@@ -184,27 +171,27 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --b
 
 ---
 
-## 9. 实时观测（stream/progress）
+## 9. 实时观测（events/progress）
 
 长任务（尤其是 LLM 调用）如果只在结束后一次性写出 JSON 报告，反馈环路会被拉长。
-脚本新增了可选的旁路输出：
+脚本提供两类“旁路信号”，不改变最终报告的口径：
 
-- `--stream-out`：实时事件流文件（推荐 `.events.jsonl`）
-- `--progress-every-seconds`：控制台聚合摘要（节流输出）
+- `--events-out`：写出 **items 事件流**（JSONL，一行一个 v2 `item`），便于实时查看与中断后重放。
+- `--progress`：stderr 进度反馈；配合 `--progress-min-interval-ms` 做节流，避免刷屏。
 
 示例：
 
 ```bash
-python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k 5 --base-url http://127.0.0.1:8000/v1 --out data_processed/build_reports/eval_rag_report.json --stream-out data_processed/build_reports/eval_rag_report.events.jsonl --stream-format jsonl --progress-every-seconds 5 --stream-answer-chars 200
+python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k 5 --base-url http://127.0.0.1:8000/v1   --out data_processed/build_reports/eval_rag_report.json   --events-out data_processed/build_reports/eval_rag_report.events.jsonl   --progress on --progress-min-interval-ms 500   --print-case-errors
 ```
 
 Windows PowerShell 观测（实时刷新）：
 
 ```powershell
-Get-Content -Wait data_processed\build_reports\eval_rag_report.events.jsonl
+Get-Content -Wait data_processeduild_reports\eval_rag_report.events.jsonl
 ```
 
-注意：最终门禁/统计仍以 `eval_rag_report.json` 为准；stream 仅用于实时观测与调试。
+注意：最终门禁/统计仍以 `eval_rag_report.json` 为准；events/progress 仅用于实时观测与调试。
 
 ## 自动生成区块（AUTO）
 <!-- AUTO:BEGIN options -->

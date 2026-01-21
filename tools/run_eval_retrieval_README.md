@@ -131,58 +131,29 @@ python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cas
 
 ---
 
-## 7. 实时观测（stream/progress）
+## 7. 实时观测（events/progress）
 
-> 背景：最终报告 `eval_retrieval_report.json` 依旧在跑完整个用例集后一次性写出；为避免“跑完才发现错”，可以开启旁路 **流式事件文件** 与 **控制台节流进度**。
+> 背景：最终报告 `eval_retrieval_report.json` 依旧在跑完整个用例集后一次性写出；为缩短反馈环路，可开启 **items 事件流** 与 **控制台进度** 两类旁路信号。
 
-### 7.1 开启流式事件输出（JSONL / json-seq）
-
-推荐 JSONL（最易观察）：
+### 7.1 开启 items 事件流（JSONL）
 
 ```bash
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --out data_processed/build_reports/eval_retrieval_report.json --stream-out data_processed/build_reports/eval_retrieval_report.events.jsonl --stream-format jsonl
-  --progress-every-seconds 10
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5   --out data_processed/build_reports/eval_retrieval_report.json   --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl   --progress on --progress-min-interval-ms 500
 ```
 
-可选 RFC 7464（json-seq）：
+说明：
+- `--events-out` 写出 JSONL（每行一个 v2 `item`），用于实时查看与中断后重放。
+- `--progress` 输出到 stderr；`--progress-min-interval-ms` 用于节流。
 
-```bash
-python tools/run_eval_retrieval.py ... --stream-out data_processed/build_reports/eval_retrieval_report.events.json-seq --stream-format json-seq
-```
-
-### 7.2 Windows 下实时观察（PowerShell / CMD）
-
-PowerShell（推荐）：
+### 7.2 Windows 下实时观察（PowerShell）
 
 ```powershell
-# JSONL：每条 case/summary 会实时追加
-Get-Content -Path data_processed\build_reports\eval_retrieval_report.events.jsonl -Wait
+Get-Content -Path data_processeduild_reports\eval_retrieval_report.events.jsonl -Wait
 ```
 
-json-seq（含 RS 分隔符，先移除 RS 再看）：
+### 7.3 事件记录语义（简述）
 
-```powershell
-Get-Content -Path data_processed\build_reports\eval_retrieval_report.events.json-seq -Wait | ForEach-Object { $_ -replace "
-", "" }
-```
-
-### 7.3 控制台节流进度（不刷屏）
-
-默认每 10 秒打印一次聚合进度（可关闭/调整）：
-
-```bash
-python tools/run_eval_retrieval.py ... --progress-every-seconds 10
-python tools/run_eval_retrieval.py ... --progress-every-seconds 0   # 关闭
-```
-
-### 7.4 事件记录类型（简述）
-
-流式文件会写入三类记录（每条都是一个 JSON 对象）：
-- `record_type=meta`：启动元信息（argv、k、embed、collection、run_id 等）
-- `record_type=case`：每条 case 的结果（hit_at_k、topk、elapsed_ms 等）
-- `record_type=summary`：整体汇总（cases_total、hit_rate、elapsed_ms 等）
-
-更完整的字段约定请见：`docs/reference/EVAL_REPORTS_STREAM_SCHEMA.md`。
+events 文件每行是一个“report v2 item”（同最终报告的 `items[]` 结构）；字段解释见：`docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md` 的 items 章节，以及 `src/mhy_ai_rag_data/tools/report_events.py` 的模块注释。
 
 ## 自动生成区块（AUTO）
 <!-- AUTO:BEGIN options -->

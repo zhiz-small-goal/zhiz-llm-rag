@@ -15,7 +15,8 @@ Checks (FAIL => exit code 2)
   4) options_match_when_present (AUTO options block must match generated content when present)
   5) output_contract_match_when_present (AUTO output-contract block must match generated content when present)
   6) artifacts_match_when_present (AUTO artifacts block must match generated content when present)
-  7) output_contract_refs_when_v2 (minimal: require the v2 contract tag to be present in frontmatter or body)
+  7) examples_flags_match_when_present (validate flags used in README examples when present)
+  8) output_contract_refs_when_v2 (minimal: require the v2 contract tag to be present in frontmatter or body)
 
 Notes
   - --check focuses on structural validity + minimal signals.
@@ -200,6 +201,92 @@ FLAG_RE = re.compile(r"(?<![\w-])(--[A-Za-z0-9][A-Za-z0-9_-]*)(?![\w-])")
 
 def extract_flags_from_text(s: str) -> Set[str]:
     return set(FLAG_RE.findall(s or ""))
+
+
+def iter_fenced_code_blocks(text: str) -> list[tuple[int, list[str]]]:
+    """Return fenced code blocks as (first_content_line_no, lines).
+
+    - Fences are lines starting with ```.
+    - The returned line number is 1-based and points to the first content line inside the fence.
+    - Unclosed fences are ignored.
+    """
+
+    blocks: list[tuple[int, list[str]]] = []
+    lines = normalize_newlines(text).splitlines()
+    in_block = False
+    buf: list[str] = []
+    first_content_line = 1
+
+    for i, ln in enumerate(lines, start=1):
+        if ln.startswith("```"):
+            if not in_block:
+                in_block = True
+                buf = []
+                first_content_line = i + 1
+            else:
+                blocks.append((first_content_line, buf))
+                in_block = False
+                buf = []
+            continue
+        if in_block:
+            buf.append(ln)
+
+    return blocks
+
+
+def iter_example_commands_in_block(
+    *,
+    block_first_line: int,
+    block_lines: list[str],
+    entrypoints: list[str],
+) -> list[dict[str, object]]:
+    """Extract example commands for this tool within one fenced code block.
+
+    Heuristics:
+    - A command starts when a line (lstrip) begins with one of entrypoints.
+    - Continuation lines are indented and contain at least one flag token ('--').
+
+    Returns a list of dicts with keys: entrypoint, lines[(line_no, text)].
+    """
+
+    eps = [str(e).strip() for e in (entrypoints or []) if isinstance(e, str) and str(e).strip()]
+    if not eps:
+        return []
+
+    out: list[dict[str, object]] = []
+    i = 0
+    while i < len(block_lines):
+        ln = block_lines[i]
+        ln_stripped = ln.lstrip().replace("\\", "/")
+
+        ep_hit: str | None = None
+        for ep in eps:
+            ep_norm = ep.replace("\\", "/").strip()
+            if ln_stripped.startswith(ep_norm):
+                ep_hit = ep
+                break
+
+        if ep_hit is None:
+            i += 1
+            continue
+
+        cmd_lines: list[tuple[int, str]] = []
+        cmd_lines.append((block_first_line + i, ln))
+        j = i + 1
+        while j < len(block_lines):
+            nxt = block_lines[j]
+            if not nxt.strip():
+                break
+            if (nxt.startswith(" ") or nxt.startswith("	")) and ("--" in nxt):
+                cmd_lines.append((block_first_line + j, nxt))
+                j += 1
+                continue
+            break
+
+        out.append({"entrypoint": ep_hit, "lines": cmd_lines})
+        i = j
+
+    return out
 
 
 def module_to_file(repo: Path, module: str) -> Path:
@@ -1558,15 +1645,30 @@ def main() -> int:
                                         "detail": f"generation.options={gen_mode!r} requires impl.module or impl.wrapper (existing file)",
                                     }
                                 )
+                            skip_help_snapshot = False
                             if gen_mode == "help-snapshot" and opt_err:
-                                issues.append(
-                                    {
-                                        "type": "options_help_snapshot_failed",
-                                        "file": rel,
-                                        "detail": f"help-snapshot generation failed: {opt_err}",
-                                    }
-                                )
-                            if _normalize_block_content(block) != _normalize_block_content(expected_md):
+                                impl_path = _resolve_impl_source(repo, idx_entry, fm)
+                                suffix = impl_path.suffix.lower() if impl_path is not None else ""
+                                if os.name != "nt" and suffix in (".cmd", ".bat"):
+                                    warnings.append(
+                                        {
+                                            "type": "options_help_snapshot_skipped_non_windows",
+                                            "file": rel,
+                                            "detail": f"help-snapshot skipped on non-Windows for {suffix}: {opt_err}",
+                                        }
+                                    )
+                                    skip_help_snapshot = True
+                                else:
+                                    issues.append(
+                                        {
+                                            "type": "options_help_snapshot_failed",
+                                            "file": rel,
+                                            "detail": f"help-snapshot generation failed: {opt_err}",
+                                        }
+                                    )
+                            if not skip_help_snapshot and _normalize_block_content(block) != _normalize_block_content(
+                                expected_md
+                            ):
                                 issues.append(
                                     {
                                         "type": "options_block_mismatch",
@@ -1575,7 +1677,6 @@ def main() -> int:
                                         "diff": _diff_blocks(expected_md, block)[:8000],
                                     }
                                 )
-
             # output_contract_match_when_present
             if "output_contract_match_when_present" in enforce and isinstance(markers, dict):
                 spec = as_dict(markers.get("output_contract"))
@@ -1689,6 +1790,91 @@ def main() -> int:
                                         "diff": _diff_blocks(expected, block)[:8000],
                                     }
                                 )
+
+            # examples_flags_match_when_present
+            if "examples_flags_match_when_present" in enforce:
+                if _is_skip_by_exception(exceptions, rel, "examples"):
+                    warnings.append(
+                        {
+                            "type": "examples_check_skipped",
+                            "file": rel,
+                            "detail": "skipped by exceptions",
+                        }
+                    )
+                elif not mapping_ok:
+                    warnings.append(
+                        {
+                            "type": "examples_check_skipped",
+                            "file": rel,
+                            "detail": f"mapping_status={mapping_status_opt}; examples check skipped",
+                        }
+                    )
+                else:
+                    # Resolve expected flags from the implementation source.
+                    gen_mode = str(
+                        nested_get(as_dict(idxd.get("generation")), "options")
+                        or nested_get(as_dict(fm.get("generation")), "options")
+                        or "static-ast"
+                    )
+                    _, expected_flags, _, err = build_options_block_for_tool(
+                        repo=repo,
+                        idx_entry=idx_entry,
+                        frontmatter=fm,
+                        gen_mode=gen_mode,
+                        sort_flags=sort_flags,
+                    )
+                    if err:
+                        warnings.append(
+                            {
+                                "type": "examples_check_skipped",
+                                "file": rel,
+                                "detail": f"cannot derive flags ({gen_mode}): {err}",
+                            }
+                        )
+                    elif not expected_flags:
+                        warnings.append(
+                            {
+                                "type": "examples_check_skipped",
+                                "file": rel,
+                                "detail": "no expected flags derived; examples check skipped",
+                            }
+                        )
+                    else:
+                        entrypoints = list(idxd.get("entrypoints") or fm.get("entrypoints") or [])
+                        blocks = iter_fenced_code_blocks(raw_nl)
+                        for first_line, blines in blocks:
+                            for cmd in iter_example_commands_in_block(
+                                block_first_line=first_line,
+                                block_lines=blines,
+                                entrypoints=entrypoints,
+                            ):
+                                ep = str(cmd.get("entrypoint") or "")
+                                lines = cmd.get("lines")
+                                if not isinstance(lines, list):
+                                    continue
+
+                                # Build a flattened command string for context; extract flags per line for loc.
+                                for line_no, line_text in lines:
+                                    if not isinstance(line_no, int) or not isinstance(line_text, str):
+                                        continue
+                                    found = extract_flags_from_text(line_text)
+                                    unknown = sorted([f for f in found if f not in expected_flags])
+                                    if not unknown:
+                                        continue
+                                    for f in unknown:
+                                        col = (line_text.find(f) + 1) if f in line_text else 1
+                                        issues.append(
+                                            {
+                                                "type": "example_unknown_flag",
+                                                "file": rel,
+                                                "loc": f"{rel}:{line_no}:{max(1, col)}",
+                                                "detail": (
+                                                    f"example uses unknown flag {f}; expected flags derived from code ({gen_mode})"
+                                                ),
+                                                "entrypoint": ep,
+                                                "flag": f,
+                                            }
+                                        )
 
             # output_contract_refs_when_v2
             if "output_contract_refs_when_v2" in enforce:

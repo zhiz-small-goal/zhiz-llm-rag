@@ -1,7 +1,7 @@
 ---
 title: check_readme_code_sync.py 使用说明（tools/ README ↔ 源码对齐门禁）
-version: v0.2
-last_updated: 2026-01-20
+version: v0.3
+last_updated: 2026-01-21
 tool_id: check_readme_code_sync
 
 impl:
@@ -40,6 +40,7 @@ cli_framework: argparse
 - YAML frontmatter 必须存在，且包含 SSOT 中声明的 required keys。
 - AUTO block markers（BEGIN/END）配对与顺序合法。
 - 当 README 中出现 AUTO blocks（`options` / `output-contract` / `artifacts`）时：`--check` 会对这些区块做一致性校验；不一致会 FAIL，并提供 diff（用于 review）。
+- 当 README 的代码块中出现以 entrypoints 开头的示例命令时：校验示例中使用的 `--flags` 必须存在于源码 argparse 定义（未知 flag 直接 FAIL）。
 - 若 `contracts.output == report-output-v2`：至少在 frontmatter 或正文中可见 `report-output-v2` 信号（迁移期的最小信号约束）。
 
 约定：

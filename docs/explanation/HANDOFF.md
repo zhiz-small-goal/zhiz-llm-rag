@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - zhiz-llm-rag
 version: 7
-last_updated: 2026-01-15
+last_updated: 2026-01-21
 timezone: America/Los_Angeles
 ssot: true
 ---
@@ -147,9 +147,9 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k
 ### 4.1 scope / non-goals
 - scope：
   - 为长任务脚本提供实时信号（文件/控制台），包含：
-    - 流式事件文件（推荐 JSONL；可选 RFC 7464 json-seq）
-    - 进度快照（`progress.json`，原子替换）
-    - 控制台聚合摘要（节流输出）
+    - item 事件流文件（JSONL：每行 1 个 report v2 item；用于中断恢复/回放与审计）
+    - 控制台聚合进度（节流输出到 stderr；避免 stdout 刷屏，保持 report bundle 输出整洁）
+
   - 保留最终汇总 JSON 作为判定真源（SoT）
 - non-goals：
   - 不在此 workstream 内调整检索/RAG 算法与统计口径
@@ -160,12 +160,11 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k
   - `data_processed/build_reports/eval_retrieval_report.json`
   - `data_processed/build_reports/eval_rag_report.json`
 - 观测旁路（新增）：
-  - `data_processed/build_reports/*.events.jsonl`（或 `*.json-seq`）
-  - `data_processed/build_reports/*.progress.json`（原子替换）
+  - `data_processed/build_reports/*.events.jsonl`（item 事件流；每行 1 个 report v2 item）
+
 - 命名约定（建议）：
   - `eval_retrieval_report.json`（final）
   - `eval_retrieval_report.events.jsonl`（stream）
-  - `eval_retrieval_report.progress.json`（snapshot）
 
 ### 4.3 acceptance gates（“一次性改造完”的可验收闭环）
 - Gate-1：TTFS（Time To First Signal）
@@ -179,10 +178,12 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k
 
 ### 4.4 implementation plan（按最小改动、可回滚顺序）
 
-已落地（截至 2026-01-06）：
-- `run_eval_retrieval.py` / `run_eval_rag.py` 新增开关：`--stream-out` / `--stream-format` / `--progress-every-seconds`（默认关闭，final JSON 写入逻辑不变）。
-- 新增统一写入器：`src/mhy_ai_rag_data/tools/report_stream.py`（jsonl + json-seq）。
-- 新增文档：`docs/howto/OBSERVE_LONG_RUNS.md` 与 `docs/reference/EVAL_REPORTS_STREAM_SCHEMA.md`。
+已落地（截至 2026-01-21）：
+- `gate.py` 以及长任务工具（例如 `run_eval_retrieval.py` / `run_eval_rag.py`）提供：
+  - `--events-out`：item 事件流输出（JSONL；每行 1 个 report v2 item；默认与 report.json 同名）
+  - `--progress` + `--progress-min-interval-ms`：stderr 进度摘要（节流）
+- 统一写入器：`src/mhy_ai_rag_data/tools/report_events.py`（jsonl；支持 durability_mode=none|flush|fsync）
+- 相关文档：`docs/howto/OBSERVE_LONG_RUNS.md` 与 `docs/reference/EVAL_REPORTS_STREAM_SCHEMA.md`（与当前 events 语义对齐）
 
 已落地（v2 升级，2026-01-17）：
 - **schema_version=2 升级完成**（Tier 1+2，共4个脚本）：
