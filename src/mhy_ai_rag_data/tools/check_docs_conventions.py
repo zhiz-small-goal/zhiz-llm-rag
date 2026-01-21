@@ -15,6 +15,7 @@ check_docs_conventions.py
 用法：
   python tools/check_docs_conventions.py --root . --out data_processed/build_reports/docs_conventions_report.json
   # 默认扫描 docs/ 与 tools/；可使用 --full-repo 扩大范围
+  # 默认不修改文件；仅当传入 --fix 时才会进行原地自动修复（补齐标题后的空行）
 
 退出码：
   0 全部通过
@@ -263,13 +264,13 @@ def main() -> int:
     ap.add_argument(
         "--fix",
         action="store_true",
-        default=None,
-        help="auto-insert missing blank lines after title (in-place)",
+        default=False,
+        help="auto-insert missing blank lines after title (in-place). off by default",
     )
     ap.add_argument(
         "--no-fix",
         action="store_true",
-        help="disable auto-fix (default is on unless config sets fix=false)",
+        help="deprecated: auto-fix is off by default; keep for backward compatibility",
     )
     args = ap.parse_args()
 
@@ -293,13 +294,12 @@ def main() -> int:
     glob_cfg = cfg.get("glob", DEFAULT_GLOB)
     ignore_cfg = cfg.get("ignore", DEFAULT_IGNORE)
     out_cfg = cfg.get("out", DEFAULT_OUT)
-    fix_cfg = bool(cfg.get("fix", True))
 
     dirs_arg = args.dirs if args.dirs is not None else dirs_cfg
     glob_arg = args.glob if args.glob is not None else glob_cfg
     ignore_arg = args.ignore if args.ignore is not None else ignore_cfg
     out_arg = args.out if args.out is not None else out_cfg
-    fix = False if getattr(args, "no_fix", False) else (args.fix if args.fix is not None else fix_cfg)
+    fix = bool(getattr(args, "fix", False)) and (not getattr(args, "no_fix", False))
 
     target_dirs = [Path(".")] if full_repo else [Path(d) for d in dirs_arg]
     existing_dirs = [str((root / d).resolve()) for d in target_dirs if (root / d).exists()]

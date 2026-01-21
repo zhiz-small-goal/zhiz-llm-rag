@@ -84,6 +84,7 @@ extend-exclude = [
   "chroma_db",
   "data_processed",
   "data_raw",
+  ".tmp",
   ".venv",
   ".venv_ci",
   ".venv_embed",
