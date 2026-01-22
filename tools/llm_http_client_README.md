@@ -11,6 +11,7 @@ impl:
 entrypoints:
   - python tools/llm_http_client.py
   - python -m mhy_ai_rag_data.tools.llm_http_client
+entrypoints_note: "兼容/调试入口：用于 README↔源码对齐与开发自检；不保证提供稳定 CLI（运行通常等同导入）。"
 
 contracts:
   output: none
@@ -28,6 +29,15 @@ cli_framework: other
 
 ## 目的
 本模块为项目内所有脚本提供统一的 **OpenAI-compatible** HTTP 访问能力，解决以下问题：
+
+<!-- ENTRYPOINTS-NONCLI-NOTE -->
+## 运行入口（entrypoints）说明（非稳定 CLI）
+
+本 README 顶部与“自动生成参考”里列出的 `entrypoints`，主要用途是 **兼容入口/调试入口**：用于在 repo 根目录下通过 wrapper 触发模块导入、以及让 `check_readme_code_sync` 能识别 README 里的示例命令块并做一致性校验。它不表示该模块对外提供“可长期依赖的命令行接口”。
+
+- **行为边界**：运行 `python tools/llm_http_client.py` 或 `python -m mhy_ai_rag_data.tools.llm_http_client` 的主要效果是“导入模块并完成定义加载”，通常不会主动发起请求；传入参数也不会被消费（除非未来明确加入 CLI）。
+- **正确使用方式**：请把它当作库模块，在 Python 里 `import` 并调用下方函数/类；需要对 LLM 服务做连通性/推理探测时，优先使用项目内的具体 CLI 工具（例如 `tools/probe_llm_server.py`、`tools/run_eval_rag.py` 等）。
+
 
 1) **本地回环地址不走代理**：在 Windows 上常见 `ALL_PROXY/HTTP_PROXY=127.0.0.1:7890` 会把 `http://127.0.0.1:8000/v1` 劫持到代理端口，导致 `ReadTimeout`。本模块默认对回环地址 `trust_env=False`（`--trust-env auto`）。
 2) **connect/read 超时拆分**：requests 支持 `timeout=(connect, read)`，避免“连接很快但生成较慢”时误判。

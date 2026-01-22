@@ -11,6 +11,7 @@ impl:
 entrypoints:
   - python tools/reporting.py
   - python -m mhy_ai_rag_data.tools.reporting
+entrypoints_note: "兼容/调试入口：用于 README↔源码对齐与开发自检；不保证提供稳定 CLI（运行通常等同导入）。"
 
 contracts:
   output: none
@@ -31,6 +32,15 @@ cli_framework: other
 ## 目的
 
 本模块是工具库模块（非命令行工具），提供统一的报告生成函数，确保：
+
+<!-- ENTRYPOINTS-NONCLI-NOTE -->
+## 运行入口（entrypoints）说明（非稳定 CLI）
+
+本 README 顶部与“自动生成参考”里列出的 `entrypoints`，主要用途是 **兼容入口/调试入口**：用于在 repo 根目录下通过 wrapper 触发模块导入、以及让 `check_readme_code_sync` 能识别 README 里的示例命令块并做一致性校验。它不表示该模块对外提供“可长期依赖的命令行接口”。
+
+- **行为边界**：运行 `python tools/reporting.py` 或 `python -m mhy_ai_rag_data.tools.reporting` 的主要效果是“导入模块并完成定义加载”，通常不会生成报告文件；传入参数也不会被消费（除非未来明确加入 CLI）。
+- **正确使用方式**：请把它当作库模块，在 Python 里 `import` 后调用下方 API；需要运行验收/门禁/评测等动作时，优先使用项目内的具体 CLI 工具（例如 `tools/gate.py`、`tools/run_ci_gates.cmd`、`tools/run_eval_rag.py` 等）。
+
 
 - **统一 schema**：所有报告遵循 schema_version=1
 - **一致退出码**：PASS=0, FAIL=2, ERROR=3
