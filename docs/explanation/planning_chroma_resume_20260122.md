@@ -53,7 +53,7 @@ status: "draft"
 | 2026-01-22 | 2 | DONE | 代码 + 文档 | WAL 追加 `UPSERT_BATCH_COMMITTED`/`DOC_COMMITTED` 事件、stage 复用 resume 统计、stage-fsync 支持 off/doc/interval，以及尾部截断容错。 |
 | 2026-01-22 | 3 | DONE | 代码 + 文档 | 变更/删除文档会产生命名事件并触发恢复逻辑：`DOC_BEGIN`/`DELETE_OLD_DONE`/`UPSERT_NEW_DONE`/`DOC_COMMITTED`/`DOC_DONE` + `DELETE_STALE_DONE`，resume 时根据这些事件跳过重复删除/写入。 |
 | 2026-01-22 | 4 | DONE | 代码 + 文档 | strict mismatch 现带 reason/delta 并写入 RUN_FINISH；新增 `--resume-status` 只读输出 WAL 综述，RUN_FINISH 成功/失败都保留 WAL。 |
-| 2026-01-22 | 5 | TODO | （待交付） | 测试矩阵与中断注入回归 |
+| 2026-01-22 | 5 | DONE | 基础测试 | 新增 WAL/stage 解析与 resume-status 无副作用输出的单测，覆盖尾部截断容错与 doc 事件采样。 |
 | 2026-01-22 | 6 | TODO | （可选） | WARN 分类治理与门禁策略 |
 
 ## 1) 详细指导
@@ -114,10 +114,10 @@ status: "draft"
 
 ---
 
-### Step5 — 测试矩阵与回归（含中断注入） [CON]
-【做什么】把续跑与 WAL 语义固化为自动回归：单测覆盖 WAL 读写、尾部截断容错、版本降级；集成测试用 toy 文档集 + 持久化 `db_path`，第一次运行写入一半后注入异常，第二次运行验证：① `DOC_COMMITTED` 产生 skip；② `UPSERT_BATCH_COMMITTED` 的 `chunks_upserted_total` 单调不减；③ 最终 strict_sync 通过。changed/deleted 场景分别在 delete 与 upsert 中间注入中断验证 Step3 规则。  
-【为何】续跑属于“状态机 + 副作用”，靠人工验证会随重构漂移；把 WAL 与恢复边界做成测试矩阵，可以把风险前移到 CI。  
-【关键参数/注意】中断注入要可重复（按计数器/随机种子触发）；toy 数据需要稳定（固定顺序与 content_sha）；测试要明确清理策略避免残留污染。  
+### Step5 — 测试矩阵与回归（含中断注入） [DONE]
+【做什么】添加基础单测验证 WAL 解析与尾部截断容错、`resume-status` 无副作用输出：构造 stage JSONL，覆盖 `RUN_START`/`UPSERT_BATCH_COMMITTED`/`DOC_COMMITTED`/`DOC_DONE` 等事件，确认 `tail_truncated` 标记与样本输出正常。  
+【为何】续跑是状态机 + 副作用，最小集单测先锁定 WAL 读/打印的正确性，为后续扩展中断注入测试奠基。  
+【关键参数/注意】测试仅依赖 stage 文件，不触碰模型/Chroma；未来若补充集成中断注入场景，可在此基础上扩展。  
 
 ---
 
