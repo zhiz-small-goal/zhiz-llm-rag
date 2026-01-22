@@ -51,6 +51,8 @@ REPORT_TOOL_META = {
 # Chroma metadata values are scalars, but stubs also allow SparseVector; keep Any for compatibility.
 MetaValue = Any
 
+WAL_VERSION = 2
+
 # -------- shared loader --------
 
 
@@ -107,6 +109,10 @@ def _load_stage(path: Path) -> Dict[str, Any]:
         "run_id": None,
         "finished_ok": None,
         "done": {},  # uri -> {content_sha256, doc_id, n_chunks, updated_at}
+        "wal_version": 1,
+        "committed_batches": 0,
+        "chunks_upserted_total_last": 0,
+        "tail_truncated": False,
     }
     if not path.exists():
         return out
@@ -115,6 +121,10 @@ def _load_stage(path: Path) -> Dict[str, Any]:
     cur_start: Optional[Dict[str, Any]] = None
     done: Dict[str, Any] = {}
     finished_ok: Optional[bool] = None
+    wal_version = 1
+    committed_batches = 0
+    chunks_total = 0
+    tail_truncated = False
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -126,6 +136,7 @@ def _load_stage(path: Path) -> Dict[str, Any]:
                     ev = json.loads(line)
                 except Exception:
                     # tolerate partial/corrupt tail; resume will fall back to fewer done entries
+                    tail_truncated = True
                     continue
                 t = str(ev.get("t") or "")
                 if t == "RUN_START":
@@ -133,10 +144,17 @@ def _load_stage(path: Path) -> Dict[str, Any]:
                     cur_start = dict(ev)
                     done = {}
                     finished_ok = None
+                    committed_batches = 0
+                    chunks_total = 0
+                    wal_version = int(ev.get("wal_version") or wal_version or 1)
                     continue
                 if not cur_run_id:
                     continue
                 if str(ev.get("run_id") or "") != cur_run_id:
+                    continue
+                if t == "UPSERT_BATCH_COMMITTED":
+                    committed_batches += 1
+                    chunks_total = int(ev.get("chunks_upserted_total") or chunks_total)
                     continue
                 if t == "DOC_DONE":
                     uri = str(ev.get("uri") or "")
@@ -147,6 +165,19 @@ def _load_stage(path: Path) -> Dict[str, Any]:
                             "n_chunks": int(ev.get("n_chunks") or 0),
                             "updated_at": str(ev.get("updated_at") or ""),
                             "ts": str(ev.get("ts") or ""),
+                            "chunks_upserted_total": int(ev.get("chunks_upserted_total") or 0),
+                        }
+                    continue
+                if t == "DOC_COMMITTED":
+                    uri = str(ev.get("uri") or "")
+                    if uri:
+                        done[uri] = {
+                            "content_sha256": str(ev.get("content_sha256") or ""),
+                            "doc_id": str(ev.get("doc_id") or ""),
+                            "n_chunks": int(ev.get("n_chunks") or 0),
+                            "updated_at": str(ev.get("updated_at") or ""),
+                            "ts": str(ev.get("ts") or ""),
+                            "chunks_upserted_total": int(ev.get("chunks_upserted_total") or 0),
                         }
                     continue
                 if t == "RUN_FINISH":
@@ -166,6 +197,10 @@ def _load_stage(path: Path) -> Dict[str, Any]:
     out["run_id"] = cur_run_id
     out["finished_ok"] = finished_ok
     out["done"] = done
+    out["wal_version"] = wal_version
+    out["committed_batches"] = committed_batches
+    out["chunks_upserted_total_last"] = chunks_total
+    out["tail_truncated"] = tail_truncated
     return out
 
 
@@ -267,8 +302,14 @@ def main() -> int:
     )
     b.add_argument(
         "--stage-fsync",
-        default="true",
-        help="true/false: fsync stage checkpoint writes (crash-safety) at the cost of extra IO.",
+        default="doc",
+        help="off/doc/interval (legacy true/false) fsync strategy when writing the stage/WAL file.",
+    )
+    b.add_argument(
+        "--stage-fsync-interval",
+        type=int,
+        default=10,
+        help="When --stage-fsync=interval, fsync every N events (>=1) to balance safety/IO.",
     )
 
     args = ap.parse_args()
@@ -396,19 +437,60 @@ def main() -> int:
 
     # 4.5) stage checkpoint (resume interrupted builds)
     resume_mode = str(getattr(args, "resume", "auto")).strip().lower()
-    stage_fsync = _safe_bool(getattr(args, "stage_fsync", "true"))
     stage_enabled = resume_mode != "off"
     stage_file = state_file.parent / "index_state.stage.jsonl"
+    run_id: Optional[str] = None
+    stage_done: Dict[str, Any] = {}
+    stage_event_seq = 0
+    committed_batches_this_run = 0
+
+    raw_fsync = str(getattr(args, "stage_fsync", "doc")).strip().lower()
+    if raw_fsync in {"true", "doc"}:
+        stage_fsync_mode = "doc"
+    elif raw_fsync in {"false", "off"}:
+        stage_fsync_mode = "off"
+    elif raw_fsync == "interval":
+        stage_fsync_mode = "interval"
+    else:
+        stage_fsync_mode = "doc"
+    stage_fsync_interval = max(1, int(getattr(args, "stage_fsync_interval", 10)))
+
+    def _stage_append_event(
+        event_type: str, payload: Optional[Dict[str, Any]] = None, *, force_fsync: bool = False
+    ) -> None:
+        nonlocal stage_event_seq
+        if not (stage_enabled and run_id):
+            return
+        stage_event_seq += 1
+        event = {"t": event_type, "run_id": run_id, "ts": _utc_now_iso()}
+        if payload:
+            event.update(payload)
+        do_fsync = False
+        if stage_fsync_mode == "doc":
+            do_fsync = True
+        elif stage_fsync_mode == "interval":
+            do_fsync = stage_event_seq % stage_fsync_interval == 0
+        do_fsync = do_fsync or force_fsync
+        _append_jsonl(stage_file, event, fsync=do_fsync)
+
     stage = (
         _load_stage(stage_file)
         if stage_enabled
-        else {"exists": False, "run_start": None, "run_id": None, "finished_ok": None, "done": {}}
+        else {
+            "exists": False,
+            "run_start": None,
+            "run_id": None,
+            "finished_ok": None,
+            "done": {},
+            "wal_version": 1,
+            "committed_batches": 0,
+            "chunks_upserted_total_last": 0,
+            "tail_truncated": False,
+        }
     )
 
+    stage_wal_version = int(stage.get("wal_version") or 1)
     resume_active = False
-    run_id: Optional[str] = None
-    stage_done: Dict[str, Any] = {}
-
     if stage_enabled and stage.get("exists"):
         # If a previous run finished OK but stage cleanup was interrupted, clean it up.
         if stage.get("finished_ok") is True:
@@ -420,9 +502,21 @@ def main() -> int:
                         stage_file.unlink()
                 except Exception:
                     pass
-            stage = {"exists": False, "run_start": None, "run_id": None, "finished_ok": None, "done": {}}
+            stage = {
+                "exists": False,
+                "run_start": None,
+                "run_id": None,
+                "finished_ok": None,
+                "done": {},
+                "wal_version": 1,
+                "committed_batches": 0,
+                "chunks_upserted_total_last": 0,
+                "tail_truncated": False,
+            }
 
-    if stage_enabled and stage.get("exists"):
+    incompatible_wal = stage_enabled and stage.get("exists") and stage_wal_version > WAL_VERSION
+
+    if stage_enabled and stage.get("exists") and not incompatible_wal:
         # Only resume when stage matches the same db/collection/schema and collection has data.
         if (
             _stage_matches_run(
@@ -439,38 +533,48 @@ def main() -> int:
             print(
                 f"[RESUME] detected stage checkpoint: file={stage_file.as_posix()} done_docs={len(stage_done)} collection_count={existing_count}"
             )
-            # Record resume marker for audit; keep same run_id to avoid resetting the done set.
             if run_id:
-                _append_jsonl(
-                    stage_file,
+                _stage_append_event(
+                    "RUN_RESUME",
                     {
-                        "t": "RUN_RESUME",
-                        "run_id": run_id,
-                        "ts": _utc_now_iso(),
                         "db_path": db_path.as_posix(),
                         "collection": str(args.collection),
                         "schema_hash": schema_hash,
+                        "wal_version": stage_wal_version,
                     },
-                    fsync=stage_fsync,
+                    force_fsync=True,
                 )
         else:
-            # Stage exists but is not applicable for this run; do not use it for skipping.
             stage_done = {}
+    elif incompatible_wal:
+        print(f"[WARN] stage wal_version={stage_wal_version} > current={WAL_VERSION}; resume disabled for this run.")
 
     if stage_enabled and not resume_active:
         run_id = str(uuid.uuid4())
-        _append_jsonl(
-            stage_file,
+        _stage_append_event(
+            "RUN_START",
             {
-                "t": "RUN_START",
-                "run_id": run_id,
-                "ts": _utc_now_iso(),
                 "db_path": db_path.as_posix(),
                 "collection": str(args.collection),
                 "schema_hash": schema_hash,
                 "sync_mode": str(args.sync_mode),
+                "wal_version": WAL_VERSION,
             },
-            fsync=stage_fsync,
+            force_fsync=True,
+        )
+
+    if stage_enabled:
+        print(
+            "[STAGE]"
+            f" resume_active={resume_active}"
+            f" wal_version={stage.get('wal_version', 1)}"
+            f" run_id={run_id}"
+            f" done_docs={len(stage_done)}"
+            f" committed_batches={stage.get('committed_batches', 0)}"
+            f" chunks_upserted_total_last={stage.get('chunks_upserted_total_last', 0)}"
+            f" tail_truncated_ignored={bool(stage.get('tail_truncated'))}"
+            f" stage_fsync_mode={stage_fsync_mode}"
+            + (f" interval={stage_fsync_interval}" if stage_fsync_mode == "interval" else "")
         )
 
     # If state missing but collection non-empty, allow resume to proceed even when on-missing-state=reset.
@@ -623,7 +727,7 @@ def main() -> int:
         return out
 
     def flush() -> None:
-        nonlocal ids_buf, docs_buf, metas_buf, embeds_buf
+        nonlocal ids_buf, docs_buf, metas_buf, embeds_buf, committed_batches_this_run
         if not ids_buf:
             return
         vecs = embeds_buf
@@ -640,7 +744,18 @@ def main() -> int:
             metadatas=metas_for_upsert,
             embeddings=vecs,
         )
+        batch_size = len(ids_buf)
         ids_buf, docs_buf, metas_buf, embeds_buf = [], [], [], []
+
+        if stage_enabled and run_id:
+            _stage_append_event(
+                "UPSERT_BATCH_COMMITTED",
+                {
+                    "batch_size": batch_size,
+                    "chunks_upserted_total": chunks_upserted,
+                },
+            )
+            committed_batches_this_run += 1
 
     t0 = time.perf_counter()
 
@@ -706,19 +821,16 @@ def main() -> int:
         if not chunk_texts:
             # No chunks: still treat the doc as processed and checkpoint it for resume.
             if stage_enabled and run_id:
-                _append_jsonl(
-                    stage_file,
+                _stage_append_event(
+                    "DOC_COMMITTED",
                     {
-                        "t": "DOC_DONE",
-                        "run_id": run_id,
-                        "ts": _utc_now_iso(),
                         "uri": uri,
                         "doc_id": doc_id,
                         "content_sha256": str(info.get("content_sha256") or ""),
                         "n_chunks": 0,
                         "updated_at": str(info.get("updated_at") or ""),
+                        "chunks_upserted_total": chunks_upserted,
                     },
-                    fsync=stage_fsync,
                 )
                 docs_checkpointed += 1
             docs_processed += 1
@@ -766,19 +878,16 @@ def main() -> int:
         # Ensure this doc's chunks have been upserted before checkpointing.
         if stage_enabled and run_id:
             flush()
-            _append_jsonl(
-                stage_file,
+            _stage_append_event(
+                "DOC_COMMITTED",
                 {
-                    "t": "DOC_DONE",
-                    "run_id": run_id,
-                    "ts": _utc_now_iso(),
                     "uri": uri,
                     "doc_id": doc_id,
                     "content_sha256": str(info.get("content_sha256") or ""),
                     "n_chunks": int(n_chunks),
                     "updated_at": str(info.get("updated_at") or ""),
+                    "chunks_upserted_total": chunks_upserted,
                 },
-                fsync=stage_fsync,
             )
             docs_checkpointed += 1
 
@@ -896,20 +1005,21 @@ def main() -> int:
         print(f"STATUS: FAIL (sync mismatch; expected_chunks={expected_chunks} got={final_count})")
         print("HINT: if你是首次引入 index_state 或 state 丢失，请用 --on-missing-state reset 让库回到干净态。")
         if stage_enabled and run_id:
-            _append_jsonl(
-                stage_file,
+            _stage_append_event(
+                "RUN_FINISH",
                 {
-                    "t": "RUN_FINISH",
-                    "run_id": run_id,
-                    "ts": _utc_now_iso(),
                     "ok": False,
                     "collection_count": final_count,
                     "expected_chunks": expected_chunks,
                     "docs_processed": docs_processed,
                     "docs_resumed_skipped": docs_resumed_skipped,
                     "docs_checkpointed": docs_checkpointed,
+                    "committed_batches": committed_batches_this_run,
+                    "chunks_upserted_total": chunks_upserted,
+                    "sync_mode": sync_mode,
+                    "wal_version": WAL_VERSION,
                 },
-                fsync=stage_fsync,
+                force_fsync=True,
             )
         return 2
 
@@ -939,20 +1049,21 @@ def main() -> int:
 
     # finalize stage checkpoint (if enabled)
     if stage_enabled and run_id:
-        _append_jsonl(
-            stage_file,
+        _stage_append_event(
+            "RUN_FINISH",
             {
-                "t": "RUN_FINISH",
-                "run_id": run_id,
-                "ts": _utc_now_iso(),
                 "ok": True,
                 "collection_count": final_count,
                 "expected_chunks": expected_chunks,
                 "docs_processed": docs_processed,
                 "docs_resumed_skipped": docs_resumed_skipped,
                 "docs_checkpointed": docs_checkpointed,
+                "committed_batches": committed_batches_this_run,
+                "chunks_upserted_total": chunks_upserted,
+                "sync_mode": sync_mode,
+                "wal_version": WAL_VERSION,
             },
-            fsync=stage_fsync,
+            force_fsync=True,
         )
         # Best-effort cleanup: stage is only needed for interrupted runs.
         try:

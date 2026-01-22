@@ -268,7 +268,8 @@ python tools\build_chroma_index_flagembedding.py build --root . --device cuda --
 | `--root` | — | '.' | Project root |
 | `--root` | — | '.' | Project root |
 | `--schema-change` | — | 'reset' | If schema_hash differs from LATEST pointer: reset collection (recommended) or fail. |
-| `--stage-fsync` | — | 'true' | true/false: fsync stage checkpoint writes (crash-safety) at the cost of extra IO. |
+| `--stage-fsync` | — | 'doc' | off/doc/interval (legacy true/false) fsync strategy when writing the stage/WAL file. |
+| `--stage-fsync-interval` | — | 10 | type=int；When --stage-fsync=interval, fsync every N events (>=1) to balance safety/IO. |
 | `--state-root` | — | 'data_processed/index_state' | Directory to store index_state/manifest (relative to root). |
 | `--strict-sync` | — | 'true' | true/false: fail if collection.count != expected_chunks after build. |
 | `--sync-mode` | — | 'incremental' | Sync semantics: none/upsert-only; delete-stale=delete old per-doc then full upsert; incremental=delete old per-doc and only embed changed docs. |

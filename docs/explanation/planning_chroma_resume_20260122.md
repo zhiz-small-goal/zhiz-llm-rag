@@ -50,7 +50,7 @@ status: "draft"
 | 日期 | Step | 状态 | 产出 | 备注 |
 |---|---:|---|---|---|
 | 2026-01-22 | 1 | DONE | `build-chroma-resume-stage-step1.zip` | 基础续跑已落地：doc 级 DONE 事件 + 避免误 reset |
-| 2026-01-22 | 2 | TODO | （待交付） | 本次新增：进度/WAL 记录“已提交写入计数”（写入多少、记录同步在） |
+| 2026-01-22 | 2 | DONE | 代码 + 文档 | WAL 追加 `UPSERT_BATCH_COMMITTED`/`DOC_COMMITTED` 事件、stage 复用 resume 统计、stage-fsync 支持 off/doc/interval，以及尾部截断容错。 |
 | 2026-01-22 | 3 | TODO | （待交付） | changed/deleted 的阶段事件与恢复规则 |
 | 2026-01-22 | 4 | TODO | （待交付） | strict mismatch 可复盘输出 + `--resume-status` |
 | 2026-01-22 | 5 | TODO | （待交付） | 测试矩阵与中断注入回归 |
@@ -81,6 +81,12 @@ status: "draft"
 - 启动时 stdout 必须输出：`resume_active`、`wal_version`、`run_id`、`done_docs`、`committed_batches`、`chunks_upserted_total_last`；  
 - 人为中断后重启，`chunks_upserted_total_last` 不回退，且续跑过程中仅对未 `DOC_COMMITTED` 的 doc 做 embedding；  
 - WAL 尾部截断时仍可继续续跑，并在 stdout 输出 “truncated_tail_ignored=true”（或等价字段）。  
+
+**落地说明**  
+- 已在 `index_state.stage.jsonl` 追加 `UPSERT_BATCH_COMMITTED` / `DOC_COMMITTED` 事件并记录 `chunks_upserted_total`，旧的 `DOC_DONE` 兼容保留；  
+- 启动时输出 `[STAGE] resume_active=... wal_version=... run_id=... done_docs=... committed_batches=... chunks_upserted_total_last=... tail_truncated_ignored=... stage_fsync_mode=...（interval=n）`，方便复盘与调度；  
+- `_load_stage` 读取 `wal_version`/`committed_batches`/`chunks_upserted_total_last`/`tail_truncated`，遇到未来版本会 WARN 并跳过 resume，尾部截断仅影响额外字段但不会打断重放；  
+- `--stage-fsync` 现在接受 `off/doc/interval`（兼容旧 `true/false`）并新增 `--stage-fsync-interval` 控制 interval 模式的 fsync 频率，stage 写入通过 helper 决定是否 fsync（doc 模式每次、interval 模式按事件计数、off 模式不 fsync）。
 
 ---
 
