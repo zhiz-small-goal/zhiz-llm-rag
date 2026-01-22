@@ -1,7 +1,7 @@
 ---
 title: build_chroma_index_flagembedding.py 使用说明（FlagEmbedding 构建 Chroma 索引）
-version: v1.0
-last_updated: 2026-01-16
+version: v1.1
+last_updated: 2026-01-22
 tool_id: build_chroma_index_flagembedding
 
 impl:
@@ -110,6 +110,8 @@ python tools\build_chroma_index_flagembedding.py build --root . --embed-model BA
 | `--delete-batch` | `5000` | 删除操作批大小 |
 | `--strict-sync` | `true` | 是否强制检查 count == expected_chunks |
 | `--write-state` | `true` | 是否写入 index_state.json |
+| `--resume` | `auto` | 断点续跑（auto/on/off）：auto=检测并写入 stage；on=强制启用；off=禁用 |
+| `--stage-fsync` | `true` | stage checkpoint 写入是否 fsync（更高崩溃安全性，额外 IO） |
 
 ## 同步模式说明
 
@@ -124,6 +126,7 @@ python tools\build_chroma_index_flagembedding.py build --root . --embed-model BA
 ### 位置
 ```
 data_processed/index_state/<collection>/<schema_hash>/index_state.json
+data_processed/index_state/<collection>/<schema_hash>/index_state.stage.jsonl  # 断点续跑 checkpoint（运行成功会自动清理）
 data_processed/index_state/<collection>/LATEST
 ```
 
@@ -188,6 +191,28 @@ python tools\build_chroma_index_flagembedding.py build --root . --embed-model BA
 python tools\build_chroma_index_flagembedding.py build --root . --on-missing-state reset
 ```
 
+
+### 1.5) 断点续跑：写入过程中中断后如何恢复
+**现象**：首次构建或大批量增量更新时，进程被中断（CTRL+C / 机器重启），希望不重复处理已成功写入的文档。
+
+**机制**：默认 `--resume auto` 会在 `index_state.json` 同目录写入 `index_state.stage.jsonl`（JSONL 事件流）。每个文档在完成 upsert 后记录 `DOC_DONE`；下次启动若检测到同一 `db_path + collection + schema_hash` 的 stage 且 collection 非空，会跳过 `content_sha256` 相同的已完成文档。
+
+**操作**：
+```cmd
+rem 1) 正常运行（默认会生成 stage）
+python tools\build_chroma_index_flagembedding.py build --root . --db chroma_db --collection rag_chunks
+
+rem 2) 中断后，直接重复执行同命令 → 自动跳过已完成文档，继续剩余部分
+python tools\build_chroma_index_flagembedding.py build --root . --db chroma_db --collection rag_chunks
+
+rem 3) 如需完全禁用 stage（保持旧行为 / 更少 IO）
+python tools\build_chroma_index_flagembedding.py build --root . --resume off
+```
+
+**注意**：
+- stage 仅在同一 schema_hash 下安全复用；embed_model/chunk_conf/include_media_stub 变化会导致 schema_hash 变化，stage 不会用于跳过。
+- stage 依赖 collection 中已存在数据；若手动清空 DB 或切换 db_path/collection，请删除对应 stage 文件或使用 `--resume off` 再跑一次全量。
+
 ### 2) FlagEmbedding 找不到模型
 **处理**：确认模型已下载到 Hugging Face cache 或指定本地路径
 ```cmd
@@ -239,9 +264,11 @@ python tools\build_chroma_index_flagembedding.py build --root . --device cuda --
 | `--on-missing-state` | — | 'reset' | If state missing but collection is non-empty: reset collection / fail / proceed with full upsert (may keep stale). |
 | `--overlap-chars` | — | 120 | type=int |
 | `--plan` | — | None | Optional: chunk_plan.json path used only for db_build_stamp traceability. |
+| `--resume` | — | 'auto' | Resume semantics for interrupted builds: auto=use stage if present and also write stage for future resume; on=force stage+resume; off=disable stage/resume. |
 | `--root` | — | '.' | Project root |
 | `--root` | — | '.' | Project root |
 | `--schema-change` | — | 'reset' | If schema_hash differs from LATEST pointer: reset collection (recommended) or fail. |
+| `--stage-fsync` | — | 'true' | true/false: fsync stage checkpoint writes (crash-safety) at the cost of extra IO. |
 | `--state-root` | — | 'data_processed/index_state' | Directory to store index_state/manifest (relative to root). |
 | `--strict-sync` | — | 'true' | true/false: fail if collection.count != expected_chunks after build. |
 | `--sync-mode` | — | 'incremental' | Sync semantics: none/upsert-only; delete-stale=delete old per-doc then full upsert; incremental=delete old per-doc and only embed changed docs. |

@@ -29,8 +29,11 @@ from mhy_ai_rag_data.tools.selftest_utils import add_selftest_args, maybe_run_se
 
 import argparse
 import time
+import json
+import os
+import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, cast
+from typing import Any, Dict, List, Mapping, Optional, cast
 
 
 # Tool self-description for report-output-v2 gates (static-AST friendly)
@@ -73,6 +76,111 @@ def _batched(seq: List[str], batch_size: int) -> Any:
 
 def _safe_bool(s: str) -> bool:
     return str(s).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+# -------- stage checkpoint (resume) --------
+
+
+def _utc_now_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _append_jsonl(path: Path, obj: Dict[str, Any], *, fsync: bool = True) -> None:
+    """Append one JSON line and optionally fsync for crash-safety."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(obj, ensure_ascii=False, sort_keys=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+        f.flush()
+        if fsync:
+            os.fsync(f.fileno())
+
+
+def _load_stage(path: Path) -> Dict[str, Any]:
+    """Load stage checkpoint.
+
+    Format: JSONL events. We only consider the latest RUN_START segment.
+    """
+    out: Dict[str, Any] = {
+        "exists": False,
+        "run_start": None,
+        "run_id": None,
+        "finished_ok": None,
+        "done": {},  # uri -> {content_sha256, doc_id, n_chunks, updated_at}
+    }
+    if not path.exists():
+        return out
+    out["exists"] = True
+    cur_run_id: Optional[str] = None
+    cur_start: Optional[Dict[str, Any]] = None
+    done: Dict[str, Any] = {}
+    finished_ok: Optional[bool] = None
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except Exception:
+                    # tolerate partial/corrupt tail; resume will fall back to fewer done entries
+                    continue
+                t = str(ev.get("t") or "")
+                if t == "RUN_START":
+                    cur_run_id = str(ev.get("run_id") or "")
+                    cur_start = dict(ev)
+                    done = {}
+                    finished_ok = None
+                    continue
+                if not cur_run_id:
+                    continue
+                if str(ev.get("run_id") or "") != cur_run_id:
+                    continue
+                if t == "DOC_DONE":
+                    uri = str(ev.get("uri") or "")
+                    if uri:
+                        done[uri] = {
+                            "content_sha256": str(ev.get("content_sha256") or ""),
+                            "doc_id": str(ev.get("doc_id") or ""),
+                            "n_chunks": int(ev.get("n_chunks") or 0),
+                            "updated_at": str(ev.get("updated_at") or ""),
+                            "ts": str(ev.get("ts") or ""),
+                        }
+                    continue
+                if t == "RUN_FINISH":
+                    finished_ok = bool(ev.get("ok"))
+                    continue
+    except Exception:
+        # If stage can't be read, treat as non-existent to avoid unsafe skips.
+        return {
+            "exists": False,
+            "run_start": None,
+            "run_id": None,
+            "finished_ok": None,
+            "done": {},
+        }
+
+    out["run_start"] = cur_start
+    out["run_id"] = cur_run_id
+    out["finished_ok"] = finished_ok
+    out["done"] = done
+    return out
+
+
+def _stage_matches_run(
+    stage_start: Optional[Dict[str, Any]], *, db_path: Path, collection: str, schema_hash: str
+) -> bool:
+    if not stage_start:
+        return False
+    if str(stage_start.get("schema_hash") or "") != str(schema_hash):
+        return False
+    if str(stage_start.get("collection") or "") != str(collection):
+        return False
+    if str(stage_start.get("db_path") or "") != str(db_path.as_posix()):
+        return False
+    return True
 
 
 # -------- main --------
@@ -151,6 +259,17 @@ def main() -> int:
         "--strict-sync", default="true", help="true/false: fail if collection.count != expected_chunks after build."
     )
     b.add_argument("--write-state", default="true", help="true/false: write index_state.json after successful build.")
+    b.add_argument(
+        "--resume",
+        default="auto",
+        choices=["auto", "on", "off"],
+        help="Resume semantics for interrupted builds: auto=use stage if present and also write stage for future resume; on=force stage+resume; off=disable stage/resume.",
+    )
+    b.add_argument(
+        "--stage-fsync",
+        default="true",
+        help="true/false: fsync stage checkpoint writes (crash-safety) at the cost of extra IO.",
+    )
 
     args = ap.parse_args()
 
@@ -275,9 +394,96 @@ def main() -> int:
     except Exception:
         existing_count = 0
 
+    # 4.5) stage checkpoint (resume interrupted builds)
+    resume_mode = str(getattr(args, "resume", "auto")).strip().lower()
+    stage_fsync = _safe_bool(getattr(args, "stage_fsync", "true"))
+    stage_enabled = resume_mode != "off"
+    stage_file = state_file.parent / "index_state.stage.jsonl"
+    stage = (
+        _load_stage(stage_file)
+        if stage_enabled
+        else {"exists": False, "run_start": None, "run_id": None, "finished_ok": None, "done": {}}
+    )
+
+    resume_active = False
+    run_id: Optional[str] = None
+    stage_done: Dict[str, Any] = {}
+
+    if stage_enabled and stage.get("exists"):
+        # If a previous run finished OK but stage cleanup was interrupted, clean it up.
+        if stage.get("finished_ok") is True:
+            try:
+                stage_file.unlink(missing_ok=True)
+            except TypeError:
+                try:
+                    if stage_file.exists():
+                        stage_file.unlink()
+                except Exception:
+                    pass
+            stage = {"exists": False, "run_start": None, "run_id": None, "finished_ok": None, "done": {}}
+
+    if stage_enabled and stage.get("exists"):
+        # Only resume when stage matches the same db/collection/schema and collection has data.
+        if (
+            _stage_matches_run(
+                cast(Optional[Dict[str, Any]], stage.get("run_start")),
+                db_path=db_path,
+                collection=str(args.collection),
+                schema_hash=schema_hash,
+            )
+            and existing_count > 0
+        ):
+            resume_active = True
+            run_id = str(stage.get("run_id") or "") or None
+            stage_done = cast(Dict[str, Any], stage.get("done") or {})
+            print(
+                f"[RESUME] detected stage checkpoint: file={stage_file.as_posix()} done_docs={len(stage_done)} collection_count={existing_count}"
+            )
+            # Record resume marker for audit; keep same run_id to avoid resetting the done set.
+            if run_id:
+                _append_jsonl(
+                    stage_file,
+                    {
+                        "t": "RUN_RESUME",
+                        "run_id": run_id,
+                        "ts": _utc_now_iso(),
+                        "db_path": db_path.as_posix(),
+                        "collection": str(args.collection),
+                        "schema_hash": schema_hash,
+                    },
+                    fsync=stage_fsync,
+                )
+        else:
+            # Stage exists but is not applicable for this run; do not use it for skipping.
+            stage_done = {}
+
+    if stage_enabled and not resume_active:
+        run_id = str(uuid.uuid4())
+        _append_jsonl(
+            stage_file,
+            {
+                "t": "RUN_START",
+                "run_id": run_id,
+                "ts": _utc_now_iso(),
+                "db_path": db_path.as_posix(),
+                "collection": str(args.collection),
+                "schema_hash": schema_hash,
+                "sync_mode": str(args.sync_mode),
+            },
+            fsync=stage_fsync,
+        )
+
+    # If state missing but collection non-empty, allow resume to proceed even when on-missing-state=reset.
+    allow_missing_state_resume = bool(stage_enabled and resume_active and len(stage_done) > 0)
+
     if prev_state is None and existing_count > 0:
         # 状态缺失但库非空：无法可靠定位“多余 ids”，默认策略是 reset 后全量重建。
         policy = str(args.on_missing_state)
+        if allow_missing_state_resume:
+            print(
+                "[WARN] index_state missing but stage checkpoint detected; override on-missing-state policy to full-upsert to continue resume"
+            )
+            policy = "full-upsert"
         print(f"[WARN] index_state missing but collection.count={existing_count}. policy={policy}")
         if policy == "fail":
             print("[FATAL] missing index_state + non-empty collection; refuse to proceed")
@@ -450,11 +656,35 @@ def main() -> int:
 
     chunks_upserted = 0
     docs_processed = 0
+    docs_resumed_skipped = 0
+    docs_checkpointed = 0
 
     for uri in to_process_uris:
         info = cur_docs.get(uri)
         if not info:
             continue
+
+        # Resume: skip docs already checkpointed as DONE for the same content_sha256.
+        if stage_enabled and resume_active and run_id and uri in stage_done:
+            ev = stage_done.get(uri) or {}
+            stage_sha = str(ev.get("content_sha256") or "")
+            cur_sha = str(info.get("content_sha256") or "")
+            if stage_sha and cur_sha and stage_sha == cur_sha:
+                n_chunks = int(ev.get("n_chunks") or 0)
+                expected_chunks += n_chunks
+                new_docs_state[uri] = {
+                    "doc_id": str(ev.get("doc_id") or info.get("doc_id") or ""),
+                    "source_uri": uri,
+                    "source_type": str(info.get("source_type") or ""),
+                    "content_sha256": cur_sha,
+                    "n_chunks": int(n_chunks),
+                    "updated_at": str(info.get("updated_at") or ev.get("updated_at") or ""),
+                }
+                docs_processed += 1
+                docs_resumed_skipped += 1
+                if docs_resumed_skipped <= 3 or (docs_resumed_skipped % 200 == 0):
+                    print(f"[RESUME] skip done doc: uri={uri} n_chunks={n_chunks}")
+                continue
 
         unit = info["unit"]
         chunk_texts, base_md = build_chunks_from_unit(unit, conf)
@@ -474,6 +704,23 @@ def main() -> int:
         }
 
         if not chunk_texts:
+            # No chunks: still treat the doc as processed and checkpoint it for resume.
+            if stage_enabled and run_id:
+                _append_jsonl(
+                    stage_file,
+                    {
+                        "t": "DOC_DONE",
+                        "run_id": run_id,
+                        "ts": _utc_now_iso(),
+                        "uri": uri,
+                        "doc_id": doc_id,
+                        "content_sha256": str(info.get("content_sha256") or ""),
+                        "n_chunks": 0,
+                        "updated_at": str(info.get("updated_at") or ""),
+                    },
+                    fsync=stage_fsync,
+                )
+                docs_checkpointed += 1
             docs_processed += 1
             continue
 
@@ -515,6 +762,25 @@ def main() -> int:
                 chunks_upserted += 1
                 if len(ids_buf) >= args.upsert_batch:
                     flush()
+
+        # Ensure this doc's chunks have been upserted before checkpointing.
+        if stage_enabled and run_id:
+            flush()
+            _append_jsonl(
+                stage_file,
+                {
+                    "t": "DOC_DONE",
+                    "run_id": run_id,
+                    "ts": _utc_now_iso(),
+                    "uri": uri,
+                    "doc_id": doc_id,
+                    "content_sha256": str(info.get("content_sha256") or ""),
+                    "n_chunks": int(n_chunks),
+                    "updated_at": str(info.get("updated_at") or ""),
+                },
+                fsync=stage_fsync,
+            )
+            docs_checkpointed += 1
 
         docs_processed += 1
 
@@ -629,6 +895,22 @@ def main() -> int:
     if strict_sync and final_count is not None and final_count != expected_chunks:
         print(f"STATUS: FAIL (sync mismatch; expected_chunks={expected_chunks} got={final_count})")
         print("HINT: if你是首次引入 index_state 或 state 丢失，请用 --on-missing-state reset 让库回到干净态。")
+        if stage_enabled and run_id:
+            _append_jsonl(
+                stage_file,
+                {
+                    "t": "RUN_FINISH",
+                    "run_id": run_id,
+                    "ts": _utc_now_iso(),
+                    "ok": False,
+                    "collection_count": final_count,
+                    "expected_chunks": expected_chunks,
+                    "docs_processed": docs_processed,
+                    "docs_resumed_skipped": docs_resumed_skipped,
+                    "docs_checkpointed": docs_checkpointed,
+                },
+                fsync=stage_fsync,
+            )
         return 2
 
     # 12) write DB build stamp (stable freshness basis for rag-status)
@@ -654,6 +936,33 @@ def main() -> int:
         print(f"[OK] wrote db_build_stamp: {stamp_out}")
     except Exception as e:  # noqa: BLE001
         print(f"[WARN] failed to write db_build_stamp.json: {type(e).__name__}: {e}")
+
+    # finalize stage checkpoint (if enabled)
+    if stage_enabled and run_id:
+        _append_jsonl(
+            stage_file,
+            {
+                "t": "RUN_FINISH",
+                "run_id": run_id,
+                "ts": _utc_now_iso(),
+                "ok": True,
+                "collection_count": final_count,
+                "expected_chunks": expected_chunks,
+                "docs_processed": docs_processed,
+                "docs_resumed_skipped": docs_resumed_skipped,
+                "docs_checkpointed": docs_checkpointed,
+            },
+            fsync=stage_fsync,
+        )
+        # Best-effort cleanup: stage is only needed for interrupted runs.
+        try:
+            stage_file.unlink(missing_ok=True)
+        except TypeError:
+            try:
+                if stage_file.exists():
+                    stage_file.unlink()
+            except Exception:
+                pass
 
     return 0
 
