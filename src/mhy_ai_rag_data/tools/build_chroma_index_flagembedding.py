@@ -114,6 +114,46 @@ def _merge_doc_event(done: Dict[str, Any], ev: Dict[str, Any], event_type: str) 
     done[uri] = entry
 
 
+def _print_resume_status(
+    *,
+    stage_file: Path,
+    stage: Dict[str, Any],
+    collection: str,
+    schema_hash: str,
+    db_path: Path,
+) -> int:
+    print("=== RESUME STATUS (stage/WAL) ===")
+    print(f"stage_file={stage_file}")
+    print(f"db_path={db_path}")
+    print(f"collection={collection} schema_hash={schema_hash}")
+    if not stage.get("exists"):
+        print("[INFO] stage not found; nothing to resume.")
+        return 0
+    run_id = str(stage.get("run_id") or "")
+    wal_version = int(stage.get("wal_version") or 1)
+    print(f"run_id={run_id} wal_version={wal_version} finished_ok={stage.get('finished_ok')}")
+    print(
+        f"done_docs={len(stage.get('done') or {})} committed_batches={stage.get('committed_batches', 0)}"
+        f" chunks_upserted_total_last={stage.get('chunks_upserted_total_last', 0)} tail_truncated={bool(stage.get('tail_truncated'))}"
+    )
+    run_start = stage.get("run_start") or {}
+    if run_start:
+        print(
+            f"run_start: ts={run_start.get('ts')} sync_mode={run_start.get('sync_mode')} "
+            f"db_path={run_start.get('db_path')} collection={run_start.get('collection')} schema_hash={run_start.get('schema_hash')}"
+        )
+    done = stage.get("done") or {}
+    sample = list(sorted(done.items()))[:3]
+    if sample:
+        print("done_sample:")
+        for uri, ev in sample:
+            print(
+                f"  uri={uri} last_event={ev.get('last_event')} sha={ev.get('content_sha256')} "
+                f"old_sha={ev.get('old_content_sha256')} n_chunks={ev.get('n_chunks')} chunks_total={ev.get('chunks_upserted_total')}"
+            )
+    return 0
+
+
 # -------- shared loader --------
 
 
@@ -351,11 +391,53 @@ def main() -> int:
         default=10,
         help="When --stage-fsync=interval, fsync every N events (>=1) to balance safety/IO.",
     )
+    b.add_argument(
+        "--resume-status",
+        action="store_true",
+        help="Print resume/WAL status for this collection/schema and exit without running build.",
+    )
 
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
     units_path = (root / args.units).resolve()
+    include_media_stub = bool(args.include_media_stub)
+
+    # 0.5) state invariants (available to --resume-status)
+    chunk_conf_dict = {
+        "chunk_chars": int(args.chunk_chars),
+        "overlap_chars": int(args.overlap_chars),
+        "min_chunk_chars": int(args.min_chunk_chars),
+    }
+
+    try:
+        from mhy_ai_rag_data.tools import index_state as ist
+    except Exception as e:
+        print(f"[FATAL] cannot import mhy_ai_rag_data.tools.index_state: {e}")
+        return 2
+
+    schema_hash = ist.compute_schema_hash(
+        embed_model=str(args.embed_model),
+        chunk_conf=chunk_conf_dict,
+        include_media_stub=include_media_stub,
+        id_strategy_version=1,
+    )
+
+    state_root = (root / args.state_root).resolve()
+    state_file = ist.state_file_for(state_root, args.collection, schema_hash)
+    stage_file = state_file.parent / "index_state.stage.jsonl"
+    db_path = (root / args.db).resolve()
+
+    if getattr(args, "resume_status", False):
+        stage = _load_stage(stage_file)
+        return _print_resume_status(
+            stage_file=stage_file,
+            stage=stage,
+            collection=str(args.collection),
+            schema_hash=schema_hash,
+            db_path=db_path,
+        )
+
     if not units_path.exists():
         print(f"[FATAL] units not found: {units_path}")
         return 2
@@ -424,28 +506,8 @@ def main() -> int:
         collection = client.get_or_create_collection(name=args.collection)
 
     conf = ChunkConf(max_chars=args.chunk_chars, overlap_chars=args.overlap_chars, min_chars=args.min_chunk_chars)
-    include_media_stub = bool(args.include_media_stub)
 
     # 4) state / schema hash
-    try:
-        from mhy_ai_rag_data.tools import index_state as ist
-    except Exception as e:
-        print(f"[FATAL] cannot import mhy_ai_rag_data.tools.index_state: {e}")
-        return 2
-
-    chunk_conf_dict = {
-        "chunk_chars": int(args.chunk_chars),
-        "overlap_chars": int(args.overlap_chars),
-        "min_chunk_chars": int(args.min_chunk_chars),
-    }
-    schema_hash = ist.compute_schema_hash(
-        embed_model=str(args.embed_model),
-        chunk_conf=chunk_conf_dict,
-        include_media_stub=include_media_stub,
-        id_strategy_version=1,
-    )
-
-    state_root = (root / args.state_root).resolve()
     latest = ist.read_latest_pointer(state_root, args.collection)
     if latest and latest != schema_hash:
         msg = f"[SCHEMA] LATEST={latest} != current={schema_hash} (embed_model/chunk_conf/include_media_stub changed)"
@@ -1098,7 +1160,8 @@ def main() -> int:
     print(f"elapsed_sec={round(float(dt), 3)}")
 
     if strict_sync and final_count is not None and final_count != expected_chunks:
-        print(f"STATUS: FAIL (sync mismatch; expected_chunks={expected_chunks} got={final_count})")
+        delta = int(expected_chunks) - int(final_count)
+        print(f"STATUS: FAIL (sync mismatch; expected_chunks={expected_chunks} got={final_count} delta={delta})")
         print("HINT: if你是首次引入 index_state 或 state 丢失，请用 --on-missing-state reset 让库回到干净态。")
         if stage_enabled and run_id:
             _stage_append_event(
@@ -1110,6 +1173,8 @@ def main() -> int:
                     "docs_processed": docs_processed,
                     "docs_resumed_skipped": docs_resumed_skipped,
                     "docs_checkpointed": docs_checkpointed,
+                    "reason": "strict_sync_mismatch",
+                    "delta": delta,
                     "committed_batches": committed_batches_this_run,
                     "chunks_upserted_total": chunks_upserted,
                     "sync_mode": sync_mode,
@@ -1154,6 +1219,7 @@ def main() -> int:
                 "docs_processed": docs_processed,
                 "docs_resumed_skipped": docs_resumed_skipped,
                 "docs_checkpointed": docs_checkpointed,
+                "reason": "ok",
                 "committed_batches": committed_batches_this_run,
                 "chunks_upserted_total": chunks_upserted,
                 "sync_mode": sync_mode,

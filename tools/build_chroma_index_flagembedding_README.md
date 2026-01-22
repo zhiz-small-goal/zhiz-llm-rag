@@ -265,6 +265,7 @@ python tools\build_chroma_index_flagembedding.py build --root . --device cuda --
 | `--overlap-chars` | — | 120 | type=int |
 | `--plan` | — | None | Optional: chunk_plan.json path used only for db_build_stamp traceability. |
 | `--resume` | — | 'auto' | Resume semantics for interrupted builds: auto=use stage if present and also write stage for future resume; on=force stage+resume; off=disable stage/resume. |
+| `--resume-status` | — | — | action=store_true；Print resume/WAL status for this collection/schema and exit without running build. |
 | `--root` | — | '.' | Project root |
 | `--root` | — | '.' | Project root |
 | `--schema-change` | — | 'reset' | If schema_hash differs from LATEST pointer: reset collection (recommended) or fail. |

@@ -52,7 +52,7 @@ status: "draft"
 | 2026-01-22 | 1 | DONE | `build-chroma-resume-stage-step1.zip` | 基础续跑已落地：doc 级 DONE 事件 + 避免误 reset |
 | 2026-01-22 | 2 | DONE | 代码 + 文档 | WAL 追加 `UPSERT_BATCH_COMMITTED`/`DOC_COMMITTED` 事件、stage 复用 resume 统计、stage-fsync 支持 off/doc/interval，以及尾部截断容错。 |
 | 2026-01-22 | 3 | DONE | 代码 + 文档 | 变更/删除文档会产生命名事件并触发恢复逻辑：`DOC_BEGIN`/`DELETE_OLD_DONE`/`UPSERT_NEW_DONE`/`DOC_COMMITTED`/`DOC_DONE` + `DELETE_STALE_DONE`，resume 时根据这些事件跳过重复删除/写入。 |
-| 2026-01-22 | 4 | TODO | （待交付） | strict mismatch 可复盘输出 + `--resume-status` |
+| 2026-01-22 | 4 | DONE | 代码 + 文档 | strict mismatch 现带 reason/delta 并写入 RUN_FINISH；新增 `--resume-status` 只读输出 WAL 综述，RUN_FINISH 成功/失败都保留 WAL。 |
 | 2026-01-22 | 5 | TODO | （待交付） | 测试矩阵与中断注入回归 |
 | 2026-01-22 | 6 | TODO | （可选） | WARN 分类治理与门禁策略 |
 
@@ -107,10 +107,10 @@ status: "draft"
 
 ---
 
-### Step4 — 一致性校验与故障可复盘 [CON]
-【做什么】把失败时的“可行动信息”做成固定输出：strict_sync 失败时打印期望/实际/差值，并抽样输出差异 uri（或输出差异摘要文件路径）；将 `RUN_FINISH` 扩展为 `ok=true/false` + `reason`，并规定：仅当 `ok=true` 且 `index_state.json` 原子写成功后，才允许清理 WAL；失败一律保留 WAL。新增 `--resume-status`（只读）：打印 WAL 状态、done_docs、last_event、run_id、是否可 resume、建议动作（继续/清理/reset）。  
-【为何】续跑策略出现 strict mismatch 时，需要能回答：① 是否应继续续跑？② 若不应，应该清理 WAL 还是走 reset？固定输出字段可被人读也可被 CI 脚本消费，使排障按证据决策。  
-【关键参数/注意】`--resume-status` 必须保证无写入副作用；差异抽样需可复现（固定 seed）；若输出差异文件需明确路径命名避免覆盖。  
+### Step4 — 一致性校验与故障可复盘 [DONE]
+【做什么】strict_sync 失败时输出期望/实际/差值并在 `RUN_FINISH` 写入 `reason=strict_sync_mismatch` + `delta`；成功时 `RUN_FINISH` 写入 `reason=ok`，继续沿用“仅 ok 后清理 WAL”策略。新增 `--resume-status`：只读加载 stage/WAL，输出 run_id/wal_version/done_docs/committed_batches/chunks_upserted_total_last/tail_truncated，以及 run_start 概览和最多 3 条 doc 样本，不触碰 DB/模型。  
+【为何】固定化失败输出使运维可据此决定继续续跑或 reset；`--resume-status` 提供无副作用的核验入口，便于排障与 CI。  
+【关键参数/注意】`--resume-status` 不要求 units/模型/Chroma 可用，只读取 stage 文件；strict mismatch 时 WAL 保留且带 reason，便于后续清理决策。  
 
 ---
 
