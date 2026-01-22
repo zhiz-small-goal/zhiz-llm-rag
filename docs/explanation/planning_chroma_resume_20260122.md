@@ -121,9 +121,9 @@ status: "draft"
 
 ---
 
-### Step6（可选）— 警告收敛与门禁策略固化 [CON]
-【做什么】汇总 warning，按“功能性（需修复/可升级为 fail）”与“提示性（可文档化/可静默但不改默认）”分类；为功能性 warning 给出修复或门禁升级策略；为提示性 warning 给出解释与触发条件，避免误判。必要时将关键 warning 作为结构化字段输出。  
-【为何】续跑相关 warning 与一致性相关度高；分类治理能把需要动作的风险从提示噪声中分离出来，并为门禁/报警提供稳定接口。  
+### Step6（可选）— 警告收敛与门禁策略固化 [DONE]
+【做什么】将关键 warning 统一通过 `_warn()` 输出（仍保留 stdout 的 `[WARN] ...` 文本），同时收集为结构化 `warn_events`：包含 `key/message/detail/functional`。在 WAL 的 `RUN_FINISH` 事件追加 `warn_count/warn_functional_count/warn_keys`，在成功写入的 report items 中追加 `warn_<key>` 条目（`severity_level=2`，detail 携带 `functional` 与上下文），便于后续门禁/报警稳定消费。  
+【为何】避免 warning 只存在于非结构化日志里导致漂移；把“需要动作的风险”与“提示信息”分离出来，并提供可机读的统计字段。  
 
 ## 自检
 1. 本计划将“写入多少、记录同步在”落到 WAL 的 `UPSERT_BATCH_COMMITTED` 事件上；若你的真实需求是“按 doc/按 chunk 完整列表精确可追溯”，需要扩展事件字段与日志体积，并相应增加测试与恢复规则。  

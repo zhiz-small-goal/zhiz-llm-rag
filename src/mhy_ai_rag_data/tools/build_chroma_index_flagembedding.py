@@ -403,6 +403,19 @@ def main() -> int:
     units_path = (root / args.units).resolve()
     include_media_stub = bool(args.include_media_stub)
 
+    warn_events: List[Dict[str, Any]] = []
+
+    def _warn(key: str, message: str, *, detail: Optional[Dict[str, Any]] = None, functional: bool = False) -> None:
+        print(f"[WARN] {message}")
+        warn_events.append(
+            {
+                "key": str(key),
+                "functional": bool(functional),
+                "message": str(message),
+                "detail": dict(detail or {}),
+            }
+        )
+
     # 0.5) state invariants (available to --resume-status)
     chunk_conf_dict = {
         "chunk_chars": int(args.chunk_chars),
@@ -470,8 +483,11 @@ def main() -> int:
         model = BGEM3FlagModel(args.embed_model, use_fp16=True, device=str(args.device))
     except TypeError:
         model = BGEM3FlagModel(args.embed_model, use_fp16=True)
-        print(
-            f"[WARN] BGEM3FlagModel() 不支持 device=，已回退为默认 device；你指定的 --device={args.device} 可能未生效。"
+        _warn(
+            "flagembedding_device_kw_unsupported",
+            f"BGEM3FlagModel() 不支持 device=，已回退为默认 device；你指定的 --device={args.device} 可能未生效。",
+            functional=True,
+            detail={"device": str(args.device), "embed_model": str(args.embed_model)},
         )
 
     def _require_chromadb() -> Any:
@@ -514,8 +530,17 @@ def main() -> int:
         if args.schema_change == "fail":
             print("[FATAL] " + msg)
             return 2
-        print("[WARN] " + msg)
-        print("[WARN] schema-change=reset -> will reset collection and create a new state version")
+        _warn(
+            "schema_hash_changed",
+            msg,
+            functional=True,
+            detail={"latest": str(latest), "current": str(schema_hash), "schema_change": str(args.schema_change)},
+        )
+        _warn(
+            "schema_change_reset",
+            "schema-change=reset -> will reset collection and create a new state version",
+            functional=True,
+        )
         # Reset collection: easiest to guarantee correctness
         try:
             client.delete_collection(name=args.collection)
@@ -649,7 +674,12 @@ def main() -> int:
         else:
             stage_done = {}
     elif incompatible_wal:
-        print(f"[WARN] stage wal_version={stage_wal_version} > current={WAL_VERSION}; resume disabled for this run.")
+        _warn(
+            "wal_version_incompatible",
+            f"stage wal_version={stage_wal_version} > current={WAL_VERSION}; resume disabled for this run.",
+            functional=True,
+            detail={"stage_wal_version": stage_wal_version, "current_wal_version": WAL_VERSION},
+        )
 
     if stage_enabled and not resume_active:
         run_id = str(uuid.uuid4())
@@ -686,11 +716,19 @@ def main() -> int:
         # 状态缺失但库非空：无法可靠定位“多余 ids”，默认策略是 reset 后全量重建。
         policy = str(args.on_missing_state)
         if allow_missing_state_resume:
-            print(
-                "[WARN] index_state missing but stage checkpoint detected; override on-missing-state policy to full-upsert to continue resume"
+            _warn(
+                "missing_state_overridden_by_stage",
+                "index_state missing but stage checkpoint detected; override on-missing-state policy to full-upsert to continue resume",
+                functional=True,
+                detail={"on_missing_state": str(args.on_missing_state), "policy": "full-upsert"},
             )
             policy = "full-upsert"
-        print(f"[WARN] index_state missing but collection.count={existing_count}. policy={policy}")
+        _warn(
+            "missing_state_collection_nonempty",
+            f"index_state missing but collection.count={existing_count}. policy={policy}",
+            functional=True,
+            detail={"collection_count": existing_count, "policy": str(policy)},
+        )
         if policy == "fail":
             print("[FATAL] missing index_state + non-empty collection; refuse to proceed")
             return 2
@@ -1110,6 +1148,23 @@ def main() -> int:
                 }
             )
 
+        # Emit warnings observed during the run as structured items for postmortem/CI consumption.
+        for w in warn_events:
+            raw_items.append(
+                {
+                    "tool": tool_name,
+                    "key": f"warn_{w.get('key')}",
+                    "title": f"warning: {w.get('key')}",
+                    "status_label": "WARN",
+                    "severity_level": 2,
+                    "message": str(w.get("message") or ""),
+                    "detail": {
+                        "functional": bool(w.get("functional")),
+                        "detail": dict(w.get("detail") or {}),
+                    },
+                }
+            )
+
         last_build = {
             "sync_mode": sync_mode,
             "units_total": total_units,
@@ -1177,6 +1232,9 @@ def main() -> int:
                     "delta": delta,
                     "committed_batches": committed_batches_this_run,
                     "chunks_upserted_total": chunks_upserted,
+                    "warn_count": len(warn_events),
+                    "warn_functional_count": sum(1 for w in warn_events if bool(w.get("functional"))),
+                    "warn_keys": [str(w.get("key") or "") for w in warn_events],
                     "sync_mode": sync_mode,
                     "wal_version": WAL_VERSION,
                 },
@@ -1206,7 +1264,12 @@ def main() -> int:
         )
         print(f"[OK] wrote db_build_stamp: {stamp_out}")
     except Exception as e:  # noqa: BLE001
-        print(f"[WARN] failed to write db_build_stamp.json: {type(e).__name__}: {e}")
+        _warn(
+            "db_build_stamp_write_failed",
+            f"failed to write db_build_stamp.json: {type(e).__name__}: {e}",
+            detail={"exc_type": type(e).__name__, "exc": str(e)},
+            functional=False,
+        )
 
     # finalize stage checkpoint (if enabled)
     if stage_enabled and run_id:
@@ -1222,6 +1285,9 @@ def main() -> int:
                 "reason": "ok",
                 "committed_batches": committed_batches_this_run,
                 "chunks_upserted_total": chunks_upserted,
+                "warn_count": len(warn_events),
+                "warn_functional_count": sum(1 for w in warn_events if bool(w.get("functional"))),
+                "warn_keys": [str(w.get("key") or "") for w in warn_events],
                 "sync_mode": sync_mode,
                 "wal_version": WAL_VERSION,
             },
