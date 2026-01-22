@@ -51,7 +51,7 @@ status: "draft"
 |---|---:|---|---|---|
 | 2026-01-22 | 1 | DONE | `build-chroma-resume-stage-step1.zip` | 基础续跑已落地：doc 级 DONE 事件 + 避免误 reset |
 | 2026-01-22 | 2 | DONE | 代码 + 文档 | WAL 追加 `UPSERT_BATCH_COMMITTED`/`DOC_COMMITTED` 事件、stage 复用 resume 统计、stage-fsync 支持 off/doc/interval，以及尾部截断容错。 |
-| 2026-01-22 | 3 | TODO | （待交付） | changed/deleted 的阶段事件与恢复规则 |
+| 2026-01-22 | 3 | DONE | 代码 + 文档 | 变更/删除文档会产生命名事件并触发恢复逻辑：`DOC_BEGIN`/`DELETE_OLD_DONE`/`UPSERT_NEW_DONE`/`DOC_COMMITTED`/`DOC_DONE` + `DELETE_STALE_DONE`，resume 时根据这些事件跳过重复删除/写入。 |
 | 2026-01-22 | 4 | TODO | （待交付） | strict mismatch 可复盘输出 + `--resume-status` |
 | 2026-01-22 | 5 | TODO | （待交付） | 测试矩阵与中断注入回归 |
 | 2026-01-22 | 6 | TODO | （可选） | WARN 分类治理与门禁策略 |
@@ -90,18 +90,20 @@ status: "draft"
 
 ---
 
-### Step3 — changed/deleted 的可重入顺序与幂等 [CON]
-【做什么】为 `changed_uris` 引入阶段事件序列（建议：`DOC_BEGIN → DELETE_OLD_DONE → UPSERT_NEW_DONE → DOC_COMMITTED → DOC_DONE`），并明确恢复规则：  
-- 若存在 `UPSERT_NEW_DONE`（或 `DOC_COMMITTED`）：跳过 delete 与 upsert，避免误删新数据；  
-- 若仅 `DELETE_OLD_DONE`：仅执行 upsert；  
-- 若仅 `DOC_BEGIN`：重做 delete+upsert（要求 delete 幂等、upsert 可重入）。  
-为 `deleted_uris` 记录 `DELETE_STALE_DONE` 并允许重复 delete（幂等）。必要时加入 writer lock（锁文件或 `run_id` 协议）拒绝并发写入。  
-【为何】changed 场景的风险在于：chunk_id 可能复用（例如 `doc_id:idx`），中断后恢复若重复 delete，可能命中新写入的 chunk；阶段事件序列提供“已完成到哪一步”的证据，使恢复可以精确跳过已完成阶段并避免误删。  
-【关键参数/注意】事件 key 至少包含 `uri/doc_id/old_sha/new_sha`；恢复规则必须绑定到这些字段，避免不同版本内容的事件互相污染；并发保护必须覆盖“同一 collection 不同进程同时跑”的情况，否则 WAL 交错会破坏恢复判定。  
+### Step3 — changed/deleted 的可重入顺序与幂等 [DONE]
+【做什么】为变更/删除文档引入阶段事件流，并在恢复时基于事件状态跳过重复改写：
+- `DELETE_STALE_DONE` 记录已删除文档的旧 chunk；只在 delete 完成后写入，防止多次 delete 把新 chunk 误删。
+- `DOC_BEGIN` + `DELETE_OLD_DONE` + `UPSERT_NEW_DONE` + `DOC_COMMITTED` + `DOC_DONE` 形成完整流水线，事件携带 `uri/doc_id/content_sha256/old_content_sha256/n_chunks` 等字段。
+- 恢复逻辑借助 `last_event`：`UPSERT_NEW_DONE`/`DOC_COMMITTED`/`DOC_DONE` 表示 doc 已完全写入（skip 整个 doc），而 `DELETE_OLD_DONE` + `old_content_sha256` 仍可复用、只需跳过 delete 后续处理。
+【为何】分阶段的事件让恢复能准确判断处于哪个阶段，从而避免 delete 重复命中新 chunk、ups? 重复写入或遗漏进度；`delete_stale` 事件做为审计，让 `doc_state` 只在删除成功后才认为旧 chunk 消失。
+【关键参数/注意】
+- 事件必须携带 `old_content_sha256`/`content_sha256` 以判断是否仍然是同一个变更版本。
+- `DOC_BEGIN` 只在第一次处理该 doc 时写入，后续 resume 只通过 `last_event` 判断状态。
+- `UPSERT_NEW_DONE` 会记录 `chunks_upserted_total`，也用于检测中断是否发生在 upsert 之后。
 
-**验收（可核验输出）**：  
-- changed 场景在 `DELETE_OLD_DONE` 与 `UPSERT_NEW_DONE` 之间注入中断，恢复后最终 `collection.count()` 与期望一致；  
-- stdout 对恢复决策输出摘要：对每个 uri 选择了“跳过/补做 delete/补做 upsert/重做”的原因（可采样）。  
+**验收（可核验输出）**：
+- 中断发生在 `DELETE_OLD_DONE` 与 `UPSERT_NEW_DONE` 之间，重启后 stage 仅跳过 delete，继续 embedding/upsert，并产出 `DOC_COMMITTED`。
+- 已删除文档在 `index_state.stage.jsonl` 中留下 `DELETE_STALE_DONE`，且 `DELETE_OLD_DONE` 只出现一次，不重复删除相同 `doc_id`。
 
 ---
 

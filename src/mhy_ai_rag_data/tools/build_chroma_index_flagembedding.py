@@ -53,6 +53,67 @@ MetaValue = Any
 
 WAL_VERSION = 2
 
+DOC_EVENT_DOC_BEGIN = "DOC_BEGIN"
+DOC_EVENT_DELETE_OLD_DONE = "DELETE_OLD_DONE"
+DOC_EVENT_UPSERT_NEW_DONE = "UPSERT_NEW_DONE"
+DOC_EVENT_DOC_COMMITTED = "DOC_COMMITTED"
+DOC_EVENT_DOC_DONE = "DOC_DONE"
+DOC_EVENT_DELETE_STALE_DONE = "DELETE_STALE_DONE"
+
+DOC_EVENT_TYPES = {
+    DOC_EVENT_DOC_BEGIN,
+    DOC_EVENT_DELETE_OLD_DONE,
+    DOC_EVENT_UPSERT_NEW_DONE,
+    DOC_EVENT_DOC_COMMITTED,
+    DOC_EVENT_DOC_DONE,
+    DOC_EVENT_DELETE_STALE_DONE,
+}
+
+DOC_FINAL_SKIP_EVENTS = {DOC_EVENT_DOC_COMMITTED, DOC_EVENT_DOC_DONE, DOC_EVENT_UPSERT_NEW_DONE}
+DOC_DELETE_SKIP_EVENTS = {
+    DOC_EVENT_DELETE_OLD_DONE,
+    DOC_EVENT_UPSERT_NEW_DONE,
+    DOC_EVENT_DOC_COMMITTED,
+    DOC_EVENT_DOC_DONE,
+}
+DOC_INITIATED_EVENTS = DOC_DELETE_SKIP_EVENTS | {DOC_EVENT_DOC_BEGIN}
+
+
+def _merge_doc_event(done: Dict[str, Any], ev: Dict[str, Any], event_type: str) -> None:
+    uri = str(ev.get("uri") or "")
+    if not uri:
+        return
+    entry: Dict[str, Any] = dict(done.get(uri) or {})
+    entry["doc_id"] = str(ev.get("doc_id") or entry.get("doc_id") or "")
+    content_sha = ev.get("content_sha256")
+    if content_sha is not None:
+        entry["content_sha256"] = str(content_sha)
+    old_content_sha = ev.get("old_content_sha256")
+    if old_content_sha is not None:
+        entry["old_content_sha256"] = str(old_content_sha)
+    n_chunks = ev.get("n_chunks")
+    if n_chunks is not None:
+        try:
+            entry["n_chunks"] = int(n_chunks)
+        except Exception:
+            entry["n_chunks"] = int(entry.get("n_chunks") or 0)
+    chunks_total = ev.get("chunks_upserted_total")
+    if chunks_total is not None:
+        try:
+            entry["chunks_upserted_total"] = int(chunks_total)
+        except Exception:
+            entry["chunks_upserted_total"] = int(entry.get("chunks_upserted_total") or 0)
+    source_type = ev.get("source_type")
+    if source_type is not None:
+        entry["source_type"] = str(source_type)
+    updated_at = ev.get("updated_at")
+    if updated_at is not None:
+        entry["updated_at"] = str(updated_at)
+    entry["last_event"] = event_type
+    entry["ts"] = str(ev.get("ts") or entry.get("ts") or "")
+    done[uri] = entry
+
+
 # -------- shared loader --------
 
 
@@ -156,29 +217,8 @@ def _load_stage(path: Path) -> Dict[str, Any]:
                     committed_batches += 1
                     chunks_total = int(ev.get("chunks_upserted_total") or chunks_total)
                     continue
-                if t == "DOC_DONE":
-                    uri = str(ev.get("uri") or "")
-                    if uri:
-                        done[uri] = {
-                            "content_sha256": str(ev.get("content_sha256") or ""),
-                            "doc_id": str(ev.get("doc_id") or ""),
-                            "n_chunks": int(ev.get("n_chunks") or 0),
-                            "updated_at": str(ev.get("updated_at") or ""),
-                            "ts": str(ev.get("ts") or ""),
-                            "chunks_upserted_total": int(ev.get("chunks_upserted_total") or 0),
-                        }
-                    continue
-                if t == "DOC_COMMITTED":
-                    uri = str(ev.get("uri") or "")
-                    if uri:
-                        done[uri] = {
-                            "content_sha256": str(ev.get("content_sha256") or ""),
-                            "doc_id": str(ev.get("doc_id") or ""),
-                            "n_chunks": int(ev.get("n_chunks") or 0),
-                            "updated_at": str(ev.get("updated_at") or ""),
-                            "ts": str(ev.get("ts") or ""),
-                            "chunks_upserted_total": int(ev.get("chunks_upserted_total") or 0),
-                        }
+                if t in DOC_EVENT_TYPES:
+                    _merge_doc_event(done, ev, t)
                     continue
                 if t == "RUN_FINISH":
                     finished_ok = bool(ev.get("ok"))
@@ -696,20 +736,66 @@ def main() -> int:
             doc_id = str(prev.get("doc_id") or "")
             n_chunks = int(prev.get("n_chunks") or 0)
             try:
-                chunks_deleted += delete_doc_chunks(doc_id, n_chunks)
+                deleted = delete_doc_chunks(doc_id, n_chunks)
+                chunks_deleted += deleted
                 docs_deleted += 1
             except Exception:
                 return 2
+            if stage_enabled and run_id:
+                _stage_append_event(
+                    DOC_EVENT_DELETE_STALE_DONE,
+                    {
+                        "uri": uri,
+                        "doc_id": doc_id,
+                        "old_content_sha256": str(prev.get("content_sha256") or ""),
+                        "old_n_chunks": n_chunks,
+                        "deleted_chunks": deleted,
+                    },
+                )
 
         # delete changed docs old chunks (important to avoid leftover ids when chunk count shrinks)
         for uri in changed_uris:
             prev = prev_docs.get(uri) or {}
             doc_id = str(prev.get("doc_id") or "")
-            n_chunks = int(prev.get("n_chunks") or 0)
+            prev_n_chunks = int(prev.get("n_chunks") or 0)
+            prev_sha = str(prev.get("content_sha256") or "")
+            stage_doc = stage_done.get(uri) or {}
+            stage_event = str(stage_doc.get("last_event") or "")
+            delete_done = stage_event in DOC_DELETE_SKIP_EVENTS and stage_doc.get("old_content_sha256") == prev_sha
+            cur_info = cur_docs.get(uri) or {}
+            if delete_done:
+                continue
+            if stage_event not in DOC_INITIATED_EVENTS:
+                _stage_append_event(
+                    DOC_EVENT_DOC_BEGIN,
+                    {
+                        "uri": uri,
+                        "doc_id": doc_id,
+                        "content_sha256": str(cur_info.get("content_sha256") or ""),
+                        "old_content_sha256": prev_sha,
+                        "old_n_chunks": prev_n_chunks,
+                        "source_type": str(cur_info.get("source_type") or ""),
+                        "updated_at": str(cur_info.get("updated_at") or ""),
+                    },
+                )
             try:
-                chunks_deleted += delete_doc_chunks(doc_id, n_chunks)
+                deleted = delete_doc_chunks(doc_id, prev_n_chunks)
+                chunks_deleted += deleted
             except Exception:
                 return 2
+            if stage_enabled and run_id:
+                _stage_append_event(
+                    DOC_EVENT_DELETE_OLD_DONE,
+                    {
+                        "uri": uri,
+                        "doc_id": doc_id,
+                        "old_content_sha256": prev_sha,
+                        "old_n_chunks": prev_n_chunks,
+                        "deleted_chunks": deleted,
+                        "source_type": str(cur_info.get("source_type") or ""),
+                        "updated_at": str(cur_info.get("updated_at") or ""),
+                    },
+                )
 
     # 8) embed + upsert (for selected docs)
     ids_buf: List[str] = []
@@ -779,27 +865,36 @@ def main() -> int:
         if not info:
             continue
 
+        stage_doc = stage_done.get(uri) or {}
+        stage_event = str(stage_doc.get("last_event") or "")
+        stage_sha = str(stage_doc.get("content_sha256") or "")
+        cur_sha = str(info.get("content_sha256") or "")
         # Resume: skip docs already checkpointed as DONE for the same content_sha256.
-        if stage_enabled and resume_active and run_id and uri in stage_done:
-            ev = stage_done.get(uri) or {}
-            stage_sha = str(ev.get("content_sha256") or "")
-            cur_sha = str(info.get("content_sha256") or "")
-            if stage_sha and cur_sha and stage_sha == cur_sha:
-                n_chunks = int(ev.get("n_chunks") or 0)
-                expected_chunks += n_chunks
-                new_docs_state[uri] = {
-                    "doc_id": str(ev.get("doc_id") or info.get("doc_id") or ""),
-                    "source_uri": uri,
-                    "source_type": str(info.get("source_type") or ""),
-                    "content_sha256": cur_sha,
-                    "n_chunks": int(n_chunks),
-                    "updated_at": str(info.get("updated_at") or ev.get("updated_at") or ""),
-                }
-                docs_processed += 1
-                docs_resumed_skipped += 1
-                if docs_resumed_skipped <= 3 or (docs_resumed_skipped % 200 == 0):
-                    print(f"[RESUME] skip done doc: uri={uri} n_chunks={n_chunks}")
-                continue
+        if (
+            stage_enabled
+            and resume_active
+            and run_id
+            and stage_doc
+            and stage_event in DOC_FINAL_SKIP_EVENTS
+            and stage_sha
+            and cur_sha
+            and stage_sha == cur_sha
+        ):
+            n_chunks = int(stage_doc.get("n_chunks") or 0)
+            expected_chunks += n_chunks
+            new_docs_state[uri] = {
+                "doc_id": str(stage_doc.get("doc_id") or info.get("doc_id") or ""),
+                "source_uri": uri,
+                "source_type": str(info.get("source_type") or stage_doc.get("source_type") or ""),
+                "content_sha256": cur_sha,
+                "n_chunks": int(n_chunks),
+                "updated_at": str(info.get("updated_at") or stage_doc.get("updated_at") or ""),
+            }
+            docs_processed += 1
+            docs_resumed_skipped += 1
+            if docs_resumed_skipped <= 3 or (docs_resumed_skipped % 200 == 0):
+                print(f"[RESUME] skip done doc: uri={uri} n_chunks={n_chunks}")
+            continue
 
         unit = info["unit"]
         chunk_texts, base_md = build_chunks_from_unit(unit, conf)
@@ -821,17 +916,17 @@ def main() -> int:
         if not chunk_texts:
             # No chunks: still treat the doc as processed and checkpoint it for resume.
             if stage_enabled and run_id:
-                _stage_append_event(
-                    "DOC_COMMITTED",
-                    {
-                        "uri": uri,
-                        "doc_id": doc_id,
-                        "content_sha256": str(info.get("content_sha256") or ""),
-                        "n_chunks": 0,
-                        "updated_at": str(info.get("updated_at") or ""),
-                        "chunks_upserted_total": chunks_upserted,
-                    },
-                )
+                payload = {
+                    "uri": uri,
+                    "doc_id": doc_id,
+                    "content_sha256": str(info.get("content_sha256") or ""),
+                    "n_chunks": 0,
+                    "chunks_upserted_total": chunks_upserted,
+                    "source_type": str(info.get("source_type") or ""),
+                    "updated_at": str(info.get("updated_at") or ""),
+                }
+                _stage_append_event(DOC_EVENT_DOC_COMMITTED, payload)
+                _stage_append_event(DOC_EVENT_DOC_DONE, payload)
                 docs_checkpointed += 1
             docs_processed += 1
             continue
@@ -878,17 +973,18 @@ def main() -> int:
         # Ensure this doc's chunks have been upserted before checkpointing.
         if stage_enabled and run_id:
             flush()
-            _stage_append_event(
-                "DOC_COMMITTED",
-                {
-                    "uri": uri,
-                    "doc_id": doc_id,
-                    "content_sha256": str(info.get("content_sha256") or ""),
-                    "n_chunks": int(n_chunks),
-                    "updated_at": str(info.get("updated_at") or ""),
-                    "chunks_upserted_total": chunks_upserted,
-                },
-            )
+            payload = {
+                "uri": uri,
+                "doc_id": doc_id,
+                "content_sha256": str(info.get("content_sha256") or ""),
+                "n_chunks": int(n_chunks),
+                "chunks_upserted_total": chunks_upserted,
+                "source_type": str(info.get("source_type") or ""),
+                "updated_at": str(info.get("updated_at") or ""),
+            }
+            _stage_append_event(DOC_EVENT_UPSERT_NEW_DONE, payload)
+            _stage_append_event(DOC_EVENT_DOC_COMMITTED, payload)
+            _stage_append_event(DOC_EVENT_DOC_DONE, payload)
             docs_checkpointed += 1
 
         docs_processed += 1
