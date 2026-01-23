@@ -1,7 +1,7 @@
 ---
 title: index_state.py 使用说明（索引状态管理模块）
-version: v1.1
-last_updated: 2026-01-19
+version: v1.2
+last_updated: 2026-01-23
 tool_id: index_state
 
 impl:
@@ -46,6 +46,16 @@ cli_framework: other
 - **状态文件读写**：index_state.json 原子写入（tmp -> replace）
 - **LATEST 指针管理**：跟踪最新 schema_hash
 - **Report v2 兼容读取**：读取 legacy v1（缺 schema_version）时，在内存中转换为 `schema_version=2` 的 v2 envelope
+
+
+## 与断点续跑（WAL）的关系
+
+- 本模块管理 `index_state.json`（完成态 manifest）的读写与兼容；当前策略是 only-on-success 写入，因此中断时 `index_state.json` 可能缺失。
+- build 工具为断点续跑引入了 `index_state.stage.jsonl`（WAL）与 `writer.lock`（互斥锁）；它们不由本模块负责写入，但与 manifest 存在协作关系。
+- 若你要判断是否可续跑，请使用：
+  ```cmd
+  python tools\build_chroma_index_flagembedding.py build --collection <name> --resume-status
+  ```
 
 ## 主要API
 

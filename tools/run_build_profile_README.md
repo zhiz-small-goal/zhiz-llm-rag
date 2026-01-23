@@ -1,7 +1,7 @@
 ---
 title: run_build_profile.py 使用说明（运行构建性能分析）
 version: v1.0
-last_updated: 2026-01-16
+last_updated: 2026-01-23
 tool_id: run_build_profile
 
 impl:
@@ -24,6 +24,8 @@ timezone: America/Los_Angeles
 cli_framework: argparse
 ---
 # run_build_profile.py 使用说明
+
+> 注意（2026-01-23）：`build_chroma_index_flagembedding` 已引入断点续跑 WAL（`index_state.stage.jsonl`）与 `--resume-status`。因此当出现“state 缺失但库非空”的场景时，`on-missing-state=reset` 可能会被 WAL 的 resume 分支覆盖（以避免清除已写入进度）。若你确实要全量重建，可用 `--resume off` 显式关闭续跑。
 
 
 > 目标：用 JSON profile 驱动 plan → build → check 的一致性执行，把"口径"从手工命令行升级为可复现的配置文件。

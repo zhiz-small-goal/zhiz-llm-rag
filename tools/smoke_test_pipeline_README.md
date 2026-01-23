@@ -1,7 +1,7 @@
 ---
 title: smoke_test_pipeline.py 使用说明（烟雾测试管道）
 version: v1.0
-last_updated: 2026-01-16
+last_updated: 2026-01-23
 tool_id: smoke_test_pipeline
 
 impl:
@@ -24,6 +24,8 @@ timezone: America/Los_Angeles
 cli_framework: argparse
 ---
 # smoke_test_pipeline.py 使用说明
+
+> 注意（2026-01-23）：`build_chroma_index_flagembedding` 已引入断点续跑 WAL（`index_state.stage.jsonl`）与 `--resume-status`。因此当出现“state 缺失但库非空”的场景时，`on-missing-state=reset` 可能会被 WAL 的 resume 分支覆盖（以避免清除已写入进度）。若你确实要全量重建，可用 `--resume off` 显式关闭续跑。
 
 
 > 目标：快速烟雾测试管道，验证核心流程可用性。

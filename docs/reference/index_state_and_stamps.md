@@ -1,7 +1,7 @@
 ---
 title: Index State 与 Stamps 契约
-version: v1.1
-last_updated: 2026-01-18
+version: v1.2
+last_updated: 2026-01-23
 ---
 
 # Index State 与 Stamps 契约
@@ -134,6 +134,19 @@ last_updated: 2026-01-18
 - `last_build`：本轮 build 的计数与模式（sync_mode / expected_chunks / collection_count 等）。
 
 ---
+
+
+
+### 3.4 断点续跑 WAL（`index_state.stage.jsonl`）
+- 位置：`data_processed/index_state/<collection>/<schema_hash>/index_state.stage.jsonl`
+- 语义：append-only 的进度事件流（非完成态），用于在 build 中断后恢复：根据 `DOC_COMMITTED` 事件构造“已提交 doc 集合”，重启时跳过这些 doc，仅处理剩余部分。
+- 与 `index_state.json` 的关系：`index_state.json` 是 only-on-success 的完成态 manifest；WAL 是运行期的旁路证据，允许在 manifest 缺失时仍能恢复。
+- 持久化策略：默认每条事件 flush；可选 `--wal-fsync` 在 doc 提交或按事件间隔 fsync，以换取更强的“写入多少、记录就同步在”的语义。
+
+### 3.5 单写入者锁（`writer.lock`）
+- 位置：`data_processed/index_state/<collection>/<schema_hash>/writer.lock`
+- 语义：防止并发 build 进程同时写同一 collection/state/WAL，导致恢复链路失真。
+- 处理：若无并发写入者且锁来自异常退出，可删除该文件后继续；也可用 `--writer-lock false` 绕过，但需要你自行保证单写入者。
 
 ## 4) 与 rag-status / rag-check 的依赖关系
 

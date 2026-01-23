@@ -1,5 +1,7 @@
 # 2025-12-29_chroma_build_postmortem_count_mismatch_3728_vs_4433.md目录：
 
+> 注意（2026-01-23）：`build_chroma_index_flagembedding` 已引入断点续跑 WAL（`index_state.stage.jsonl`）与 `--resume-status`。因此当出现“state 缺失但库非空”的场景时，`on-missing-state=reset` 可能会被 WAL 的 resume 分支覆盖（以避免清除已写入进度）。若你确实要全量重建，可用 `--resume off` 显式关闭续跑。
+
 
 - [1. 现象与触发](#1-现象与触发)
   - [1.1 检查输出（你提供）](#1-1-检查输出-你提供)

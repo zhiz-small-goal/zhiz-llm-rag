@@ -12,6 +12,8 @@
 
 # 本次 Chroma 构建数量异常排查总结（705 vs 694）
 
+> 注意（2026-01-23）：`build_chroma_index_flagembedding` 已引入断点续跑 WAL（`index_state.stage.jsonl`）与 `--resume-status`。因此当出现“state 缺失但库非空”的场景时，`on-missing-state=reset` 可能会被 WAL 的 resume 分支覆盖（以避免清除已写入进度）。若你确实要全量重建，可用 `--resume off` 显式关闭续跑。
+
 > 日期：2025-12-26  
 > 项目目录：`<REPO_ROOT>
 > 虚拟环境：`.venv_rag`  

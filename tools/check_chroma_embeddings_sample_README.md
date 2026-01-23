@@ -1,7 +1,7 @@
 ---
 title: check_chroma_embeddings_sample.py 使用说明（检查 Chroma 嵌入向量质量）
 version: v1.0
-last_updated: 2026-01-16
+last_updated: 2026-01-23
 tool_id: check_chroma_embeddings_sample
 
 impl:
@@ -24,6 +24,8 @@ timezone: America/Los_Angeles
 cli_framework: argparse
 ---
 # check_chroma_embeddings_sample.py 使用说明
+
+> 注意（2026-01-23）：`build_chroma_index_flagembedding` 已引入断点续跑 WAL（`index_state.stage.jsonl`）与 `--resume-status`。因此当出现“state 缺失但库非空”的场景时，`on-missing-state=reset` 可能会被 WAL 的 resume 分支覆盖（以避免清除已写入进度）。若你确实要全量重建，可用 `--resume off` 显式关闭续跑。
 
 
 > 目标：抽样读取 Chroma collection 的 embeddings，检查维度一致性、L2 范数分布、是否存在 NaN/Inf，用于快速诊断向量质量问题。

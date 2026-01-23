@@ -1,7 +1,7 @@
 ---
 title: 报告输出契约（v2）与工程规则（SSOT）
-version: 1.1.2
-last_updated: 2026-01-18
+version: 1.1.3
+last_updated: 2026-01-23
 timezone: America/Los_Angeles
 ssot: true
 scope: "统一输出工程规则（schema_version=2）：报告/状态元数据/长跑任务（进度与 events）"
@@ -255,6 +255,12 @@ out = data_processed/build_reports/gate_report.json
 - `--fsync-interval-ms <int>`（对 fsync 节流）
 
 > 参考实现：`src/mhy_ai_rag_data/tools/report_events.py::ItemEventsWriter`。
+
+**补充（2026-01-23）：索引构建的 WAL 特例**
+- `build_chroma_index_flagembedding` 为“写入 + 中断恢复”引入 `index_state.stage.jsonl`（WAL）。该文件是工具级恢复载体：每行是一个事件对象（含 `wal_version/ts/seq/event/run_id/...`），用于恢复 doc 提交边界。
+- 该 WAL **不等同于** `*.events.jsonl`（v2 item 流）：它的 schema 以恢复为中心，而非 report 渲染；因此消费者不应把它当作 report events 读取。
+- 若未来要统一到 v2 item events，可在 build 工具中同时写 `ItemEventsWriter`（以 `--events-out` 控制）而保留 WAL 作为内部 checkpoint。
+
 
 ### 8.3 恢复与重放
 

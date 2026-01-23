@@ -1,7 +1,7 @@
 ---
 title: OPERATION GUIDE（运行手册）
-version: v1.0
-last_updated: 2026-01-13
+version: v1.1
+last_updated: 2026-01-23
 ---
 
 # OPERATION_GUIDE目录：
@@ -171,7 +171,25 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
 
 
 
-**新增（2025-12-29）：增量同步（index_state/manifest）**  
+**新增（2025-12-29）：增量同步（index_state/manifest）**
+
+**新增（2026-01-23）：断点续跑（WAL）+ 单写入者锁（writer.lock）**
+**做什么**：build 过程会在 `data_processed/index_state/<collection>/<schema_hash>/` 下追加写入 `index_state.stage.jsonl`（WAL）。当进程被中断或异常退出时，下一次启动会优先读取 WAL 来恢复进度：**跳过已 `DOC_COMMITTED` 的 doc，仅处理剩余部分**；同时会创建 `writer.lock`，用于阻止并发写入导致 WAL/collection 交错。
+**为何（因果）**：`index_state.json` 是 only-on-success 的完成态 manifest，中断时通常缺失；如果仅依赖 manifest，会把“已写入但未完成”的状态误判为需要 reset。WAL 的职责是把“写入进度”在运行期同步落盘，从而让恢复语义具备可核验依据。
+**关键参数/注意**：
+- 只读预检查：
+  ```cmd
+  python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
+  ```
+- 典型 WARN 含义：
+  - `index_state missing ... policy=reset`：默认分支评估（缺 manifest 且库非空）。
+  - `WAL indicates resumable progress; ignore on-missing-state=reset ...`：WAL 匹配且可续跑，最终生效为 resume（不会执行 reset）。
+- 若你要强制全量重建：
+  ```cmd
+  python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume off --on-missing-state reset
+  ```
+- 若遇到 `writer lock exists`：先确认无并发 build 进程；再删除 `writer.lock` 后重试（或用 `--writer-lock false` 绕过锁，但需你保证单写入者）。
+  
 **做什么**：build 脚本默认启用 `--sync-mode incremental`，会在 `data_processed/index_state/` 下写入索引状态；后续重复运行时：  
 - 只对新增/内容变更文件做 embedding + upsert；  
 - 对删除/内容变更文件先按 doc 粒度 delete 旧 chunk，避免 “count mismatch”；  
@@ -182,6 +200,13 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
 - `--on-missing-state reset`（state 缺失但库非空时，自动重置）；  
 - `--schema-change reset`（口径变更时自动重置）；  
 - `--strict-sync true`（构建后若 `count!=expected` 直接 FAIL）。
+
+**断点续跑相关参数**：
+- `--wal on|off`：是否写入进度 WAL（默认 on）。
+- `--resume auto|off|force`：WAL 存在时的续跑策略（默认 auto）。
+- `--resume-status`：只读打印 RESUME STATUS 并退出。
+- `--writer-lock true|false`：是否启用单写入者锁（默认 true）。
+- `--wal-fsync off|doc|interval` / `--wal-fsync-interval N`：WAL 的持久化策略（默认 off；可按 doc 或按事件间隔 fsync）。
 
 **产物**：`data_processed/index_state/<collection>/<schema_hash>/index_state.json` + `LATEST` 指针文件。  
 

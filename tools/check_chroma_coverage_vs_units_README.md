@@ -1,7 +1,7 @@
 ---
 title: check_chroma_coverage_vs_units.py 使用说明（检查 Chroma 覆盖率）
-version: v1.0
-last_updated: 2026-01-16
+version: v1.1
+last_updated: 2026-01-23
 tool_id: check_chroma_coverage_vs_units
 
 impl:
@@ -53,6 +53,21 @@ cli_framework: argparse
 - **断电恢复**：快速检查缺口比例
 - **CI 验证**：确认 build 后索引是否完整
 
+
+## 与断点续跑（WAL）的分工
+
+- 本工具侧重“**覆盖率核验**”：根据 units 重新计算期望 chunk_ids，再查询 Chroma 判断缺口。
+- build 工具的 `--resume-status`/WAL 侧重“**恢复决策**”：判断是否存在可续跑进度（`wal_docs_committed`）以及是否会启用 resume（`resume_active`）。
+
+推荐顺序（成本更可控）：
+1) 先跑只读检查：
+   ```cmd
+   python tools\build_chroma_index_flagembedding.py build --collection <name> --resume-status
+   ```
+2) 若 `resume_active=true`：优先续跑 build（避免不必要的全量重建）。
+3) 只有在 **WAL 不存在/不可用** 或你要做“外部独立核验”时，再使用本工具做 coverage 检查。
+
+注意：coverage 以 chunk_id 是否存在为判据；在变更文档场景下，build 会在 doc 级完成后执行 tail delete（删除旧的多余 chunk_ids），因此 coverage 可以作为后验检查，但不替代 WAL 的“doc 提交边界”语义。
 ## 原理
 
 本项目使用 upsert 且 chunk_id 可复现（`doc_id:chunk_index`），因此：
