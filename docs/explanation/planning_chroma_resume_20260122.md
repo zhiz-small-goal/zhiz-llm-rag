@@ -69,7 +69,7 @@ status: "draft"
 【做什么】在现有 `index_state.stage.jsonl` 事件流基础上新增两类“提交计数”事件，并明确它们的写入边界与恢复使用方式：  
 1) **`UPSERT_BATCH_COMMITTED`**：每次 `flush()` 内 `collection.upsert(...)` 成功返回后立即追加写入，包含：`batch_size`、`chunks_upserted_total`、（可选）`collection_count_snapshot`、`ts/run_id/seq`。  
 2) **`DOC_COMMITTED`**：当某 `source_uri` 的全部 chunks 已被 flush/upsert 并确认完成后追加写入，包含：`source_uri/doc_id/content_sha256/n_chunks` 与 `chunks_upserted_total`。  
-同时把写盘策略参数化：将 `--stage-fsync` 扩展为 `off/doc/interval`（或等价参数），并把 WAL 读取容错固化：尾部截断时忽略最后坏行继续重放。  
+同时把写盘策略参数化：将 `--wal-fsync` 参数化为 `off/doc/interval`，并把 WAL 读取容错固化：尾部截断时忽略最后坏行继续重放。  
 【为何】用户希望“写入多少条、记录就同步在”，这要求进度记录必须与“真实写入提交点”绑定，而脚本里唯一集中提交写入的点是 `flush()->collection.upsert(...)`；在 upsert 成功后立即写入 `UPSERT_BATCH_COMMITTED`，即可让 WAL 在中断后仍能反映已提交写入数量，并为恢复提供证据。doc 级 `DOC_COMMITTED` 则用于“跳过已完成 doc”，降低重复 embedding。  
 【关键参数/注意】  
 - **事件顺序约束**：任何 `*_COMMITTED` 必须发生在 upsert 成功之后；否则会出现 WAL 领先 DB 的不可核验窗口。  
@@ -78,15 +78,15 @@ status: "draft"
 - **恢复使用**：恢复时 `DOC_COMMITTED` 决定跳过集合；`UPSERT_BATCH_COMMITTED` 用于核验“已提交写入计数是否连续增长”，并辅助判断异常停机窗口。  
 
 **验收（可核验输出）**：  
-- 启动时 stdout 必须输出：`resume_active`、`wal_version`、`run_id`、`done_docs`、`committed_batches`、`chunks_upserted_total_last`；  
-- 人为中断后重启，`chunks_upserted_total_last` 不回退，且续跑过程中仅对未 `DOC_COMMITTED` 的 doc 做 embedding；  
+- 启动时 stdout 必须输出：`resume_active`、`run_id`、`done_docs`、`committed_batches`、`wal_upsert_rows_committed_total`；  
+- 人为中断后重启，`wal_upsert_rows_committed_total` 不回退，且续跑过程中仅对未 `DOC_COMMITTED` 的 doc 做 embedding；  
 - WAL 尾部截断时仍可继续续跑，并在 stdout 输出 “truncated_tail_ignored=true”（或等价字段）。  
 
 **落地说明**  
 - 已在 `index_state.stage.jsonl` 追加 `UPSERT_BATCH_COMMITTED` / `DOC_COMMITTED` 事件并记录 `chunks_upserted_total`，旧的 `DOC_DONE` 兼容保留；  
-- 启动时输出 `[STAGE] resume_active=... wal_version=... run_id=... done_docs=... committed_batches=... chunks_upserted_total_last=... tail_truncated_ignored=... stage_fsync_mode=...（interval=n）`，方便复盘与调度；  
-- `_load_stage` 读取 `wal_version`/`committed_batches`/`chunks_upserted_total_last`/`tail_truncated`，遇到未来版本会 WARN 并跳过 resume，尾部截断仅影响额外字段但不会打断重放；  
-- `--stage-fsync` 现在接受 `off/doc/interval`（兼容旧 `true/false`）并新增 `--stage-fsync-interval` 控制 interval 模式的 fsync 频率，stage 写入通过 helper 决定是否 fsync（doc 模式每次、interval 模式按事件计数、off 模式不 fsync）。
+- 启动时或通过 `--resume-status` 输出 resume/WAL 概览（run_id/done_docs/committed_batches/wal_upsert_rows_committed_total/wal_truncated_tail_ignored/wal_last_event），方便复盘与调度；  
+- `read_wal` 读取最新 RUN_START/RUN_RESUME 段并容忍尾部截断（忽略最后坏行），形成可用于续跑的 done_docs/committed_batches/upsert_rows_committed_total 快照；  
+- `--wal-fsync` 现在接受 `off/doc/interval`，并新增 `--wal-fsync-interval` 控制 interval 模式的 fsync 频率，写入侧按策略决定是否 fsync（doc 模式每次、interval 模式按事件计数、off 模式不 fsync）。
 
 ---
 
@@ -108,14 +108,14 @@ status: "draft"
 ---
 
 ### Step4 — 一致性校验与故障可复盘 [DONE]
-【做什么】strict_sync 失败时输出期望/实际/差值并在 `RUN_FINISH` 写入 `reason=strict_sync_mismatch` + `delta`；成功时 `RUN_FINISH` 写入 `reason=ok`，继续沿用“仅 ok 后清理 WAL”策略。新增 `--resume-status`：只读加载 stage/WAL，输出 run_id/wal_version/done_docs/committed_batches/chunks_upserted_total_last/tail_truncated，以及 run_start 概览和最多 3 条 doc 样本，不触碰 DB/模型。  
+【做什么】strict_sync 失败时输出期望/实际/差值并在 `RUN_FINISH` 写入 `reason=strict_mismatch` + 关键字段；成功时 `RUN_FINISH` 写入 `reason=ok`，继续沿用“仅 ok 且已写 state 后清理 WAL”策略。新增 `--resume-status`：只读加载 WAL，输出 run_id/finished_ok/last_event/done_docs/committed_batches/wal_upsert_rows_committed_total/wal_truncated_tail_ignored，不触碰 embedding 模型。  
 【为何】固定化失败输出使运维可据此决定继续续跑或 reset；`--resume-status` 提供无副作用的核验入口，便于排障与 CI。  
 【关键参数/注意】`--resume-status` 不要求 units/模型/Chroma 可用，只读取 stage 文件；strict mismatch 时 WAL 保留且带 reason，便于后续清理决策。  
 
 ---
 
 ### Step5 — 测试矩阵与回归（含中断注入） [DONE]
-【做什么】添加基础单测验证 WAL 解析与尾部截断容错、`resume-status` 无副作用输出：构造 stage JSONL，覆盖 `RUN_START`/`UPSERT_BATCH_COMMITTED`/`DOC_COMMITTED`/`DOC_DONE` 等事件，确认 `tail_truncated` 标记与样本输出正常。  
+【做什么】添加基础单测验证 WAL 解析与尾部截断容错：构造 WAL JSONL，覆盖 `RUN_START`/`UPSERT_BATCH_COMMITTED`/`DOC_COMMITTED`/`DOC_DONE`/`RUN_FINISH` 等事件，确认 `truncated_tail_ignored` 与 committed 计数逻辑正常。  
 【为何】续跑是状态机 + 副作用，最小集单测先锁定 WAL 读/打印的正确性，为后续扩展中断注入测试奠基。  
 【关键参数/注意】测试仅依赖 stage 文件，不触碰模型/Chroma；未来若补充集成中断注入场景，可在此基础上扩展。  
 
@@ -154,7 +154,7 @@ python tools\build_chroma_index_flagembedding.py build --root . --db data_proces
 ```
 运行一段时间后 Ctrl+C。
 
-2) 重启续跑（期望出现 skip，且 `chunks_upserted_total_last` 延续增长）  
+2) 重启续跑（期望出现 skip，且 `wal_upsert_rows_committed_total` 延续增长）  
 ```cmd
 python tools\build_chroma_index_flagembedding.py build --root . --db data_processed\chroma\toy --collection toy
 ```
