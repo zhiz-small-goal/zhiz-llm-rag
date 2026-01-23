@@ -23,7 +23,7 @@ status: "active"
 
 对 Level 3 文档体系做最小门禁检查，聚焦三类“高频回归点”：
 1) 仓内链接（路径/锚点）是否可达；  
-2) 关键术语是否统一（避免 `index_stage.json` 等误写）；  
+2) 关键术语是否统一（避免使用错误的文件扩展名，如 `.json` 应为 `.jsonl`）；  
 3) front-matter 必填字段是否齐全（便于后续机械化处理与索引）。  
 
 脚本输出 **Report v2（schema_version=2）**，可与项目现有的报告渲染/聚合路径对齐。
@@ -50,7 +50,7 @@ python tools\check_doc_system_gate.py --root . --doc-map docs\explanation\doc_ma
 - `archive/postmortem`：以历史叙事为主，默认把同类问题降级为 `WARN`（避免阻塞主线）；但仍会在报告中显式列出。  
 
 关键规则：
-- **禁止术语**：`index_stage.json`、`index_state.stage.json`（应为 `index_state.stage.jsonl`）  
+- **禁止术语**：`index_state.stage.json`（应为 `index_state.stage.jsonl`）  
 - **policy=reset 两阶段解释**：若出现 `policy=reset` 或 `on-missing-state`，文本中需同时覆盖“默认评估/最终生效”。  
 - **仓内链接**：相对路径必须存在；`#anchor` 必须能在目标文档标题中解析到对应锚点。  
 

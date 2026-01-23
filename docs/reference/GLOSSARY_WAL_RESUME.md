@@ -3,6 +3,7 @@ title: 术语表（WAL/断点续跑/State）
 version: v1.0
 last_updated: 2026-01-23
 timezone: America/Los_Angeles
+owner: zhiz
 status: active
 ---
 

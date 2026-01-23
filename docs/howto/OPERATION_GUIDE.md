@@ -16,7 +16,7 @@ status: "active"
   - [1) 详细指导（按 Step 组织）](#1-详细指导按-step-组织)
     - [Step 0：环境与依赖安装（core vs embed）——避免在 Python 3.13 及以上误装 Stage-2](#step-0环境与依赖安装core-vs-embed避免在-python-313-及以上误装-stage-2)
     - [Step 1：理解 Scheme B 的“口径契约”（先明确你要建的是什么库）](#step-1理解-scheme-b-的口径契约先明确你要建的是什么库)
-  - [**数目漂移**: 详情见补充说明](#数目漂移-详情见补充说明)
+  - [**数目漂移**: 详情见补充说明](#inventorycsv-补充说明)
     - [Step 2：目录与产物约定（避免“查错库/混用旧产物”）](#step-2目录与产物约定避免查错库混用旧产物)
     - [Step 3：从 inventory.csv 生成 units（extract）并做硬校验（validate 必须 PASS）](#step-3从-inventorycsv-生成-unitsextract并做硬校验validate-必须-pass)
     - [Step 4：plan（dry-run）——用“同参数计划数”取代手填 expected](#step-4plandry-run用同参数计划数取代手填-expected)

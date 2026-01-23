@@ -3,6 +3,7 @@ title: 文档体系 SSOT（Level 3：WAL/断点续跑语义）
 version: v1.0
 last_updated: 2026-01-23
 timezone: America/Los_Angeles
+owner: zhiz
 status: active
 ---
 
@@ -56,7 +57,7 @@ status: active
 
 - `index_state.json`：**完成态快照**，仅在成功完成后写入（success-only），缺失不代表“未写入任何数据”  
 - `index_state.stage.jsonl`：**WAL/进度事件流**，append-only，用于中断恢复与审计  
-- `policy=reset` / `--on-missing-state=reset`：当 `state` 缺失且 `collection.count>0` 时的**默认评估分支**；若 WAL 可续跑，最终决策可被 resume 覆盖（详见 CLI&日志真相表）  
+- `policy=reset` / `--on-missing-state=reset`：当 `state` 缺失且 `collection.count>0` 时的**默认评估分支**；若 WAL 可续跑，**最终生效**决策将进入 resume 路径（详见 CLI&日志真相表）  
 - `writer lock exists`：单写入者互斥保护；常见原因是上次中断遗留锁文件  
 - `strict-sync`：验收开关；`true` 时要求 build 后 `collection.count == expected_chunks`
 
