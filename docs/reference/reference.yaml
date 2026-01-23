@@ -1,7 +1,7 @@
 # Machine-readable SSOT for repo gates + schema + policy.
 # Keep this file stable: consumers must treat it as the single source of truth (SSOT).
 version: 2
-last_updated: "2026-01-20"
+last_updated: "2026-01-23"
 timezone: "America/Los_Angeles"
 
 exit_codes:

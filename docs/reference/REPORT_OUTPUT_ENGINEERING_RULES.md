@@ -5,12 +5,23 @@ last_updated: 2026-01-23
 timezone: America/Los_Angeles
 ssot: true
 scope: "统一输出工程规则（schema_version=2）：报告/状态元数据/长跑任务（进度与 events）"
+owner: "zhiz"
+status: "active"
 ---
 
 # 报告输出契约（v2）与工程规则（SSOT）
 
 
 > 本文档是**输出契约的单一真源（SSOT）**：约束 `schema_version=2` 的报告落盘、控制台渲染、VS Code 可点击定位链接，以及长跑任务的进度与 `*.events.jsonl` 恢复链路。
+
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
 
 ## 目录
 - [1. 背景与目标](#1-背景与目标)
@@ -20,7 +31,7 @@ scope: "统一输出工程规则（schema_version=2）：报告/状态元数据/
 - [5. 文件输出规则（JSON/Markdown）](#5-文件输出规则jsonmarkdown)
 - [6. 控制台输出规则（stdout）](#6-控制台输出规则stdout)
 - [7. VS Code 可点击链接规则](#7-vs-code-可点击链接规则)
-- [8. 长跑任务：进度（stderr）与 events（jsonl）](#8-长跑任务进度stderr-与-eventsjsonl)
+- [8. 长跑任务：进度（stderr）与 events（jsonl）](#8-长跑任务进度stderr与-eventsjsonl)
 - [9. 状态元数据纳入 v2](#9-状态元数据纳入-v2)
 - [10. 验收与门禁](#10-验收与门禁)
 - [11. MRE](#11-mre)

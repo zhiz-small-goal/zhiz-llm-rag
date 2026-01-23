@@ -22,11 +22,33 @@ generation:
 mapping_status: ok
 timezone: America/Los_Angeles
 cli_framework: argparse
+owner: "zhiz"
+status: "active"
 ---
 # write_db_build_stamp.py 使用说明
 
 
+
+## 目录
+
+- [SSOT 与口径入口](#ssot-与口径入口)
+- [快速开始](#快速开始)
+- [参数说明](#参数说明)
+- [退出码](#退出码)
+- [示例](#示例)
+- [输出](#输出)
+- [自动生成区块（AUTO）](#自动生成区块auto)
+
 > 目标：写入 db_build_stamp.json，记录数据库构建时间戳和元数据，为 rag-status 提供稳定的 freshness 判定基础。
+
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
 
 ## 快速开始
 

@@ -22,15 +22,64 @@ generation:
 mapping_status: ok
 timezone: America/Los_Angeles
 cli_framework: argparse
+owner: "zhiz"
+status: "active"
 ---
 # `verify_stage1_pipeline.py` 使用说明（Stage-1 一键验收/回归）
 
+
+
+## 目录
+
+- [SSOT 与口径入口](#ssot-与口径入口)
+- [1. 背景与目标](#1-背景与目标)
+- [2. 工具做什么、不做什么](#2-工具做什么不做什么)
+  - [2.1 做什么（Checks）](#21-做什么checks)
+  - [2.2 不做什么（Non-goals）](#22-不做什么non-goals)
+- [3. 目录约定与前置条件](#3-目录约定与前置条件)
+  - [3.1 典型目录结构](#31-典型目录结构)
+  - [3.2 前置条件](#32-前置条件)
+- [4. 快速开始（推荐工作流）](#4-快速开始推荐工作流)
+  - [Step 1：在项目根目录运行（最常用）](#step-1在项目根目录运行最常用)
+  - [Step 2：查看控制台结果与 JSON 报告](#step-2查看控制台结果与-json-报告)
+- [5. 命令行参数详解](#5-命令行参数详解)
+- [6. 输出说明（stdout + JSON）](#6-输出说明stdout-json)
+  - [6.1 标准输出（stdout）](#61-标准输出stdout)
+  - [6.2 JSON 报告（`data_processed/build_reports/stage1_verify.json`）](#62-json-报告data_processedbuild_reportsstage1_verifyjson)
+- [7. 常用场景（建议直接复制）](#7-常用场景建议直接复制)
+  - [7.1 只验收中间产物（不要求本机有 db/llm）](#71-只验收中间产物不要求本机有-dbllm)
+  - [7.2 只验收 Chroma（LLM 不在本机）](#72-只验收-chromallm-不在本机)
+  - [7.3 只探测 LLM（用于模型机健康检查）](#73-只探测-llm用于模型机健康检查)
+  - [7.4 在 CI 或脚本门禁里使用（基于退出码）](#74-在-ci-或脚本门禁里使用基于退出码)
+- [8. 设计原理（为什么这样检查）](#8-设计原理为什么这样检查)
+  - [8.1 “Artifacts 是单一真源”](#81-artifacts-是单一真源)
+  - [8.2 “planned_chunks == collection.count 是最小完整性约束”](#82-planned_chunks-collectioncount-是最小完整性约束)
+  - [8.3 LLM 探测只验证“协议链路”，不验证“模型语义”](#83-llm-探测只验证协议链路不验证模型语义)
+- [9. 故障排查（现象 → 原因 → 处理）](#9-故障排查现象-原因-处理)
+  - [9.1 artifacts FAIL：missing 文件](#91-artifacts-failmissing-文件)
+  - [9.2 chroma FAIL：db path not found](#92-chroma-faildb-path-not-found)
+  - [9.3 chroma FAIL：chromadb import failed](#93-chroma-failchromadb-import-failed)
+  - [9.4 llm FAIL：timeout / 非 2xx](#94-llm-failtimeout-非-2xx)
+- [10. 与现有工具/脚本的关系（推荐用法）](#10-与现有工具脚本的关系推荐用法)
+- [11. 最小可复现（MRE）](#11-最小可复现mre)
+- [12. 变更建议（进入下一阶段前可选）](#12-变更建议进入下一阶段前可选)
+- [代理与超时（重要）](#代理与超时重要)
+- [自动生成区块（AUTO）](#自动生成区块auto)
 
 > **适用日期**：2025-12-28  
 > **适配脚本**：`tools/verify_stage1_pipeline.py`（已将该脚本放入 `tools/` 目录）  
 > **用途定位**：在进入“下一阶段”之前，快速回答一个问题：**阶段一闭环链路是否仍然完整可复现**（产物齐全、Chroma 写入完整、LLM 端点可用）。
 
 ---
+
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
 
 ## 1. 背景与目标
 

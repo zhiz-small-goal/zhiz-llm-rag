@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - zhiz-llm-rag
-version: 7
-last_updated: 2026-01-21
+version: 10
+last_updated: 2026-01-23
 timezone: America/Los_Angeles
 ssot: true
 ---
@@ -18,9 +18,10 @@ ssot: true
 - [2. Active workstreams（并行线路一览）](#2-active-workstreams并行线路一览)
 - [3. WS-RETRIEVAL-REGRESSION（检索回归）](#3-ws-retrieval-regression检索回归)
 - [4. WS-REPORT-OBSERVABILITY（报告实时观测）](#4-ws-report-observability报告实时观测)
-- [5. 全局门禁策略（warning 过渡 → 收紧触发器）](#5-全局门禁策略warning-过渡--收紧触发器)
-- [6. 新对话接手提示词（可复制）](#6-新对话接手提示词可复制)
-- [7. 变更日志](#7-变更日志)
+- [5. WS-DOC-SYSTEM-LEVEL3（文档体系重构：WAL/断点续跑语义）](#5-ws-doc-system-level3文档体系重构wal断点续跑语义)
+- [6. 全局门禁策略（warning 过渡 → 收紧触发器）](#6-全局门禁策略warning-过渡--收紧触发器)
+- [7. 新对话接手提示词（可复制）](#7-新对话接手提示词可复制)
+- [8. 变更日志](#8-变更日志)
 
 ---
 
@@ -94,6 +95,7 @@ ssot: true
 |---|---|---|---|---|
 | WS-RETRIEVAL-REGRESSION | active | Stage-2 检索回归（分桶/对照/门禁收紧） | `eval_cases.jsonl` / `eval_retrieval_report.json` | warnings→fail 收紧触发器；非法桶直接 fail |
 | WS-REPORT-OBSERVABILITY | active | report 实时观测（流式事件 + 控制台摘要），不破坏最终 JSON | `data_processed/build_reports/*.events.jsonl` + `*_report.json` | TTFS / case 增量 / stream vs final 对账 / 兼容性 |
+| WS-DOC-SYSTEM-LEVEL3 | active | 文档体系重构（WAL/断点续跑语义）：术语/契约/去重/链接修复/门禁 | `docs/explanation/planning_doc_system_level3_sync_20260123.md` + `docs/explanation/doc_inventory.md` + `docs/explanation/doc_map.json` | Step1 覆盖清点；Step6（后续）最小文档门禁（链接/术语/front-matter） |
 
 ---
 ## 3. WS-RETRIEVAL-REGRESSION（检索回归）
@@ -207,19 +209,89 @@ next（最小改动优先）：
 - 回滚必须做到“删除 stream/progress 输出仍能生成 final JSON 且工具链可读”；换句话说：stream/progress 是旁路，不可成为主链路依赖。
 
 ---
-## 5. 全局门禁策略（warning 过渡 → 收紧触发器）
+## 5. WS-DOC-SYSTEM-LEVEL3（文档体系重构：WAL/断点续跑语义）
 
-### 5.1 迁移期（默认）
+> 目标：将全仓与“Chroma build 的 WAL/断点续跑语义”相关的文档口径统一到 SSOT，避免不同入口互相矛盾。
+
+### 5.1 scope / non-goals
+- scope：
+  - 全仓 `*.md` 的 Level 3 重构：统一术语、统一“reset/resume/WAL/state/锁/strict-sync”解释、去重、修复链接与 TOC/front-matter。
+  - 解释并固化“用户真实输出”相关的可操作 runbook：
+    - `--resume-status` 的字段含义与决策入口
+    - `policy=reset` 的日志含义（默认评估 vs 最终生效决策）
+    - `writer lock exists` 的互斥目的与处置
+- non-goals：
+  - 不改动代码行为；若文档发现与代码冲突，以代码为准并登记缺口。
+  - 不重写 archive/postmortem 的历史叙事（只加 NOTE/跳转）。
+
+### 5.2 SoT artifacts
+- 计划（Step1–Step6）：`docs/explanation/planning_doc_system_level3_sync_20260123.md`
+
+- Step1（Inventory + Map）
+  - 人类可读：`docs/explanation/doc_inventory.md`
+  - 机器可读：`docs/explanation/doc_map.json`
+  - 生成工具：`tools/gen_doc_inventory.py`（用法：`tools/gen_doc_inventory_README.md`）
+
+- Step2（SSOT + 术语）
+  - 文档体系裁决/引用边界：`docs/reference/DOC_SYSTEM_SSOT.md`
+  - 术语表（WAL/State/Resume）：`docs/reference/GLOSSARY_WAL_RESUME.md`
+  - 索引状态与锁语义（既有契约，已补齐与 CLI 对齐 NOTE）：`docs/reference/index_state_and_stamps.md`
+
+- Step3（CLI/日志真相表）
+  - `build_chroma_index_flagembedding` 参数/默认值/组合语义 + `--resume-status` 字段与关键日志：`docs/reference/build_chroma_cli_and_logs.md`
+
+
+### 5.3 commands（Step1–Step3）
+
+Windows CMD：
+
+- Step1：生成/更新清点与图谱
+```cmd
+python tools\gen_doc_inventory.py --root . --include-untracked --write
+```
+
+- Step3：只读预检（runbook 第一入口）
+```cmd
+python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
+```
+
+- Step6：文档门禁（links/terms/front-matter）
+```cmd
+python tools\check_doc_system_gate.py --root . --doc-map docs\explanation\doc_map.json --out data_processed\build_reports\doc_system_gate_report.json --md-out data_processed\build_reports\doc_system_gate_report.md
+```
+
+
+### 5.4 acceptance（Step1）
+- 覆盖面：`doc_map.json.meta.tracked_md_files_total` 必须覆盖 `git ls-files "*.md"` 的全部文件。
+- 图谱完整性：每份文档必须有唯一 `role`（reference/guide/runbook/README/archive/postmortem）与 `action`（need_align/only_note/no_action）。
+- 关键字命中：所有命中文档必须被标注（need_align/only_note）。
+
+### 5.5 status / next
+- 已完成：Step1（Inventory+Map）、Step2（SSOT+术语）、Step3（CLI/日志真相表）。
+- 已推进：Step4/5（对 need_align 文档收敛到 SSOT，并补齐 TOC/front-matter/链接）。
+- 已完成：Step6 最小门禁脚本 `tools/check_doc_system_gate.py`（当前 scope：仅 keyword_hits 文档 + ALWAYS_INCLUDE 入口文档）。
+
+下一步建议（继续按批次推进）：
+1) 依据 `doc_inventory.md` 的 `need_align` 集合，分目录扩展迁移去重范围（优先 README/howto/tools README）。
+2) 将 Step6 gate 的 `INFO` 项逐步收紧为 `WARN/FAIL`（先入口文档，再扩展到全仓）。
+
+### 5.6 rollback
+- Step1 产物可随时用生成器重建；任何迁移改动必须分批提交并可回滚到“仅 NOTE/跳转”的状态。
+
+---
+## 6. 全局门禁策略（warning 过渡 → 收紧触发器）
+
+### 6.1 迁移期（默认）
 - 旧格式/缺字段允许继续运行，但必须产生 `warnings` 并落盘，禁止 silent failure。
 - 会导致统计/契约失真的错误（例如：非法枚举值、schema 破坏、关键输出缺失）应直接 FAIL。
 
-### 5.2 收紧触发器（逐条收紧，不一步到位）
+### 6.2 收紧触发器（逐条收紧，不一步到位）
 - `warnings_ratio <= 1%`（或 warnings 连续 N 次回归接近 0）
 - `oral_cases >= 10`（口语桶样本量达到可解释规模）
 - `pair_id_coverage >= 5`（至少覆盖 5 个高价值概念对照组）
 满足后，将对应 warning 升级为 FAIL。
 
-### 5.3 Repo Gate（PR/CI Lite：Schema + Policy + 可审计报告）
+### 6.3 Repo Gate（PR/CI Lite：Schema + Policy + 可审计报告）
 
 - Review Spec（审查规范）门禁：
   - SSOT：`docs/reference/review/review_spec.v1.json`
@@ -239,18 +311,29 @@ next（最小改动优先）：
 
 ---
 
-## 6. 新对话接手提示词（可复制）
+## 7. 新对话接手提示词（可复制）
 
 > 你是“技术顾问+系统分析师”。我在维护一个本地 RAG/检索项目。  
 > SSOT：请先读取 `docs/explanation/HANDOFF.md` 并遵循其中的 Read→Derive→Act→Write-back。  
-> 当前有两条并行 workstream：  
+> 当前有三条并行 workstream：  
 > 1) WS-RETRIEVAL-REGRESSION：口语 query 与官方术语不一致导致 topK 漏召回。我已完成 eval_cases 分桶（oral/official/ambiguous）并生成检索回归与端到端回归报告。请基于最新 `eval_cases.jsonl` 与 `eval_retrieval_report.json / eval_rag_report.json` 做诊断并给最小改动方案，保持可回滚与可观测，并给门禁收紧触发器。  
 > 2) WS-REPORT-OBSERVABILITY：我希望长任务可实时观测。请在不破坏最终报告 JSON 兼容性的前提下，引入流式事件/进度快照/控制台摘要，并提供对账门禁（stream vs final）。  
+> 3) WS-DOC-SYSTEM-LEVEL3：我希望把全仓 Markdown 做 Level 3 文档体系重构（WAL/断点续跑语义）。请先执行 Step1（Inventory + Map）：运行 `python tools/gen_doc_inventory.py --root . --include-untracked --write`，并基于 `docs/explanation/doc_inventory.md` + `doc_map.json` 规划后续 Step2/3（SSOT/术语/CLI&日志真相表）与分批迁移。  
 > 若涉及模型字段：以 `GET /v1/models` 返回 id 为准，不要使用占位符。
 
 ---
 
-## 7. 变更日志
+## 8. 变更日志
+
+### v9 (2026-01-23)
+- WS-DOC-SYSTEM-LEVEL3：补齐 Step2/Step3 SSOT 工件（DOC_SYSTEM_SSOT / GLOSSARY_WAL_RESUME / build_chroma_cli_and_logs），并在 index_state_and_stamps 增补与 CLI 对齐 NOTE。
+
+
+### v8 (2026-01-23)
+- 新增 workstream：WS-DOC-SYSTEM-LEVEL3（文档体系重构：WAL/断点续跑语义）
+- 落盘 Step1 产物：`docs/explanation/doc_inventory.md` + `docs/explanation/doc_map.json`
+- 新增生成工具：`tools/gen_doc_inventory.py`（用法：`tools/gen_doc_inventory_README.md`）
+- 新增计划文档：`docs/explanation/planning_doc_system_level3_sync_20260123.md`
 
 ### v7 (2026-01-17)
 - **报告输出 v2 升级完成**（WS-REPORT-OBSERVABILITY）：

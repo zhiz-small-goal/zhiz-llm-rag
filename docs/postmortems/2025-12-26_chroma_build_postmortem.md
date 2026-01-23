@@ -1,3 +1,10 @@
+> NOTE（现行口径 / SSOT 跳转）：本文为历史材料或旧入口，相关解释可能与当前实现存在差异。
+> - CLI 与日志真相表（SSOT）：`docs/reference/build_chroma_cli_and_logs.md`
+> - 文件语义（state/WAL/lock）：`docs/reference/index_state_and_stamps.md`
+> - 术语表：`docs/reference/GLOSSARY_WAL_RESUME.md`
+> - 文档裁决规则：`docs/reference/DOC_SYSTEM_SSOT.md`
+
+
 [关键词] chroma build, expected_chunks, count mismatch, media skip, include-media-stub, chunk_plan
 
 

@@ -1,3 +1,10 @@
+> NOTE（现行口径 / SSOT 跳转）：本文为历史材料或旧入口，相关解释可能与当前实现存在差异。
+> - CLI 与日志真相表（SSOT）：`docs/reference/build_chroma_cli_and_logs.md`
+> - 文件语义（state/WAL/lock）：`docs/reference/index_state_and_stamps.md`
+> - 术语表：`docs/reference/GLOSSARY_WAL_RESUME.md`
+> - 文档裁决规则：`docs/reference/DOC_SYSTEM_SSOT.md`
+
+
 # 2025-12-29_chroma_build_postmortem_count_mismatch_3728_vs_4433.md目录：
 
 > 注意（2026-01-23）：`build_chroma_index_flagembedding` 已引入断点续跑 WAL（`index_state.stage.jsonl`）与 `--resume-status`。因此当出现“state 缺失但库非空”的场景时，`on-missing-state=reset` 可能会被 WAL 的 resume 分支覆盖（以避免清除已写入进度）。若你确实要全量重建，可用 `--resume off` 显式关闭续跑。

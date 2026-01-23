@@ -1,7 +1,10 @@
 ---
 title: 参考与契约（REFERENCE）
-version: v1.3
-last_updated: 2026-01-20
+version: v1.4
+last_updated: 2026-01-23
+timezone: "America/Los_Angeles"
+owner: "zhiz"
+status: "active"
 ---
 
 > SSOT（机器可读）: `docs/reference/reference.yaml`。CI 与 gate runner 以此为准。
@@ -31,6 +34,15 @@ last_updated: 2026-01-20
 ---
 
 ## 1. 参考入口与导航
+
+- **WAL/断点续跑（文档体系 Level 3）**：
+  - SSOT（裁决优先级/引用边界）：`docs/reference/DOC_SYSTEM_SSOT.md`
+  - CLI 与日志真相表：`docs/reference/build_chroma_cli_and_logs.md`
+  - 术语表：`docs/reference/GLOSSARY_WAL_RESUME.md`
+
+- **文档体系门禁（Level 3）**：`tools/check_doc_system_gate.py`（链接/术语/front-matter 一致性）
+  - 推荐：`python tools\check_doc_system_gate.py --root . --doc-map docs\explanation\doc_map.json --out data_processed\build_reports\doc_system_gate_report.json --md-out data_processed\build_reports\doc_system_gate_report.md`
+
 
 - 报告输出契约与工程规则（schema_version=2，SSOT）：[`REPORT_OUTPUT_ENGINEERING_RULES.md`](REPORT_OUTPUT_ENGINEERING_RULES.md)
   - 兼容入口：[`REPORT_OUTPUT_CONTRACT.md`](REPORT_OUTPUT_CONTRACT.md)

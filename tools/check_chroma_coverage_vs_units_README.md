@@ -22,11 +22,29 @@ generation:
 mapping_status: ok
 timezone: America/Los_Angeles
 cli_framework: argparse
+owner: "zhiz"
+status: "active"
 ---
 # check_chroma_coverage_vs_units.py 使用说明
 
 
 > 目标：快速判断 Chroma 索引覆盖率，用于"中断恢复/是否需要重跑"的决策依据，避免不必要的全量重建。
+
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
+
+### 关于 `policy=reset` 的两阶段含义（默认评估 vs 最终生效）
+
+当你看到类似 `index_state missing ... policy=reset` 的 WARN 时，它表达的是对 `--on-missing-state=reset` 的**默认评估**分支，并不等价于“已经执行 reset”。  
+若同一轮启动还出现 `WAL indicates resumable progress; ignore on-missing-state=reset and continue with resume.`，则代表 WAL 判定可续跑，进入 resume 路径为**最终生效**决策，此时不会执行 reset（避免重复写入与无谓重置）。  
+详见：`docs/reference/build_chroma_cli_and_logs.md` 的“关键日志与含义”。
+
 
 ## 目录
 - [目的](#目的)

@@ -1,6 +1,6 @@
 ---
 title: index_state.py 使用说明（索引状态管理模块）
-version: v1.2
+version: v1.3
 last_updated: 2026-01-23
 tool_id: index_state
 
@@ -23,13 +23,44 @@ generation:
 mapping_status: ok
 timezone: America/Los_Angeles
 cli_framework: other
+owner: "zhiz"
+status: "active"
 ---
 # index_state.py 使用说明
 
 
+
+## 目录
+
+- [SSOT 与口径入口](#ssot-与口径入口)
+- [目的](#目的)
+- [运行入口（entrypoints）说明（非稳定 CLI）](#运行入口entrypoints说明非稳定-cli)
+- [与断点续跑（WAL）的关系](#与断点续跑wal的关系)
+- [主要API](#主要api)
+  - [1) compute_schema_hash](#1-compute_schema_hash)
+  - [2) load_index_state（兼容 v1 -> v2）](#2-load_index_state兼容-v1-v2)
+  - [3) write_index_state_report（v2 写入推荐入口）](#3-write_index_state_reportv2-写入推荐入口)
+  - [4) read_latest_pointer / write_latest_pointer](#4-read_latest_pointer-write_latest_pointer)
+- [状态文件结构（v2 示例）](#状态文件结构v2-示例)
+- [目录布局](#目录布局)
+- [关联自检](#关联自检)
+- [自动生成区块（AUTO）](#自动生成区块auto)
+
 > 目标：为增量构建 + 强一致验收提供最小状态文件（manifest）管理，记录每个文档的 doc_id、content_sha256、n_chunks，支持新增/变更/删除判定。
 
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
+
 ## 目的
+
+> 相关 SSOT：`docs/reference/index_state_and_stamps.md`、`docs/reference/build_chroma_cli_and_logs.md`、`docs/reference/GLOSSARY_WAL_RESUME.md`。
+
 
 本模块是工具库模块（非命令行工具），提供：
 

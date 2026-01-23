@@ -1,13 +1,18 @@
 ---
 title: OPERATION GUIDE（运行手册）
-version: v1.1
+version: v1.2
 last_updated: 2026-01-23
+timezone: "America/Los_Angeles"
+owner: "zhiz"
+status: "active"
 ---
 
 # OPERATION_GUIDE目录：
 
 
 - [OPERATION\_GUIDE目录：](#operation_guide目录)
+  - [SSOT 与口径入口](#ssot-与口径入口)
+    - [关于 `policy=reset` 的两阶段含义（默认评估 vs 最终生效）](#关于-policyreset-的两阶段含义默认评估-vs-最终生效)
   - [1) 详细指导（按 Step 组织）](#1-详细指导按-step-组织)
     - [Step 0：环境与依赖安装（core vs embed）——避免在 Python 3.13 及以上误装 Stage-2](#step-0环境与依赖安装core-vs-embed避免在-python-313-及以上误装-stage-2)
     - [Step 1：理解 Scheme B 的“口径契约”（先明确你要建的是什么库）](#step-1理解-scheme-b-的口径契约先明确你要建的是什么库)
@@ -33,6 +38,22 @@ last_updated: 2026-01-23
 
 
 ---
+
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
+
+### 关于 `policy=reset` 的两阶段含义（默认评估 vs 最终生效）
+
+当你看到类似 `index_state missing ... policy=reset` 的 WARN 时，它表达的是对 `--on-missing-state=reset` 的**默认评估**分支，并不等价于“已经执行 reset”。  
+若同一轮启动还出现 `WAL indicates resumable progress; ignore on-missing-state=reset and continue with resume.`，则代表 WAL 判定可续跑，进入 resume 路径为**最终生效**决策，此时不会执行 reset（避免重复写入与无谓重置）。  
+详见：`docs/reference/build_chroma_cli_and_logs.md` 的“关键日志与含义”。
+
 
 ## 1) 详细指导（按 Step 组织）
 
@@ -174,6 +195,13 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
 **新增（2025-12-29）：增量同步（index_state/manifest）**
 
 **新增（2026-01-23）：断点续跑（WAL）+ 单写入者锁（writer.lock）**
+
+> 相关 SSOT：
+> - CLI 与日志真相表：[`../reference/build_chroma_cli_and_logs.md`](../reference/build_chroma_cli_and_logs.md)
+> - 文件语义（state/WAL/lock）：[`../reference/index_state_and_stamps.md`](../reference/index_state_and_stamps.md)
+> - 术语表：[`../reference/GLOSSARY_WAL_RESUME.md`](../reference/GLOSSARY_WAL_RESUME.md)
+> - 文档裁决规则：[`../reference/DOC_SYSTEM_SSOT.md`](../reference/DOC_SYSTEM_SSOT.md)
+
 **做什么**：build 过程会在 `data_processed/index_state/<collection>/<schema_hash>/` 下追加写入 `index_state.stage.jsonl`（WAL）。当进程被中断或异常退出时，下一次启动会优先读取 WAL 来恢复进度：**跳过已 `DOC_COMMITTED` 的 doc，仅处理剩余部分**；同时会创建 `writer.lock`，用于阻止并发写入导致 WAL/collection 交错。
 **为何（因果）**：`index_state.json` 是 only-on-success 的完成态 manifest，中断时通常缺失；如果仅依赖 manifest，会把“已写入但未完成”的状态误判为需要 reset。WAL 的职责是把“写入进度”在运行期同步落盘，从而让恢复语义具备可核验依据。
 **关键参数/注意**：
@@ -188,20 +216,21 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
   ```cmd
   python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume off --on-missing-state reset
   ```
-- 若遇到 `writer lock exists`：先确认无并发 build 进程；再删除 `writer.lock` 后重试（或用 `--writer-lock false` 绕过锁，但需你保证单写入者）。
+- 若遇到 `writer lock exists`：先执行 `--resume-status` 读取 wal/state；确认当前无并发 build 进程后，再按决策树处理：优先选择“继续续跑”或“显式禁用 resume 并重建”；仅在确认锁为遗留且无并发时才删除 `writer.lock`。如需临时绕过锁，可用 `--writer-lock false`，但必须由你保证单写入者与 WAL 不被交叉写入。
   
 **做什么**：build 脚本默认启用 `--sync-mode incremental`，会在 `data_processed/index_state/` 下写入索引状态；后续重复运行时：  
 - 只对新增/内容变更文件做 embedding + upsert；  
 - 对删除/内容变更文件先按 doc 粒度 delete 旧 chunk，避免 “count mismatch”；  
 - schema 变化（embed_model/chunk_conf/include_media_stub）会触发自动 reset（默认策略），保证口径一致。
 
-**关键参数**：  
-- `--sync-mode incremental|delete-stale|none`（推荐 `incremental`）；  
-- `--on-missing-state reset`（state 缺失但库非空时，自动重置）；  
-- `--schema-change reset`（口径变更时自动重置）；  
-- `--strict-sync true`（构建后若 `count!=expected` 直接 FAIL）。
+**关键参数（只列 runbook 决策会用到的开关；完整参数/默认值以 SSOT 为准）**：
+- `--resume-status`：只读预检（优先执行）。
+- `--resume auto|off|force`：是否使用 WAL 续跑（`off` 表示即便 WAL 存在也不续跑）。
+- `--on-missing-state reset|fail|full-upsert`：state 缺失且库非空时的默认分支评估；若 WAL 可续跑会被覆盖进入 resume。
+- `--writer-lock true|false`：互斥锁（默认 true）；仅在你能保证“单写入者”时才考虑关闭。
+- `--strict-sync true|false`：构建后强一致验收开关。
 
-**断点续跑相关参数**：
+**断点续跑相关参数（完整表见 SSOT；此处只保留入口）**：
 - `--wal on|off`：是否写入进度 WAL（默认 on）。
 - `--resume auto|off|force`：WAL 存在时的续跑策略（默认 auto）。
 - `--resume-status`：只读打印 RESUME STATUS 并退出。

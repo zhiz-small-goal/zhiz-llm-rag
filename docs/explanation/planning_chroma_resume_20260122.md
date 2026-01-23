@@ -7,6 +7,13 @@ owner: "zhiz"
 status: "draft"
 ---
 
+# Chroma 索引断点续跑（方案 B）推进计划
+
+> 目标：中断后再次运行时，不重复处理已确认完成写入的文档；仅处理剩余部分；并支持“写入多少、进度记录就同步在”的可核验进度日志。  
+> 适用范围：`tools/build_chroma_index_flagembedding.py build` 及其生成的 `index_state.json` / `index_state.stage.jsonl`。  
+> 约定：对外“完成态口径”以 `index_state.json` 为准；`index_state.stage.jsonl` 用作构建过程旁路 **进度/WAL**（用于恢复与审计），成功结束后可清理或归档。  
+
+
 > NOTE（现行口径 / SSOT 跳转）：本文为历史材料或旧入口，相关解释可能与当前实现存在差异。
 > - CLI 与日志真相表（SSOT）：`docs/reference/build_chroma_cli_and_logs.md`
 > - 文件语义（state/WAL/lock）：`docs/reference/index_state_and_stamps.md`
@@ -14,12 +21,13 @@ status: "draft"
 > - 文档裁决规则：`docs/reference/DOC_SYSTEM_SSOT.md`
 
 
+## SSOT 与口径入口
 
-# Chroma 索引断点续跑（方案 B）推进计划
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
 
-> 目标：中断后再次运行时，不重复处理已确认完成写入的文档；仅处理剩余部分；并支持“写入多少、进度记录就同步在”的可核验进度日志。  
-> 适用范围：`tools/build_chroma_index_flagembedding.py build` 及其生成的 `index_state.json` / `index_state.stage.jsonl`。  
-> 约定：对外“完成态口径”以 `index_state.json` 为准；`index_state.stage.jsonl` 用作构建过程旁路 **进度/WAL**（用于恢复与审计），成功结束后可清理或归档。  
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
 
 ## 目录
 - [结论](#结论)

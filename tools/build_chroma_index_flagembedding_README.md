@@ -1,7 +1,7 @@
 ---
 title: build_chroma_index_flagembedding.py 使用说明（FlagEmbedding 构建 Chroma 索引）
-version: v1.1
-last_updated: 2026-01-22
+version: v1.2
+last_updated: 2026-01-23
 tool_id: build_chroma_index_flagembedding
 
 impl:
@@ -22,11 +22,29 @@ generation:
 mapping_status: ok
 timezone: America/Los_Angeles
 cli_framework: argparse
+owner: "zhiz"
+status: "active"
 ---
 # build_chroma_index_flagembedding.py 使用说明
 
 
 > 目标：使用 FlagEmbedding (BGE-M3) 构建/更新 Chroma 向量索引，支持增量同步（incremental）、删除过期（delete-stale）等策略，并提供强一致验收（expected_chunks == collection.count）。
+
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
+
+### 关于 `policy=reset` 的两阶段含义（默认评估 vs 最终生效）
+
+当你看到类似 `index_state missing ... policy=reset` 的 WARN 时，它表达的是对 `--on-missing-state=reset` 的**默认评估**分支，并不等价于“已经执行 reset”。  
+若同一轮启动还出现 `WAL indicates resumable progress; ignore on-missing-state=reset and continue with resume.`，则代表 WAL 判定可续跑，进入 resume 路径为**最终生效**决策，此时不会执行 reset（避免重复写入与无谓重置）。  
+详见：`docs/reference/build_chroma_cli_and_logs.md` 的“关键日志与含义”。
+
 
 ## 目录
 - [目的](#目的)
@@ -83,41 +101,19 @@ python tools\build_chroma_index_flagembedding.py build --root . --embed-model BA
 
 ## 参数说明
 
-| 参数 | 默认值 | 说明 |
-|---|---:|---|
-| **输入/输出** |||
-| `--root` | `.` | 项目根目录 |
-| `--units` | `data_processed/text_units.jsonl` | 文本单元输入文件 |
-| `--db` | `chroma_db` | Chroma 持久化目录 |
-| `--collection` | `rag_chunks` | Collection 名称 |
-| `--plan` | *(空)* | chunk_plan.json 路径（可选，用于 db_build_stamp 追溯） |
-| **Embedding** |||
-| `--embed-model` | `BAAI/bge-m3` | FlagEmbedding 模型名 |
-| `--device` | `cpu` | 设备（cpu/cuda） |
-| `--embed-batch` | `32` | Embedding 批大小 |
-| `--upsert-batch` | `256` | Upsert 批大小 |
-| **分块配置** |||
-| `--chunk-chars` | `1200` | 单个 chunk 最大字符数 |
-| `--overlap-chars` | `120` | 重叠字符数 |
-| `--min-chunk-chars` | `200` | 最小 chunk 字符数（小于此值丢弃） |
-| `--include-media-stub` | *(flag)* | 是否索引媒体 stub |
-| `--hnsw-space` | `cosine` | HNSW 距离（cosine/l2/ip） |
-| **同步/状态** |||
-| `--sync-mode` | `incremental` | 同步模式（none/delete-stale/incremental） |
-| `--state-root` | `data_processed/index_state` | 状态文件根目录 |
-| `--on-missing-state` | `reset` | 状态缺失时策略（reset/fail/full-upsert） |
-| `--schema-change` | `reset` | schema 变更时策略（reset/fail） |
-| `--delete-batch` | `5000` | 删除操作批大小 |
-| `--strict-sync` | `true` | 是否强制检查 count == expected_chunks |
-| `--write-state` | `true` | 是否写入 index_state.json |
-| **断点续跑/WAL** |||
-| `--wal` | `on` | 是否写入进度/WAL：`index_state.stage.jsonl` |
-| `--resume` | `auto` | 断点续跑（auto/off/force）：auto=按 WAL 自动续跑；off=禁用；force=无可续跑 WAL 则失败 |
-| `--resume-status` | *(flag)* | 只读输出 WAL/状态概览并退出 |
-| `--wal-fsync` | `off` | WAL fsync 策略（off/doc/interval） |
-| `--wal-fsync-interval` | `200` | wal-fsync=interval 时，每 N 个 WAL 事件 fsync |
-| `--keep-wal` | *(flag)* | 成功且写入 state 后仍保留 WAL |
-| `--writer-lock` | `true` | 是否在 state dir 创建单写入者锁（writer.lock） |
+本工具的**完整参数/默认值/互斥与组合语义**以 SSOT 为准（避免 README 漂移）：
+
+- 参考（SSOT）：[`docs/reference/build_chroma_cli_and_logs.md`](../docs/reference/build_chroma_cli_and_logs.md)
+- 术语：[`docs/reference/GLOSSARY_WAL_RESUME.md`](../docs/reference/GLOSSARY_WAL_RESUME.md)
+- 文件语义：[`docs/reference/index_state_and_stamps.md`](../docs/reference/index_state_and_stamps.md)
+
+本 README 仅保留 runbook 会用到的常见开关（示例见下文“快速开始/示例/常见问题”）：
+
+- `--resume-status`：只读预检并退出
+- `--resume auto|off|force`：WAL 存在时的续跑策略
+- `--on-missing-state reset|fail|full-upsert`：state 缺失且库非空时的默认分支评估（WAL 可续跑时可能被覆盖进入 resume）
+- `--writer-lock true|false`：单写入者互斥锁
+- `--strict-sync true|false`：构建后强一致验收开关
 
 ## 同步模式说明
 

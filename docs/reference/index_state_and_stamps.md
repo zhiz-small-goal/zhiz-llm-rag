@@ -2,12 +2,31 @@
 title: Index State 与 Stamps 契约
 version: v1.2
 last_updated: 2026-01-23
+timezone: "America/Los_Angeles"
+owner: "zhiz"
+status: "active"
 ---
 
 # Index State 与 Stamps 契约
 
 
 > 目的：把“增量同步状态（index_state）”与“写库完成戳（stamps）”写成可核验契约，避免把 DB 目录 mtime 当成上游输入，从而降低 `rag-status` 的误报与漂移。
+
+
+## SSOT 与口径入口
+
+- **文档体系 SSOT**：`docs/reference/DOC_SYSTEM_SSOT.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+
+> 约束：本文仅保留“怎么做/怎么排障”的最短路径；参数默认值与字段解释以真相表为准。
+
+### 关于 `policy=reset` 的两阶段含义（默认评估 vs 最终生效）
+
+当你看到类似 `index_state missing ... policy=reset` 的 WARN 时，它表达的是对 `--on-missing-state=reset` 的**默认评估**分支，并不等价于“已经执行 reset”。  
+若同一轮启动还出现 `WAL indicates resumable progress; ignore on-missing-state=reset and continue with resume.`，则代表 WAL 判定可续跑，进入 resume 路径为**最终生效**决策，此时不会执行 reset（避免重复写入与无谓重置）。  
+详见：`docs/reference/build_chroma_cli_and_logs.md` 的“关键日志与含义”。
+
 
 ## 目录
 - [Index State 与 Stamps 契约](#index-state-与-stamps-契约)
@@ -143,6 +162,9 @@ last_updated: 2026-01-23
 - 与 `index_state.json` 的关系：`index_state.json` 是 only-on-success 的完成态 manifest；WAL 是运行期的旁路证据，允许在 manifest 缺失时仍能恢复。
 - 持久化策略：默认每条事件 flush；可选 `--wal-fsync` 在 doc 提交或按事件间隔 fsync，以换取更强的“写入多少、记录就同步在”的语义。
 
+
+> NOTE（与 CLI 行为对齐）：当 `index_state.json` 缺失且 `collection.count>0` 时，CLI 会先输出一条“policy=reset”的默认评估 WARN；若 WAL 表示可续跑（`resume_active=true`），最终决策会覆盖 reset 并进入 resume。详细规则以 `docs/reference/build_chroma_cli_and_logs.md` 为准。
+
 ### 3.5 单写入者锁（`writer.lock`）
 - 位置：`data_processed/index_state/<collection>/<schema_hash>/writer.lock`
 - 语义：防止并发 build 进程同时写同一 collection/state/WAL，导致恢复链路失真。
@@ -182,3 +204,11 @@ last_updated: 2026-01-23
 
 - **原子写**：写 stamp/状态文件时，先写临时文件（`.tmp`），再用原子替换（rename/replace），避免中断导致半写 JSON。
 - **单写入者**：同一时刻不应有两个 build 作业写入同一 `db + collection + index_state`，否则状态会互相覆盖并导致不可复核。
+
+
+### writer lock 的处置顺序（以只读预检为第一步）
+
+1) 先运行 `--resume-status` 读取 WAL/状态，确认是否存在可续跑进度与当前决策（resume_active）。  
+2) 再确认没有并发进程正在写同一 collection（例如另一个终端/CI 任务未退出）。  
+3) 若确认无并发且锁为中断遗留，可移除 `writer.lock` 后重试；若希望完全绕过续跑，使用 `--resume off`。  
+详见：`docs/howto/OPERATION_GUIDE.md` 与 `docs/reference/build_chroma_cli_and_logs.md`。
