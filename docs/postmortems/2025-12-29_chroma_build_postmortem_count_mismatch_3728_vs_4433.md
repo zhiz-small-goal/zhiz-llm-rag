@@ -1,8 +1,19 @@
+---
+title: "2025-12-29 Chroma 构建数量异常排查（expected=3728 vs got=4433）"
+version: "1.0"
+last_updated: 2026-01-25
+timezone: "America/Los_Angeles"
+owner: "zhiz"
+status: "done"
+---
+
 > NOTE（现行口径 / SSOT 跳转）：本文为历史材料或旧入口，相关解释可能与当前实现存在差异。
 > - CLI 与日志真相表（SSOT）：`docs/reference/build_chroma_cli_and_logs.md`
 > - 文件语义（state/WAL/lock）：`docs/reference/index_state_and_stamps.md`
 > - 术语表：`docs/reference/GLOSSARY_WAL_RESUME.md`
 > - 文档裁决规则：`docs/reference/DOC_SYSTEM_SSOT.md`
+
+> 关于 `policy=reset` 的两阶段含义：日志里的 `index_state missing ... policy=reset` 属于对 `--on-missing-state=reset` 的默认评估，并不代表已经执行 reset；若同一轮发现 WAL 可续跑会走 resume 作为最终生效决策，不会清库。确需强制重置时，请显式加上 `--resume off` 或手动清理 WAL。
 
 
 # 2025-12-29_chroma_build_postmortem_count_mismatch_3728_vs_4433.md目录：
@@ -11,24 +22,24 @@
 
 
 - [1. 现象与触发](#1-现象与触发)
-  - [1.1 检查输出（你提供）](#1-1-检查输出-你提供)
-  - [1.2 直接结论（现象级）](#1-2-直接结论-现象级)
+  - [1.1 检查输出（你提供）](#11-检查输出你提供)
+  - [1.2 直接结论（现象级）](#12-直接结论现象级)
 - [2. 问题定义](#2-问题定义)
 - [3. 关键证据与排查过程](#3-关键证据与排查过程)
-  - [3.1 期望值来自 plan（expected=3728）](#3-1-期望值来自-plan-expected-3728)
-  - [3.2 实际库内条目数（got=4433）](#3-2-实际库内条目数-got-4433)
-  - [3.3 计数大于期望的含义：存在“计划外残留”](#3-3-计数大于期望的含义-存在计划外残留)
-  - [3.4 为什么“重跑流程”仍会保留残留](#3-4-为什么重跑流程仍会保留残留)
-- [4. 根因分析（RCA）](#4-根因分析-rca)
-  - [4.1 直接根因（Direct Cause）](#4-1-直接根因-direct-cause)
-  - [4.2 促成因素（Contributing Factors）](#4-2-促成因素-contributing-factors)
-  - [4.3 反事实验证（如何证伪/证实）](#4-3-反事实验证-如何证伪-证实)
+  - [3.1 期望值来自 plan（expected=3728）](#31-期望值来自-planexpected3728)
+  - [3.2 实际库内条目数（got=4433）](#32-实际库内条目数got4433)
+  - [3.3 计数大于期望的含义：存在“计划外残留”](#33-计数大于期望的含义存在计划外残留)
+  - [3.4 为什么“重跑流程”仍会保留残留](#34-为什么重跑流程仍会保留残留)
+- [4. 根因分析（RCA）](#4-根因分析rca)
+  - [4.1 直接根因（Direct Cause）](#41-直接根因direct-cause)
+  - [4.2 促成因素（Contributing Factors）](#42-促成因素contributing-factors)
+  - [4.3 反事实验证（如何证伪/证实）](#43-反事实验证如何证伪证实)
 - [5. 修复与处置](#5-修复与处置)
-  - [5.1 一次性修复（推荐）：隔离旧库/重置 collection 后重建](#5-1-一次性修复-推荐-隔离旧库-重置-collection-后重建)
-  - [5.2 低成本验证（不重建也能定位）：证明存在多余 ids](#5-2-低成本验证-不重建也能定位-证明存在多余-ids)
-  - [5.3 长期方案：构建语义从 merge(upsert) 升级为 sync（index_state/manifest）](#5-3-长期方案-构建语义从-merge-upsert-升级为-sync-indexstate-manifest)
+  - [5.1 一次性修复（推荐）：隔离旧库/重置 collection 后重建](#51-一次性修复推荐隔离旧库重置-collection-后重建)
+  - [5.2 低成本验证（不重建也能定位）：证明存在多余 ids](#52-低成本验证不重建也能定位证明存在多余-ids)
+  - [5.3 长期方案：构建语义从 merge(upsert) 升级为 sync（index_state/manifest）](#53-长期方案构建语义从-mergeupsert-升级为-syncindex_statemanifest)
 - [6. 预防与回归测试](#6-预防与回归测试)
-- [7. 最小可复现（MRE）](#7-最小可复现-mre)
+- [7. 最小可复现（MRE）](#7-最小可复现mre)
 - [8. 一句话复盘](#8-一句话复盘)
 
 [关键词] chroma build, expected_chunks, count mismatch, residual data, plan-driven, include_media_stub, schemeB

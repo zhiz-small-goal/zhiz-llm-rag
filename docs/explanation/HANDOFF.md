@@ -3,6 +3,8 @@ title: HANDOFF (SSOT) - zhiz-llm-rag
 version: 10
 last_updated: 2026-01-23
 timezone: America/Los_Angeles
+owner: zhiz
+status: active
 ssot: true
 ---
 

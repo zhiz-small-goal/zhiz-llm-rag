@@ -2,6 +2,8 @@
 title: Report Output v2 后续落地规划（Planning）
 version: 1.0.0
 last_updated: 2026-01-18
+timezone: "America/Los_Angeles"
+owner: "zhiz"
 status: draft
 scope: report-output-v2
 ---
