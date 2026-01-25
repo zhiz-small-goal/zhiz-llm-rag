@@ -7,7 +7,7 @@
 # Contract: Report Output v2 (schema_version=2) unless explicitly stated.
 
 schema_version = 1
-last_updated = "2026-01-20"
+last_updated = "2026-01-25"
 source_timezone = "America/Los_Angeles"
 
 # ---------------------------
@@ -301,3 +301,25 @@ high_cost = false
 artifacts = [
   "data_processed/index_state/db_build_stamp.json",
 ]
+
+[[tool]]
+id = "snapshot_eval_retrieval_baseline"
+module = "mhy_ai_rag_data.tools.snapshot_eval_retrieval_baseline"
+kind = "STATE_REPORT"
+contract_version = 2
+entrypoint = "python tools/snapshot_eval_retrieval_baseline.py"
+channels = ["file", "console"]
+high_cost = false
+supports_selftest = true
+
+
+[[tool]]
+id = "compare_eval_retrieval_baseline"
+module = "mhy_ai_rag_data.tools.compare_eval_retrieval_baseline"
+kind = "CHECK_REPORT"
+contract_version = 2
+entrypoint = "python tools/compare_eval_retrieval_baseline.py"
+channels = ["file", "console"]
+high_cost = false
+supports_selftest = true
+

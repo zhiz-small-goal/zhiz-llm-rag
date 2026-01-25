@@ -73,6 +73,11 @@ def main() -> int:
         "--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)"
     )
     ap.add_argument(
+        "--skip-if-missing",
+        action="store_true",
+        help="if cases missing, emit WARN and exit 0 (for gate integration)",
+    )
+    ap.add_argument(
         "--out",
         default="data_processed/build_reports/eval_cases_validation.json",
         help="output report json (relative to root)",
@@ -124,7 +129,20 @@ def main() -> int:
 
     try:
         if not cases_path.exists():
-            _emit(_termination_item(f"cases file not found: {cases_path.as_posix()}"))
+            if getattr(args, "skip_if_missing", False):
+                _emit(
+                    {
+                        "tool": "validate_eval_cases",
+                        "title": "stage2_prereq",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": f"SKIP: cases file not found: {cases_path.as_posix()}",
+                        "loc": _normalize_rel(str(args.cases)),
+                        "detail": {"skip_reason": f"cases file not found: {cases_path.as_posix()}"},
+                    }
+                )
+            else:
+                _emit(_termination_item(f"cases file not found: {cases_path.as_posix()}"))
         else:
             lines = read_jsonl_with_lineno(cases_path)
 

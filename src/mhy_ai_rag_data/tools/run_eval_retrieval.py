@@ -23,6 +23,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import re
+from collections import Counter
 import platform
 import sys
 import time
@@ -157,6 +160,289 @@ def extract_source(meta: Mapping[str, Any], meta_field: str) -> str:
     return ""
 
 
+_TOKEN_RE = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]", re.UNICODE)
+
+
+def _tokenize(s: str) -> List[str]:
+    s = (s or "").lower()
+    return _TOKEN_RE.findall(s)
+
+
+class _KeywordIndex:
+    # Minimal BM25-style index over Chroma documents, restricted to the query vocabulary.
+
+    def __init__(
+        self,
+        *,
+        doc_ids: List[str],
+        doc_sources: List[str],
+        doc_tfs: List[Dict[str, int]],
+        doc_lens: List[int],
+        avgdl: float,
+        df: Dict[str, int],
+        n_docs: int,
+    ) -> None:
+        self.doc_ids = doc_ids
+        self.doc_sources = doc_sources
+        self.doc_tfs = doc_tfs
+        self.doc_lens = doc_lens
+        self.avgdl = float(avgdl)
+        self.df = df
+        self.n_docs = int(n_docs)
+
+
+def _build_keyword_index(
+    *,
+    doc_ids: List[str],
+    doc_texts: List[str],
+    doc_metas: List[Mapping[str, Any]],
+    query_vocab: set[str],
+    meta_field: str,
+) -> _KeywordIndex:
+    # Restrict tf/df to tokens that appear in any query, to reduce memory.
+    df: Dict[str, int] = {t: 0 for t in query_vocab}
+    doc_tfs: List[Dict[str, int]] = []
+    doc_lens: List[int] = []
+    doc_sources: List[str] = []
+
+    total_len = 0
+    n_docs = len(doc_texts)
+
+    for i in range(n_docs):
+        txt = doc_texts[i] or ""
+        toks = _tokenize(txt)
+        dl = len(toks)
+        total_len += dl
+        doc_lens.append(dl)
+
+        tf: Dict[str, int] = {}
+        for t in toks:
+            if t in query_vocab:
+                tf[t] = tf.get(t, 0) + 1
+        doc_tfs.append(tf)
+
+        for t in tf.keys():
+            df[t] = df.get(t, 0) + 1
+
+        meta = doc_metas[i] if i < len(doc_metas) else {}
+        doc_sources.append(extract_source(meta or {}, meta_field))
+
+    avgdl = (float(total_len) / float(n_docs)) if n_docs else 0.0
+    return _KeywordIndex(
+        doc_ids=doc_ids,
+        doc_sources=doc_sources,
+        doc_tfs=doc_tfs,
+        doc_lens=doc_lens,
+        avgdl=avgdl,
+        df=df,
+        n_docs=n_docs,
+    )
+
+
+def _load_chroma_docs(
+    col: Any,
+    *,
+    include_documents: bool,
+    batch_size: int = 512,
+) -> Tuple[List[str], List[str], List[Mapping[str, Any]]]:
+    """Load all docs from a Chroma collection.
+
+    Why: keyword retrieval needs documents; Chroma `get()` is usually paginated.
+
+    Returns: (ids, documents, metadatas)
+    - If documents are not stored in the collection, documents may be an empty list.
+    """
+
+    include: List[str] = ["metadatas"]
+    if include_documents:
+        include.append("documents")
+
+    # Best effort paging (API differs across chromadb versions).
+    try:
+        n = int(col.count())
+    except Exception:
+        n = -1
+
+    ids: List[str] = []
+    docs: List[str] = []
+    metas: List[Mapping[str, Any]] = []
+
+    def _extend(res: Mapping[str, Any]) -> None:
+        _ids = res.get("ids") or []
+        _docs = res.get("documents") or []
+        _metas = res.get("metadatas") or []
+
+        # Some versions may return nested lists.
+        if _ids and isinstance(_ids, list) and _ids and isinstance(_ids[0], list):
+            _ids = _ids[0]
+        if _docs and isinstance(_docs, list) and _docs and isinstance(_docs[0], list):
+            _docs = _docs[0]
+        if _metas and isinstance(_metas, list) and _metas and isinstance(_metas[0], list):
+            _metas = _metas[0]
+
+        ids.extend([str(x) for x in (_ids or [])])
+        docs.extend([str(x or "") for x in (_docs or [])])
+        metas.extend([x if isinstance(x, dict) else {} for x in (_metas or [])])
+
+    # Fast path: try single get() call.
+    try:
+        res0 = col.get(include=include)
+        if isinstance(res0, dict) and res0.get("ids"):
+            _extend(res0)
+            # If it looks like a full dump, accept.
+            if n <= 0 or len(ids) >= n or (n > 0 and len(ids) == n):
+                return ids, docs, metas
+    except Exception:
+        pass
+
+    if n <= 0:
+        return ids, docs, metas
+
+    # Paged path.
+    ids.clear()
+    docs.clear()
+    metas.clear()
+    offset = 0
+    while offset < n:
+        lim = min(int(batch_size), n - offset)
+        try:
+            res = col.get(include=include, limit=lim, offset=offset)
+        except TypeError:
+            # Older API might not support offset/limit.
+            res = col.get(include=include)
+        if not isinstance(res, dict) or not res.get("ids"):
+            break
+        _extend(res)
+        offset += lim
+
+    return ids, docs, metas
+
+
+def _bm25_score(
+    *,
+    q_tokens: List[str],
+    tf: Mapping[str, int],
+    dl: int,
+    avgdl: float,
+    df: Mapping[str, int],
+    n_docs: int,
+    k1: float = 1.5,
+    b: float = 0.75,
+) -> float:
+    if not q_tokens or not n_docs or avgdl <= 0:
+        return 0.0
+
+    score = 0.0
+    # Use unique tokens only for scoring.
+    for t in set(q_tokens):
+        f = int(tf.get(t, 0))
+        if f <= 0:
+            continue
+        dfi = int(df.get(t, 0))
+        # BM25 idf (with +1 to keep non-negative)
+        idf = math.log(((n_docs - dfi + 0.5) / (dfi + 0.5)) + 1.0)
+        denom = f + k1 * (1.0 - b + b * (float(dl) / float(avgdl)))
+        score += idf * ((f * (k1 + 1.0)) / (denom if denom else 1.0))
+    return float(score)
+
+
+def _keyword_search(
+    *,
+    idx: _KeywordIndex,
+    query: str,
+    topk: int,
+) -> List[Dict[str, Any]]:
+    toks = _tokenize(query)
+    scored: List[Tuple[float, int]] = []
+    for i in range(idx.n_docs):
+        s = _bm25_score(
+            q_tokens=toks,
+            tf=idx.doc_tfs[i],
+            dl=idx.doc_lens[i],
+            avgdl=idx.avgdl,
+            df=idx.df,
+            n_docs=idx.n_docs,
+        )
+        if s > 0.0:
+            scored.append((s, i))
+    # Stable: score desc, then doc ordinal asc.
+    scored.sort(key=lambda x: (-x[0], x[1]))
+
+    out: List[Dict[str, Any]] = []
+    for rank, (s, i) in enumerate(scored[: max(0, int(topk))], start=1):
+        out.append(
+            {
+                "rank": rank,
+                "id": str(idx.doc_ids[i]),
+                "source": str(idx.doc_sources[i]),
+                "keyword_score": float(s),
+            }
+        )
+    return out
+
+
+def _rrf_fuse(
+    *,
+    dense: List[Dict[str, Any]],
+    keyword: List[Dict[str, Any]],
+    topk: int,
+    rrf_k: int = 60,
+) -> List[Dict[str, Any]]:
+    # Reciprocal Rank Fusion.
+    scores: Dict[str, float] = {}
+    dense_rank: Dict[str, int] = {}
+    keyword_rank: Dict[str, int] = {}
+
+    for it in dense:
+        cid = str(it.get("id") or "")
+        if not cid:
+            continue
+        r = int(it.get("rank") or 0) or (len(dense_rank) + 1)
+        dense_rank[cid] = r
+        scores[cid] = scores.get(cid, 0.0) + (1.0 / float(rrf_k + r))
+
+    for it in keyword:
+        cid = str(it.get("id") or "")
+        if not cid:
+            continue
+        r = int(it.get("rank") or 0) or (len(keyword_rank) + 1)
+        keyword_rank[cid] = r
+        scores[cid] = scores.get(cid, 0.0) + (1.0 / float(rrf_k + r))
+
+    # Materialize candidates.
+    dense_by_id = {str(it.get("id")): it for it in dense if it.get("id")}
+    keyword_by_id = {str(it.get("id")): it for it in keyword if it.get("id")}
+
+    fused: List[Dict[str, Any]] = []
+    for cid, sc in scores.items():
+        base: Dict[str, Any] = {"id": cid, "fusion_score": float(sc)}
+        if cid in dense_by_id:
+            base["distance"] = dense_by_id[cid].get("distance")
+            base["source"] = dense_by_id[cid].get("source")
+        if cid in keyword_by_id:
+            base["keyword_score"] = keyword_by_id[cid].get("keyword_score")
+            if not base.get("source"):
+                base["source"] = keyword_by_id[cid].get("source")
+        base["dense_rank"] = dense_rank.get(cid)
+        base["keyword_rank"] = keyword_rank.get(cid)
+        fused.append(base)
+
+    # Stable: fusion_score desc, then best rank asc, then id.
+    def _best_rank(x: Dict[str, Any]) -> int:
+        dr = x.get("dense_rank")
+        kr = x.get("keyword_rank")
+        ranks = [r for r in [dr, kr] if isinstance(r, int) and r > 0]
+        return min(ranks) if ranks else 10**9
+
+    fused.sort(key=lambda x: (-float(x.get("fusion_score") or 0.0), _best_rank(x), str(x.get("id") or "")))
+    out: List[Dict[str, Any]] = []
+    for r, it in enumerate(fused[: max(0, int(topk))], start=1):
+        it2 = dict(it)
+        it2["rank"] = r
+        out.append(it2)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     add_selftest_args(ap)
@@ -167,6 +453,37 @@ def main() -> int:
         "--cases", default="data_processed/eval/eval_cases.jsonl", help="eval cases jsonl (relative to root)"
     )
     ap.add_argument("--k", type=int, default=5, help="topK for retrieval")
+    ap.add_argument(
+        "--retrieval-mode",
+        default="hybrid",
+        choices=["dense", "hybrid"],
+        help="retrieval strategy: dense|hybrid (dense + keyword via RRF)",
+    )
+    ap.add_argument(
+        "--dense-topk",
+        type=int,
+        default=0,
+        help="dense candidate pool for fusion; 0 means use --k",
+    )
+    ap.add_argument(
+        "--keyword-topk",
+        type=int,
+        default=0,
+        help="keyword candidate pool for fusion; 0 means use --k",
+    )
+    ap.add_argument(
+        "--fusion-method",
+        default="rrf",
+        choices=["rrf"],
+        help="fusion method for hybrid retrieval (currently: rrf)",
+    )
+    ap.add_argument("--rrf-k", type=int, default=60, help="RRF k parameter (rank bias)")
+    ap.add_argument(
+        "--skip-if-missing",
+        action="store_true",
+        help="if inputs/deps missing, emit WARN and exit 0 (for gate integration)",
+    )
+
     ap.add_argument(
         "--meta-field",
         default="source_uri|source|path|file",
@@ -248,7 +565,16 @@ def main() -> int:
     total_valid_cases = 0
     evaluated_cases = 0
     hit_cases = 0
+    hit_cases_dense = 0
     t0 = time.time()
+    skipped_reason: Optional[str] = None
+
+    # derived retrieval params (used in report.data)
+    dense_pool_k = int(args.dense_topk) if int(args.dense_topk) > 0 else int(args.k)
+    keyword_pool_k = int(args.keyword_topk) if int(args.keyword_topk) > 0 else int(args.k)
+    kw_index_info: Dict[str, Any] = {"enabled": False}
+    bucket_metrics: Dict[str, Any] = {}
+    query_error_cases = 0
 
     def _emit_item(raw: Dict[str, Any]) -> None:
         it = ensure_item_fields(raw, tool_default="run_eval_retrieval")
@@ -291,20 +617,34 @@ def main() -> int:
                     "model": str(args.embed_model),
                     "device": str(args.device),
                 },
+                "retrieval": {
+                    "mode": str(args.retrieval_mode),
+                    "dense_pool_k": int(dense_pool_k),
+                    "keyword_pool_k": int(keyword_pool_k),
+                    "fusion_method": str(args.fusion_method),
+                    "rrf_k": int(args.rrf_k),
+                    "keyword_index": kw_index_info,
+                },
                 "run_meta": {
                     "tool": "run_eval_retrieval",
                     "tool_impl": "src/mhy_ai_rag_data/tools/run_eval_retrieval.py",
                     "python": sys.version.split()[0],
                     "platform": platform.platform(),
                     "argv": sys.argv,
+                    "skipped": bool(skipped_reason),
+                    "skip_reason": skipped_reason,
                 },
                 "metrics": {
                     "cases_total": int(total_valid_cases),
                     "evaluated_cases": int(evaluated_cases),
+                    "query_error_cases": int(query_error_cases),
                     "hit_cases": int(hit_cases),
                     "hit_rate": (float(hit_cases) / float(evaluated_cases)) if evaluated_cases else 0.0,
+                    "hit_cases_dense": int(hit_cases_dense),
+                    "hit_rate_dense": (float(hit_cases_dense) / float(evaluated_cases)) if evaluated_cases else 0.0,
                     "elapsed_ms": int((time.time() - t0) * 1000),
                 },
+                "buckets": bucket_metrics,
                 "warnings": warnings,
                 "cases": per_case,
             },
@@ -329,16 +669,58 @@ def main() -> int:
 
     try:
         if not cases_path.exists():
+            if args.skip_if_missing:
+                skipped_reason = f"cases not found: {cases_path.as_posix()}"
+                _emit_item(
+                    {
+                        "tool": "run_eval_retrieval",
+                        "title": "stage2_prereq",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": f"SKIP: {skipped_reason}",
+                        "loc": _normalize_rel(args.cases),
+                        "detail": {"skip_reason": skipped_reason},
+                    }
+                )
+                return _finalize_and_write()
             _emit_item(_termination_item(message=f"cases not found: {cases_path.as_posix()}"))
             return _finalize_and_write()
 
         if not db_path.exists():
+            if args.skip_if_missing:
+                skipped_reason = f"db not found: {db_path.as_posix()}"
+                _emit_item(
+                    {
+                        "tool": "run_eval_retrieval",
+                        "title": "stage2_prereq",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": f"SKIP: {skipped_reason}",
+                        "loc": str(db_path.as_posix()),
+                        "detail": {"skip_reason": skipped_reason},
+                    }
+                )
+                return _finalize_and_write()
             _emit_item(_termination_item(message=f"db not found: {db_path.as_posix()}"))
             return _finalize_and_write()
 
         try:
             import chromadb
         except Exception as e:
+            if args.skip_if_missing:
+                skipped_reason = f"chromadb import failed: {type(e).__name__}: {e}"
+                _emit_item(
+                    {
+                        "tool": "run_eval_retrieval",
+                        "title": "stage2_prereq",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": f"SKIP: {skipped_reason}",
+                        "loc": "python:import",
+                        "detail": {"skip_reason": skipped_reason},
+                    }
+                )
+                return _finalize_and_write()
             _emit_item(_termination_item(message=f"chromadb import failed: {type(e).__name__}: {e}", exc=e))
             return _finalize_and_write()
 
@@ -346,6 +728,20 @@ def main() -> int:
             progress.update(stage="load_cases")
             raw_lines = read_jsonl_with_lineno(cases_path)
         except Exception as e:
+            if args.skip_if_missing:
+                skipped_reason = f"read cases failed: {type(e).__name__}: {e}"
+                _emit_item(
+                    {
+                        "tool": "run_eval_retrieval",
+                        "title": "stage2_prereq",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": f"SKIP: {skipped_reason}",
+                        "loc": str(cases_path.as_posix()),
+                        "detail": {"skip_reason": skipped_reason},
+                    }
+                )
+                return _finalize_and_write()
             _emit_item(_termination_item(message=f"read cases failed: {type(e).__name__}: {e}", exc=e))
             return _finalize_and_write()
 
@@ -354,11 +750,43 @@ def main() -> int:
             progress.update(stage="init_embedder")
             backend, embedder = load_embedder(args.embed_backend, args.embed_model, args.device)
         except Exception as e:
+            if args.skip_if_missing:
+                skipped_reason = f"embedder init failed: {type(e).__name__}: {e}"
+                _emit_item(
+                    {
+                        "tool": "run_eval_retrieval",
+                        "title": "stage2_prereq",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": f"SKIP: {skipped_reason}",
+                        "loc": "embedder:init",
+                        "detail": {"skip_reason": skipped_reason},
+                    }
+                )
+                return _finalize_and_write()
             _emit_item(_termination_item(message=f"embedder init failed: {type(e).__name__}: {e}", exc=e))
             return _finalize_and_write()
 
-        client = chromadb.PersistentClient(path=str(db_path))
-        col = client.get_collection(args.collection)
+        try:
+            client = chromadb.PersistentClient(path=str(db_path))
+            col = client.get_collection(args.collection)
+        except Exception as e:
+            if args.skip_if_missing:
+                skipped_reason = f"open collection failed: {type(e).__name__}: {e}"
+                _emit_item(
+                    {
+                        "tool": "run_eval_retrieval",
+                        "title": "stage2_prereq",
+                        "status_label": "WARN",
+                        "severity_level": 2,
+                        "message": f"SKIP: {skipped_reason}",
+                        "loc": str(db_path.as_posix()),
+                        "detail": {"skip_reason": skipped_reason, "collection": str(args.collection)},
+                    }
+                )
+                return _finalize_and_write()
+            _emit_item(_termination_item(message=f"open collection failed: {type(e).__name__}: {e}", exc=e))
+            return _finalize_and_write()
 
         # Emit items for parse errors / non-object JSON, and keep valid dict cases for evaluation.
         valid_cases: List[Tuple[int, Dict[str, Any]]] = []
@@ -394,8 +822,54 @@ def main() -> int:
         total_valid_cases = len(valid_cases)
         progress.total = total_valid_cases if valid_cases else None
 
-        hit_cases = 0
-        evaluated_cases = 0
+        # Candidate pool sizes for dense + keyword retrieval.
+        dense_pool_k = int(args.dense_topk) if int(args.dense_topk) > 0 else int(args.k)
+        keyword_pool_k = int(args.keyword_topk) if int(args.keyword_topk) > 0 else int(args.k)
+
+        # Build a lightweight keyword index (BM25-ish) over stored Chroma documents.
+        # NOTE: this requires the collection to store `documents`.
+        kw_idx: Optional[_KeywordIndex] = None
+        kw_index_info = {"enabled": False, "n_docs": 0, "avgdl": 0.0, "query_vocab": 0}
+        if str(args.retrieval_mode) == "hybrid":
+            progress.update(stage="build_keyword_index")
+            query_vocab: set[str] = set()
+            for _ln, cc in valid_cases:
+                qv = str(cc.get("query") or "").strip()
+                for t in _tokenize(qv):
+                    if t:
+                        query_vocab.add(t)
+            kw_index_info["query_vocab"] = len(query_vocab)
+
+            doc_ids, doc_texts, doc_metas = _load_chroma_docs(col, include_documents=True)
+            kw_index_info["n_docs"] = len(doc_texts)
+
+            if not doc_texts:
+                # Hybrid requires documents. Treat this as a data contract issue.
+                msg = "hybrid retrieval requires Chroma documents (collection has no documents)"
+                _emit_item(
+                    {
+                        "tool": "run_eval_retrieval",
+                        "title": "keyword_index_missing_documents",
+                        "status_label": "FAIL",
+                        "severity_level": 3,
+                        "message": msg,
+                        "loc": str(db_path.as_posix()),
+                        "detail": {
+                            "collection": str(args.collection),
+                            "hint": "rebuild index with documents stored (include=documents)",
+                        },
+                    }
+                )
+                return _finalize_and_write()
+
+            kw_idx = _build_keyword_index(
+                doc_ids=doc_ids,
+                doc_texts=doc_texts,
+                doc_metas=doc_metas,
+                query_vocab=query_vocab,
+                meta_field=str(args.meta_field),
+            )
+            kw_index_info.update({"enabled": True, "avgdl": float(kw_idx.avgdl)})
 
         for idx, (lineno, c) in enumerate(valid_cases, start=1):
             progress.update(current=idx, stage="eval")
@@ -425,17 +899,19 @@ def main() -> int:
                     }
                 )
                 continue
-
-            evaluated_cases += 1
             try:
                 qvec = embed_query(embedder, backend, q)
                 query_embeddings: List[Sequence[float]] = [qvec]
                 res = col.query(
-                    query_embeddings=query_embeddings, n_results=int(args.k), include=["metadatas", "distances"]
+                    query_embeddings=query_embeddings,
+                    n_results=int(dense_pool_k),
+                    include=["metadatas", "distances"],
                 )
+                ids = (res.get("ids") or [[]])[0]
                 metadatas = (res.get("metadatas") or [[]])[0]
                 distances = (res.get("distances") or [[]])[0]
             except Exception as e:
+                query_error_cases += 1
                 _emit_item(
                     {
                         "tool": "run_eval_retrieval",
@@ -450,29 +926,53 @@ def main() -> int:
                 )
                 continue
 
-            got_sources: List[Dict[str, Any]] = []
+            evaluated_cases += 1
+
+            dense_topk: List[Dict[str, Any]] = []
             for i, m in enumerate(metadatas or []):
                 m = m or {}
                 src = extract_source(m, str(args.meta_field))
-                got_sources.append(
-                    {"rank": i + 1, "source": str(src), "distance": distances[i] if i < len(distances) else None}
+                dense_topk.append(
+                    {
+                        "rank": i + 1,
+                        "id": str(ids[i]) if i < len(ids) else "",
+                        "source": str(src),
+                        "distance": distances[i] if i < len(distances) else None,
+                    }
                 )
 
-            def _is_hit() -> bool:
+            keyword_topk: List[Dict[str, Any]] = []
+            if str(args.retrieval_mode) == "hybrid" and kw_idx is not None:
+                keyword_topk = _keyword_search(idx=kw_idx, query=q, topk=int(keyword_pool_k))
+
+            if str(args.retrieval_mode) == "hybrid":
+                topk_hits = _rrf_fuse(
+                    dense=dense_topk,
+                    keyword=keyword_topk,
+                    topk=int(args.k),
+                    rrf_k=int(args.rrf_k),
+                )
+            else:
+                topk_hits = dense_topk[: int(args.k)]
+
+            def _is_hit(got: List[Dict[str, Any]]) -> bool:
                 # hit rule: any expected substring matches any got source
                 for e in expected:
-                    for g in got_sources:
+                    for g in got:
                         if e and g.get("source") and (e in str(g.get("source"))):
                             return True
                 # allow prefix match for expected dir like "docs/"
                 for e in expected:
                     if e.endswith("/"):
-                        for g in got_sources:
+                        for g in got:
                             if str(g.get("source") or "").replace("\\", "/").startswith(e):
                                 return True
                 return False
 
-            hit_val: Optional[bool] = _is_hit() if expected else None
+            hit_dense: Optional[bool] = _is_hit(dense_topk[: int(args.k)]) if expected else None
+            hit_val: Optional[bool] = _is_hit(topk_hits) if expected else None
+            if hit_dense is True:
+                hit_cases_dense += 1
             if hit_val is True:
                 hit_cases += 1
 
@@ -485,13 +985,16 @@ def main() -> int:
                 "expected_sources": expected,
                 "must_include": must_include,
                 "hit_at_k": hit_val,
-                "topk": got_sources,
+                "topk": topk_hits,
                 "debug": {
-                    "retrieval_mode": "dense_only",
-                    "dense_topk": got_sources,
-                    "keyword_topk": [],
-                    "fusion_topk": [],
+                    "retrieval_mode": str(args.retrieval_mode),
+                    "dense_topk": dense_topk[: int(args.k)],
+                    "keyword_topk": keyword_topk[: int(args.k)],
+                    "fusion_topk": topk_hits if str(args.retrieval_mode) == "hybrid" else [],
                     "expansion_trace": None,
+                    "fusion_method": str(args.fusion_method),
+                    "rrf_k": int(args.rrf_k),
+                    "hit_at_k_dense": hit_dense,
                 },
             }
             per_case.append(one_case)
@@ -512,12 +1015,38 @@ def main() -> int:
                     "title": cid,
                     "status_label": status_label,
                     "severity_level": severity_level,
-                    "message": f"hit_at_k={hit_val} bucket={bucket} k={int(args.k)}",
+                    "message": f"hit_at_k={hit_val} bucket={bucket} k={int(args.k)} mode={str(args.retrieval_mode)}",
                     "loc": f"{_normalize_rel(args.cases)}:{lineno}:1",
                     "duration_ms": int((time.time() - case_t0) * 1000),
                     "detail": one_case,
                 }
             )
+
+        # Aggregate bucket metrics (evaluated cases only; query errors are excluded from denominators).
+        b_total: Counter[str] = Counter()
+        b_hit: Counter[str] = Counter()
+        b_hit_dense: Counter[str] = Counter()
+        for cc in per_case:
+            b = str(cc.get("bucket") or "unknown")
+            b_total[b] += 1
+            if cc.get("hit_at_k") is True:
+                b_hit[b] += 1
+            try:
+                if (cc.get("debug") or {}).get("hit_at_k_dense") is True:
+                    b_hit_dense[b] += 1
+            except Exception:
+                pass
+
+        bucket_metrics = {}
+        for b in sorted(b_total.keys()):
+            denom = int(b_total[b])
+            bucket_metrics[b] = {
+                "evaluated_cases": denom,
+                "hit_cases": int(b_hit[b]),
+                "hit_rate": (float(b_hit[b]) / float(denom)) if denom else 0.0,
+                "hit_cases_dense": int(b_hit_dense[b]),
+                "hit_rate_dense": (float(b_hit_dense[b]) / float(denom)) if denom else 0.0,
+            }
 
         # Warnings -> items
         for w in warnings:

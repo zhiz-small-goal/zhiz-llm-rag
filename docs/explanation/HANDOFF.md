@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - zhiz-llm-rag
-version: 10
-last_updated: 2026-01-23
+version: 11
+last_updated: 2026-01-25
 timezone: America/Los_Angeles
 owner: zhiz
 status: active
@@ -70,7 +70,7 @@ ssot: true
   - `k = 5`（基线；实验时允许扫描 k=5/10/20，但必须写清采用值）
   - `embed_model = BAAI/bge-m3`
   - `device = cpu`（除非显式传参或 profile 指定，如 `cuda:0`）
-  - 策略：`dense-only`（尚未常驻启用 BM25/hybrid/re-rank）
+  - 策略：`hybrid`（dense + keyword；fusion=rrf；dense_topk=50；keyword_topk=50；rrf_k=60）
 - E2E（Stage-3/端到端）：
   - `base_url = http://localhost:8000/v1`（OpenAI-compatible）
   - `timeout`：基线 300s（以报告落盘的 error_detail 为准做调整）
@@ -116,7 +116,7 @@ ssot: true
   - `pair_id` / `concept_id`：同概念对照组（口语 vs 术语）
 - 新增用例生成工具：`tools/suggest_eval_case.py`（半自动生成 expected_sources/must_include，并支持 bucket/pair_id/concept_id）
 - eval_retrieval_report 输出（schema v2）：
-  - `metrics`（overall）与 `buckets`（按桶聚合）
+  - `metrics`（overall，含 dense/hybrid 对照）与 `buckets`（按桶聚合）
   - `warnings`（迁移期缺字段/非法值等）
   - `run_meta`（argv、python、platform）用于复现
 - E2E（端到端）回归增强：
@@ -125,7 +125,9 @@ ssot: true
 ### 3.3 commands（基线命令）
 ```bash
 python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --out data_processed/build_reports/eval_retrieval_report.json
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --out data_processed/build_reports/eval_retrieval_report.json --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl --progress auto --durability-mode flush
+python tools/snapshot_eval_retrieval_baseline.py --root . --report data_processed/build_reports/eval_retrieval_report.json --baseline-out data_processed/baselines/eval_retrieval_baseline.json
+python tools/compare_eval_retrieval_baseline.py --root . --baseline data_processed/baselines/eval_retrieval_baseline.json --report data_processed/build_reports/eval_retrieval_report.json --allowed-drop 0.0
 python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k 5 --out data_processed/build_reports/eval_rag_report.json
 ```
 
@@ -137,7 +139,7 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --k
 ### 3.5 next（最小改动优先）
 1) k 扫描实验（k=5/10/20）：裁决失败是排序问题还是真漏召回。  
 2) 对 `hit_at_k=false` 失败用例逐条判定：expected_sources 是否过窄导致假失败（先修契约）。  
-3) 若 k=20 仍失败：优先 query 扩展（口语→术语映射），再考虑 hybrid（BM25 + 向量）与 RRF。  
+3) 若 k=20 仍失败：优先检查用例 expected_sources 的口径与索引是否漂移；其次做 query 扩展（口语→术语映射）或调整 hybrid 关键字侧候选窗（keyword_topk）与融合参数（rrf_k）。  
 4) E2E：400（ctx=4096）优先减小输入预算；ReadTimeout 优先减负，必要时再提高 timeout。  
 
 ### 3.6 rollback

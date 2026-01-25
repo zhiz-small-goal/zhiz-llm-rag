@@ -162,17 +162,23 @@ events 文件每行是一个“report v2 item”（同最终报告的 `items[]` 
 | `--cases` | — | 'data_processed/eval/eval_cases.jsonl' | eval cases jsonl (relative to root) |
 | `--collection` | — | 'rag_chunks' | collection name |
 | `--db` | — | 'chroma_db' | chroma db dir (relative to root) |
+| `--dense-topk` | — | 0 | type=int；dense candidate pool for fusion; 0 means use --k |
 | `--device` | — | 'cpu' | cpu\|cuda |
 | `--embed-backend` | — | 'auto' | auto\|flagembedding\|sentence-transformers |
 | `--embed-model` | — | 'BAAI/bge-m3' | embed model name |
 | `--events-out` | — | 'auto' | item events output (jsonl): auto\|off\|<path> (relative to root). Used for recovery/rebuild. |
+| `--fusion-method` | — | 'rrf' | fusion method for hybrid retrieval (currently: rrf) |
 | `--k` | — | 5 | type=int；topK for retrieval |
+| `--keyword-topk` | — | 0 | type=int；keyword candidate pool for fusion; 0 means use --k |
 | `--md-out` | — | '' | optional report.md path (relative to root); default: <out>.md |
 | `--meta-field` | — | 'source_uri\|source\|path\|file' | metadata field(s) for source path (use \| to separate) |
 | `--out` | — | 'data_processed/build_reports/eval_retrieval_report.json' | output json (relative to root) |
 | `--progress` | — | 'auto' | runtime progress feedback to stderr: auto\|on\|off |
 | `--progress-min-interval-ms` | — | 200 | type=int；min progress update interval in ms (throttling) |
+| `--retrieval-mode` | — | 'hybrid' | retrieval strategy: dense\|hybrid (dense + keyword via RRF) |
 | `--root` | — | '.' | project root |
+| `--rrf-k` | — | 60 | type=int；RRF k parameter (rank bias) |
+| `--skip-if-missing` | — | — | action=store_true；if inputs/deps missing, emit WARN and exit 0 (for gate integration) |
 <!-- AUTO:END options -->
 <!-- AUTO:BEGIN output-contract -->
 - `contracts.output`: `report-output-v2`

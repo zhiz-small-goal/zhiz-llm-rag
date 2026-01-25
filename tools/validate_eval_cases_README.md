@@ -111,6 +111,7 @@ python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_ca
 | `--md-out` | — | '' | optional report.md path (relative to root); default: <out>.md |
 | `--out` | — | 'data_processed/build_reports/eval_cases_validation.json' | output report json (relative to root) |
 | `--root` | — | '.' | project root |
+| `--skip-if-missing` | — | — | action=store_true；if cases missing, emit WARN and exit 0 (for gate integration) |
 <!-- AUTO:END options -->
 <!-- AUTO:BEGIN output-contract -->
 - `contracts.output`: `report-output-v2`

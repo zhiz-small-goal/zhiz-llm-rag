@@ -129,3 +129,20 @@ python tools\gen_doc_inventory.py --root . --write --out-md docs\explanation\doc
 - 其余命中：`need_align`
 
 该规则仅用于 Step1 标注，不代表 Step4 的最终迁移策略。
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--include-untracked` | — | — | action=store_true；also scan untracked *.md (git ls-files --others). useful for Step1 in a working tree |
+| `--out-json` | — | 'docs/explanation/doc_map.json' | output json path (relative to root) |
+| `--out-md` | — | 'docs/explanation/doc_inventory.md' | output markdown path (relative to root) |
+| `--root` | — | None | repo root; default inferred |
+| `--write` | — | — | action=store_true；write outputs; default is dry-run (prints summary only) |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `none`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

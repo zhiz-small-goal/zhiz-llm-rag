@@ -90,3 +90,23 @@ python tools\check_doc_system_gate.py --root . --doc-map docs\explanation\doc_ma
 3) 现象：`front-matter 缺字段`  
    - 原因：旧文档未采用统一模板。  
    - 处理：对入口文档优先补齐；对 archive/postmortem 可先以 `WARN` 方式观察，再在 Step5 机械化补齐。  
+
+## 自动生成区块（AUTO）
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--doc-map` | — | 'docs/explanation/doc_map.json' | Step1 doc_map.json path |
+| `--md-out` | — | '' | Optional: Markdown output path |
+| `--out` | — | 'data_processed/build_reports/doc_system_gate_report.json' | Report v2 JSON output |
+| `--root` | — | '.' | Project root |
+<!-- AUTO:END options -->
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 关闭落盘: `--out ""`（空字符串）
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->

@@ -1,133 +1,236 @@
-# Machine-readable SSOT for repo gates + schema + policy.
-# Keep this file stable: consumers must treat it as the single source of truth (SSOT).
 version: 2
-last_updated: "2026-01-25"
-timezone: "America/Los_Angeles"
-
+last_updated: '2026-01-25'
+timezone: America/Los_Angeles
 exit_codes:
   PASS: 0
   FAIL: 2
   ERROR: 3
-
 paths:
-  report_dir: "data_processed/build_reports"
-  gate_report: "gate_report.json"
-  gate_logs_dir: "data_processed/build_reports/gate_logs"
-
+  report_dir: data_processed/build_reports
+  gate_report: gate_report.json
+  gate_logs_dir: data_processed/build_reports/gate_logs
 schemas:
-  draft: "2020-12"
-  gate_report: "schemas/gate_report_v2.schema.json"
-  build_report: "schemas/build_report_v2.schema.json"
-
+  draft: 2020-12
+  gate_report: schemas/gate_report_v2.schema.json
+  build_report: schemas/build_report_v2.schema.json
 policy:
-  # Policy is executed via conftest when available.
   enabled: true
   conftest:
-    version: "0.61.0"
-    policy_dir: "policy"
+    version: 0.61.0
+    policy_dir: policy
     inputs:
-      - "docs/reference/reference.yaml"
-      - ".github/workflows/ci.yml"
-
+    - docs/reference/reference.yaml
+    - .github/workflows/ci.yml
 gates:
   profiles:
     fast:
-      - check_pyproject_preflight
-      - gen_tools_wrappers_check
-      - check_tools_layout
-      - check_cli_entrypoints
-      - check_docs_conventions
-      - check_doc_system_gate
-      - check_md_refs_contract
-      - check_readme_code_sync
-      - validate_review_spec
-      - pytest
+    - check_pyproject_preflight
+    - gen_tools_wrappers_check
+    - check_tools_layout
+    - check_cli_entrypoints
+    - check_docs_conventions
+    - check_doc_system_gate
+    - check_md_refs_contract
+    - check_readme_code_sync
+    - validate_review_spec
+    - pytest
     ci:
-      - check_pyproject_preflight
-      - gen_tools_wrappers_check
-      - check_tools_layout
-      - check_public_release_hygiene
-      - check_cli_entrypoints
-      - check_docs_conventions
-      - check_doc_system_gate
-      - check_md_refs_contract
-      - check_readme_code_sync
-      - check_ruff
-      - check_mypy
-      - validate_review_spec
-      - pytest
-      - policy_conftest
+    - check_pyproject_preflight
+    - gen_tools_wrappers_check
+    - check_tools_layout
+    - check_public_release_hygiene
+    - check_cli_entrypoints
+    - check_docs_conventions
+    - check_doc_system_gate
+    - check_md_refs_contract
+    - check_readme_code_sync
+    - check_ruff
+    - check_mypy
+    - validate_review_spec
+    - pytest
+    - stage2_validate_eval_cases
+    - stage2_eval_retrieval_hybrid
+    - stage2_compare_eval_retrieval_baseline
+    - policy_conftest
     release:
-      - check_pyproject_preflight
-      - gen_tools_wrappers_check
-      - check_tools_layout
-      - check_public_release_hygiene
-      - check_repo_health_files
-      - check_cli_entrypoints
-      - check_docs_conventions
-      - check_doc_system_gate
-      - check_md_refs_contract
-      - check_readme_code_sync
-      - check_ruff
-      - check_mypy
-      - validate_review_spec
-      - pytest
-      - policy_conftest
-
+    - check_pyproject_preflight
+    - gen_tools_wrappers_check
+    - check_tools_layout
+    - check_public_release_hygiene
+    - check_repo_health_files
+    - check_cli_entrypoints
+    - check_docs_conventions
+    - check_doc_system_gate
+    - check_md_refs_contract
+    - check_readme_code_sync
+    - check_ruff
+    - check_mypy
+    - validate_review_spec
+    - pytest
+    - stage2_validate_eval_cases
+    - stage2_eval_retrieval_hybrid
+    - stage2_compare_eval_retrieval_baseline
+    - policy_conftest
   steps:
     check_pyproject_preflight:
-      argv: ["tools/check_pyproject_preflight.py", "--ascii-only"]
-
+      argv:
+      - tools/check_pyproject_preflight.py
+      - --ascii-only
     gen_tools_wrappers_check:
-      argv: ["tools/gen_tools_wrappers.py", "--check"]
-
+      argv:
+      - tools/gen_tools_wrappers.py
+      - --check
     check_tools_layout:
-      argv: ["tools/check_tools_layout.py", "--mode", "fail"]
-
+      argv:
+      - tools/check_tools_layout.py
+      - --mode
+      - fail
     check_public_release_hygiene:
-      argv: ["tools/check_public_release_hygiene.py", "--repo", ".", "--history", "0", "--file-scope", "tracked_and_untracked_unignored", "--respect-gitignore"]
-
+      argv:
+      - tools/check_public_release_hygiene.py
+      - --repo
+      - .
+      - --history
+      - '0'
+      - --file-scope
+      - tracked_and_untracked_unignored
+      - --respect-gitignore
     check_repo_health_files:
-      argv: ["tools/check_repo_health_files.py", "--repo", ".", "--mode", "public-release", "--out", "data_processed/build_reports/repo_health_report.json"]
-
+      argv:
+      - tools/check_repo_health_files.py
+      - --repo
+      - .
+      - --mode
+      - public-release
+      - --out
+      - data_processed/build_reports/repo_health_report.json
     check_cli_entrypoints:
-      argv: ["tools/check_cli_entrypoints.py"]
-
+      argv:
+      - tools/check_cli_entrypoints.py
     check_docs_conventions:
-      argv: ["tools/check_docs_conventions.py", "--root", ".", "--out", "data_processed/build_reports/docs_conventions_report.json"]
-
+      argv:
+      - tools/check_docs_conventions.py
+      - --root
+      - .
+      - --out
+      - data_processed/build_reports/docs_conventions_report.json
     check_doc_system_gate:
       argv:
-        [
-          "tools/check_doc_system_gate.py",
-          "--root",
-          ".",
-          "--doc-map",
-          "docs/explanation/doc_map.json",
-          "--out",
-          "data_processed/build_reports/doc_system_gate_report.json",
-          "--md-out",
-          "data_processed/build_reports/doc_system_gate_report.md",
-        ]
-
+      - tools/check_doc_system_gate.py
+      - --root
+      - .
+      - --doc-map
+      - docs/explanation/doc_map.json
+      - --out
+      - data_processed/build_reports/doc_system_gate_report.json
+      - --md-out
+      - data_processed/build_reports/doc_system_gate_report.md
     check_md_refs_contract:
-      argv: ["tools/check_md_refs_contract.py"]
-
+      argv:
+      - tools/check_md_refs_contract.py
     check_readme_code_sync:
-      argv: ["tools/check_readme_code_sync.py", "--root", ".", "--check", "--out", "data_processed/build_reports/readme_code_sync_report.json"]
-
+      argv:
+      - tools/check_readme_code_sync.py
+      - --root
+      - .
+      - --check
+      - --out
+      - data_processed/build_reports/readme_code_sync_report.json
     check_ruff:
-      argv: ["tools/check_ruff.py", "--root", "."]
-
+      argv:
+      - tools/check_ruff.py
+      - --root
+      - .
     check_mypy:
-      argv: ["tools/check_mypy.py", "--root", "."]
-
+      argv:
+      - tools/check_mypy.py
+      - --root
+      - .
     validate_review_spec:
-      argv: ["tools/validate_review_spec.py", "--root", "."]
-
+      argv:
+      - tools/validate_review_spec.py
+      - --root
+      - .
     pytest:
-      argv: ["-m", "pytest", "-q"]
-
-    # Reserved logical step id. Implemented inside gate runner.
+      argv:
+      - -m
+      - pytest
+      - -q
     policy_conftest:
-      builtin: "conftest"
+      builtin: conftest
+    stage2_validate_eval_cases:
+      description: Stage-2 validate eval_cases.jsonl (skippable)
+      argv:
+      - tools/validate_eval_cases.py
+      - --root
+      - .
+      - --cases
+      - data_processed/eval/eval_cases.jsonl
+      - --skip-if-missing
+      - --out
+      - data_processed/build_reports/eval_cases_validation.json
+      - --md-out
+      - data_processed/build_reports/eval_cases_validation.md
+      artifacts:
+      - data_processed/build_reports/eval_cases_validation.json
+      - data_processed/build_reports/eval_cases_validation.md
+    stage2_eval_retrieval_hybrid:
+      description: 'Stage-2 retrieval regression: hybrid (dense+keyword) (skippable)'
+      argv:
+      - tools/run_eval_retrieval.py
+      - --root
+      - .
+      - --cases
+      - data_processed/eval/eval_cases.jsonl
+      - --db
+      - chroma_db
+      - --collection
+      - rag_chunks
+      - --k
+      - '5'
+      - --retrieval-mode
+      - hybrid
+      - --dense-topk
+      - '50'
+      - --keyword-topk
+      - '50'
+      - --fusion-method
+      - rrf
+      - --rrf-k
+      - '60'
+      - --skip-if-missing
+      - --out
+      - data_processed/build_reports/eval_retrieval_report.json
+      - --md-out
+      - data_processed/build_reports/eval_retrieval_report.md
+      - --events-out
+      - data_processed/build_reports/eval_retrieval_report.events.jsonl
+      - --progress
+      - auto
+      - --durability-mode
+      - flush
+      artifacts:
+      - data_processed/build_reports/eval_retrieval_report.json
+      - data_processed/build_reports/eval_retrieval_report.md
+      - data_processed/build_reports/eval_retrieval_report.events.jsonl
+    stage2_compare_eval_retrieval_baseline:
+      description: Stage-2 compare retrieval metrics against baseline (regression
+        gate)
+      argv:
+      - tools/compare_eval_retrieval_baseline.py
+      - --root
+      - .
+      - --baseline
+      - data_processed/baselines/eval_retrieval_baseline.json
+      - --report
+      - data_processed/build_reports/eval_retrieval_report.json
+      - --skip-if-missing
+      - --allowed-drop
+      - '0.0'
+      - --out
+      - data_processed/build_reports/eval_retrieval_baseline_compare_report.json
+      - --md-out
+      - data_processed/build_reports/eval_retrieval_baseline_compare_report.md
+      artifacts:
+      - data_processed/build_reports/eval_retrieval_baseline_compare_report.json
+      - data_processed/build_reports/eval_retrieval_baseline_compare_report.md
