@@ -260,6 +260,8 @@ python tools\build_chroma_index_flagembedding.py build --collection rag_chunks -
 python tools\check_doc_system_gate.py --root . --doc-map docs\explanation\doc_map.json --out data_processed\build_reports\doc_system_gate_report.json --md-out data_processed\build_reports\doc_system_gate_report.md
 ```
 
+> 2026-01-25 起：该 Step6 已纳入 gate profiles（fast/ci/release），以 `docs/reference/reference.yaml` 为准。
+
 
 ### 5.4 acceptance（Step1）
 - 覆盖面：`doc_map.json.meta.tracked_md_files_total` 必须覆盖 `git ls-files "*.md"` 的全部文件。
@@ -270,6 +272,7 @@ python tools\check_doc_system_gate.py --root . --doc-map docs\explanation\doc_ma
 - 已完成：Step1（Inventory+Map）、Step2（SSOT+术语）、Step3（CLI/日志真相表）。
 - 已推进：Step4/5（对 need_align 文档收敛到 SSOT，并补齐 TOC/front-matter/链接）。
 - 已完成：Step6 最小门禁脚本 `tools/check_doc_system_gate.py`（当前 scope：仅 keyword_hits 文档 + ALWAYS_INCLUDE 入口文档）。
+- 已收口：Step6 已挂入 gate（`python tools\gate.py --profile fast|ci|release --root .` 会自动执行）。
 
 下一步建议（继续按批次推进）：
 1) 依据 `doc_inventory.md` 的 `need_align` 集合，分目录扩展迁移去重范围（优先 README/howto/tools README）。

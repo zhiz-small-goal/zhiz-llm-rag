@@ -1,7 +1,7 @@
 # Machine-readable SSOT for repo gates + schema + policy.
 # Keep this file stable: consumers must treat it as the single source of truth (SSOT).
 version: 2
-last_updated: "2026-01-23"
+last_updated: "2026-01-25"
 timezone: "America/Los_Angeles"
 
 exit_codes:
@@ -37,6 +37,7 @@ gates:
       - check_tools_layout
       - check_cli_entrypoints
       - check_docs_conventions
+      - check_doc_system_gate
       - check_md_refs_contract
       - check_readme_code_sync
       - validate_review_spec
@@ -48,6 +49,7 @@ gates:
       - check_public_release_hygiene
       - check_cli_entrypoints
       - check_docs_conventions
+      - check_doc_system_gate
       - check_md_refs_contract
       - check_readme_code_sync
       - check_ruff
@@ -63,6 +65,7 @@ gates:
       - check_repo_health_files
       - check_cli_entrypoints
       - check_docs_conventions
+      - check_doc_system_gate
       - check_md_refs_contract
       - check_readme_code_sync
       - check_ruff
@@ -92,6 +95,20 @@ gates:
 
     check_docs_conventions:
       argv: ["tools/check_docs_conventions.py", "--root", ".", "--out", "data_processed/build_reports/docs_conventions_report.json"]
+
+    check_doc_system_gate:
+      argv:
+        [
+          "tools/check_doc_system_gate.py",
+          "--root",
+          ".",
+          "--doc-map",
+          "docs/explanation/doc_map.json",
+          "--out",
+          "data_processed/build_reports/doc_system_gate_report.json",
+          "--md-out",
+          "data_processed/build_reports/doc_system_gate_report.md",
+        ]
 
     check_md_refs_contract:
       argv: ["tools/check_md_refs_contract.py"]

@@ -1,7 +1,25 @@
 ---
 title: "check_doc_system_gate 使用说明"
 version: "v0.1"
-last_updated: "2026-01-23"
+last_updated: "2026-01-25"
+
+tool_id: check_doc_system_gate
+cli_framework: argparse
+
+impl:
+  wrapper: tools/check_doc_system_gate.py
+
+entrypoints:
+  - python tools/check_doc_system_gate.py
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
 timezone: "America/Los_Angeles"
 owner: "zhiz"
 status: "active"

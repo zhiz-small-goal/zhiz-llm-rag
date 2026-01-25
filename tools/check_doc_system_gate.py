@@ -202,8 +202,19 @@ def check_front_matter(doc: DocInfo, abs_path: Path, text: str) -> List[Tuple[st
 
 def check_terms(doc: DocInfo, abs_path: Path, text: str) -> List[Tuple[str, str]]:
     issues: List[Tuple[str, str]] = []
+    # NOTE:
+    # - We intentionally scan per-line to allow a narrow exemption for explanatory lines.
+    # - Some docs (including this tool's README) may mention a forbidden term *as an example* while
+    #   also stating the correct term on the same line (e.g. "应为 ...jsonl").
+    # - In that specific case, treating it as a violation would make the gate self-inconsistent.
     for pat, label in FORBIDDEN_TERM_PATTERNS:
-        if pat.search(text):
+        for line in text.splitlines():
+            if not pat.search(line):
+                continue
+            # Exemption: same-line corrective guidance.
+            # Keep this intentionally narrow to avoid hiding real regressions in code blocks.
+            if ("应为" in line or "请使用" in line or "应使用" in line) and "index_state.stage.jsonl" in line:
+                continue
             base = "FAIL" if doc.role in STRICT_FAIL_ROLES else "INFO"
             status = _classify_severity(doc.role, base)
             issues.append((status, f"禁止术语命中: {label}（请使用 index_state.stage.jsonl）"))

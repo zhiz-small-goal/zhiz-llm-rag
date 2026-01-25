@@ -1,5 +1,5 @@
 version: 1
-generated_at: 2026-01-20
+generated_at: 2026-01-25
 scope: tools
 readmes:
   -
@@ -108,6 +108,21 @@ readmes:
     entrypoints:
       - "python tools/check_docs_conventions.py"
       - "python -m mhy_ai_rag_data.tools.check_docs_conventions"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+
+  -
+    path: tools/check_doc_system_gate_README.md
+    tool_id: check_doc_system_gate
+    cli_framework: argparse
+    impl:
+      wrapper: tools/check_doc_system_gate.py
+    entrypoints:
+      - "python tools/check_doc_system_gate.py"
     contracts:
       output: report-output-v2
     generation:
@@ -341,6 +356,21 @@ readmes:
     generation:
       options: static-ast
       output_contract: ssot
+    mapping_status: ok
+
+  -
+    path: tools/gen_doc_inventory_README.md
+    tool_id: gen_doc_inventory
+    cli_framework: argparse
+    impl:
+      wrapper: tools/gen_doc_inventory.py
+    entrypoints:
+      - "python tools/gen_doc_inventory.py"
+    contracts:
+      output: none
+    generation:
+      options: static-ast
+      output_contract: none
     mapping_status: ok
   -
     path: tools/generate_review_spec_docs_README.md

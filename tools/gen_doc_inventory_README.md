@@ -1,7 +1,25 @@
 ---
 title: gen_doc_inventory.py 使用说明
 version: v0.1
-last_updated: 2026-01-23
+last_updated: 2026-01-25
+
+tool_id: gen_doc_inventory
+cli_framework: argparse
+
+impl:
+  wrapper: tools/gen_doc_inventory.py
+
+entrypoints:
+  - python tools\gen_doc_inventory.py
+
+contracts:
+  output: none
+
+generation:
+  options: static-ast
+  output_contract: none
+
+mapping_status: ok
 timezone: America/Los_Angeles
 owner: zhiz
 status: draft
