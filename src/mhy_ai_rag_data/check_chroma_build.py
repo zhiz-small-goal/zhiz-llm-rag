@@ -28,13 +28,37 @@ from typing import Any, Dict, Optional
 from mhy_ai_rag_data.tools.reporting import build_base, add_error, status_to_rc, write_report
 
 
+def _extract_plan_obj(obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    # v1 shape (legacy): {"planned_chunks": int, ...}
+    if isinstance(obj.get("planned_chunks"), int):
+        return obj
+
+    # v2 report-bundle shape (current): {"schema_version": 2, ..., "data": {...planned_chunks...}}
+    data = obj.get("data")
+    if isinstance(data, dict) and isinstance(data.get("planned_chunks"), int):
+        return data
+
+    # Defensive fallback: some tools may embed the payload under items[].detail.
+    items = obj.get("items")
+    if isinstance(items, list):
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            detail = it.get("detail")
+            if isinstance(detail, dict) and isinstance(detail.get("planned_chunks"), int):
+                return detail
+
+    return None
+
+
 def _load_plan(plan_path: Path) -> Dict[str, Any]:
     obj = json.loads(plan_path.read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
         raise ValueError("plan is not a json object")
-    if "planned_chunks" not in obj:
-        raise ValueError("plan missing planned_chunks")
-    return obj
+    plan = _extract_plan_obj(obj)
+    if plan is None:
+        raise ValueError("plan missing planned_chunks (supported: planned_chunks or data.planned_chunks)")
+    return plan
 
 
 def _safe_preview(s: str, n: int = 160) -> str:
