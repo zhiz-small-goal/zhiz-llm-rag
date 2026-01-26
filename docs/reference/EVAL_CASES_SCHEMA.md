@@ -1,7 +1,7 @@
 ---
 title: Stage-2 评测契约：eval_cases.jsonl 与 eval_retrieval_report.json
-version: v1.0
-last_updated: 2026-01-13
+version: v1.1
+last_updated: 2026-01-25
 ---
 
 # Stage-2 评测契约：`eval_cases.jsonl` 与 `eval_retrieval_report.json`
@@ -32,7 +32,7 @@ Stage-2 的核心目标是：在固定索引与固定检索配置下，持续验
 
 不覆盖：
 - 端到端 RAG（由 `run_eval_rag.py` 单独负责）
-- rerank / hybrid 的具体算法实现（这里只预留字段占位）
+- rerank 的具体算法实现（本契约不规定 rerank 逻辑，只规定可审计字段）
 
 ---
 
@@ -70,8 +70,15 @@ Stage-2 的核心目标是：在固定索引与固定检索配置下，持续验
 - `id/query/expected_sources/must_include`
 - `bucket/pair_id/concept_id`
 - `hit_at_k: bool|null`
-- `topk: list[{rank,source,distance}]`：dense-only topK 结果（当前实现）
-- `debug: object`：调试占位（`dense_topk/keyword_topk/fusion_topk/expansion_trace`）
+- `topk: list[{rank,source,distance,...}]`：topK 结果。`retrieval_mode=dense` 时为 dense topK；`retrieval_mode=hybrid` 时为 dense+keyword 融合 topK（RRF）。
+- `debug: object`：调试字段（可用于“dense vs hybrid”对照与失败定位）：
+  - `retrieval_mode`: `dense|hybrid`
+  - `dense_topk`: dense topK（截断到 k）
+  - `keyword_topk`: keyword topK（截断到 k；hybrid 才有）
+  - `fusion_topk`: 融合 topK（hybrid 才有）
+  - `hit_at_k_dense`: dense-only 的命中结果（用于对照）
+  - `fusion_method` / `rrf_k`: 融合参数
+  - `expansion_trace`: 预留（当前为 null）
 
 ---
 
@@ -96,3 +103,14 @@ Stage-2 的核心目标是：在固定索引与固定检索配置下，持续验
 
 - 工具必须允许旧用例（缺省 `bucket`）继续运行，但应在报告 `warnings` 明确记录缺省行为。
 - 新字段应“可空”，读取端必须容错；当你决定收紧门禁时，再把 warning 升级为 error。
+
+
+---
+
+## 7. 基线对比（baseline compare）
+
+Stage-2 的门禁闭环通常由 `compare_eval_retrieval_baseline.py` 完成：
+- baseline 固化：`snapshot_eval_retrieval_baseline.py` 将 `metrics/buckets/config` 写入 `data_processed/baselines/eval_retrieval_baseline.json`；
+- 对比裁决：默认至少校验 `k` 与 `retrieval_mode` 一致；如需把 `embed_model/device/dense_pool_k/keyword_pool_k` 等也纳入一致性，可在 compare 里启用 `--strict-config`。
+
+`config_mismatch` 常见原因是 baseline 版本旧（字段缺失或含义变更）；处理方式是更新 baseline（重新 snapshot），而不是直接放宽 `allowed-drop`。

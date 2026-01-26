@@ -1,7 +1,7 @@
 ---
 title: Getting Started（教程）：跑通 Stage-1 + PR/CI Lite 回归
 version: v1.0
-last_updated: 2026-01-13
+last_updated: 2026-01-25
 ---
 
 # Getting Started（教程）：跑通 Stage-1 + PR/CI Lite 回归
@@ -32,9 +32,18 @@ last_updated: 2026-01-13
 tools\run_ci_gates.cmd
 ```
 
+### 2.1a Linux/macOS bash 一键（与 Windows 同顺序）
+> 说明：该脚本会在仓库根目录下自动创建/复用 `.venv_ci`，先跑 `pyproject` preflight，
+> 再安装 `.[ci]` 并执行 PR/CI Lite 门禁；任何一步失败都会立刻停止。
+
+```bash
+bash tools/run_ci_gates.sh
+```
+
+
 ### 2.2 手动安装（如果你想分步观察输出）
 ```cmd
-python tools\check_pyproject_preflight.py --ascii-only
+python tools/check_pyproject_preflight.py --ascii-only
 python -m venv .venv_ci
 .\.venv_ci\Scripts\activate
 python -m pip install -U pip
@@ -43,8 +52,8 @@ pip install -e ".[ci]"
 
 ## 3) 运行 PR/CI Lite 门禁（必须 PASS）
 ```cmd
-python tools\check_cli_entrypoints.py
-python tools\check_md_refs_contract.py
+python tools/check_cli_entrypoints.py
+python tools/check_md_refs_contract.py
 pytest -q
 ```
 验收口径：

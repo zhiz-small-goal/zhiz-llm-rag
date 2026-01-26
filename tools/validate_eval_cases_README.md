@@ -1,7 +1,7 @@
 ---
 title: "`validate_eval_cases.py` 使用说明（校验 eval_cases.jsonl：结构 + 可执行性 + 分桶字段）"
-version: v1.0
-last_updated: 2026-01-20
+version: v1.1
+last_updated: 2026-01-25
 tool_id: validate_eval_cases
 
 impl:
@@ -80,8 +80,11 @@ cli_framework: argparse
 ## 3. 用法（命令行）
 
 ```bash
-python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl --out data_processed/build_reports/eval_cases_validation.json
+python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl --check-sources-exist --out data_processed/build_reports/eval_cases_validation.json
 ```
+
+说明：
+- `--skip-if-missing` 用于 gate/CI：当 cases 文件缺失时，以 WARN 退出 0（避免在“未准备用例”阶段阻断其它门禁）。
 
 ---
 

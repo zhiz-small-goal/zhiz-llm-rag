@@ -1,7 +1,7 @@
 ---
 title: OPERATION GUIDE（运行手册）
-version: v1.2
-last_updated: 2026-01-23
+version: v1.3
+last_updated: 2026-01-25
 timezone: "America/Los_Angeles"
 owner: "zhiz"
 status: "active"
@@ -26,7 +26,7 @@ status: "active"
     - [Step 8：闭环（RAG pipeline + 本地模型）——先验证请求体，再验证 LLM](#step-8闭环rag-pipeline--本地模型先验证请求体再验证-llm)
     - [Step 9：Stage-1 一键验收（verify）——把“能否进入下一阶段”变成门禁](#step-9stage-1-一键验收verify把能否进入下一阶段变成门禁)
     - [Step 10：Stage-1 基线快照（snapshot）——为“漂移归因”留证据](#step-10stage-1-基线快照snapshot为漂移归因留证据)
-    - [Step 11：Stage-2 评测体系（cases → 取证 → 门禁 → 评测 → 汇总）](#step-11stage-2-评测体系cases--取证--门禁--评测--汇总)
+    - [Step 11：Stage-2 评测体系（cases → 取证 → 门禁 → 评测 → 基线对比 → 汇总）](#step-11stage-2-评测体系cases--取证--门禁--评测--基线对比--汇总)
     - [Step 12：文档工程门禁（docs 规范与链接可用性）](#step-12文档工程门禁docs-规范与链接可用性)
     - [Step 13：JSON 报告 schema 自检（用于回归/CI）](#step-13json-报告-schema-自检用于回归ci)
   - [2) 替代方案（1–2 个：适用场景 + 代价/限制）](#2-替代方案12-个适用场景--代价限制)
@@ -357,45 +357,59 @@ python tools\compare_stage1_baseline_snapshots.py ^
 
 ---
 
-### Step 11：Stage-2 评测体系（cases → 取证 → 门禁 → 评测 → 汇总）
-**做什么**：Stage-2 的目标是把“检索是否退化、端到端是否退化”变成可度量结果。推荐工作流是：先用 `init_eval_cases.py` 初始化用例集；对每条 query 用 `suggest_expected_sources.py` 基于 Chroma topK 取证并填充 `expected_sources`；再用 `validate_eval_cases.py` 做用例集门禁；最后运行检索回归（hit@k）与端到端回归（must_include），并用 `view_stage2_reports.py` 一键汇总关键指标。  
-**为何（因果）**：没有 Stage-2，你只能用少量人工 query 做“感觉回归”，容易被随机性/排序抖动误导。Stage-2 将“检索”和“生成”拆成两层：若 hit@k 稳定但 must_include 退化，优先看 prompt/context/LLM；若 hit@k 也退化，则优先看 embedding/分块/索引口径。  
+### Step 11：Stage-2 评测体系（cases → 取证 → 门禁 → 评测 → 基线对比 → 汇总）
+**做什么**：Stage-2 的目标是把“检索是否退化、端到端是否退化”变成可复现的落盘结果，并把结果接入 gate 形成门禁闭环。推荐工作流是：先用 `init_eval_cases.py` 初始化用例集；对每条 query 用 `suggest_expected_sources.py` 基于当前索引 topK 取证并填充 `expected_sources`；再用 `validate_eval_cases.py` 做用例集门禁；随后用 `run_eval_retrieval.py` 生成检索回归（hit@k + 分桶/对照 + 证据 topK）；当你认可当前结果时，用 `snapshot_eval_retrieval_baseline.py` 固化 baseline；最后用 `compare_eval_retrieval_baseline.py` 对比基线并作为 gate 的最终裁决。
+**为何（因果）**：没有 Stage-2，你只能用少量人工 query 做“感觉回归”，而随机性与排序抖动会把原因掩盖掉。Stage-2 将“检索”和“生成”拆成两层：若 hit@k 稳定但 must_include 退化，优先看 prompt/context/LLM；若 hit@k 也退化，则优先看 embedding/分块/索引口径；若 dense 命中但 hybrid 才命中，通常意味着 keyword 侧在补“候选窗漏召回”。
 **关键参数/注意**：  
 - `expected_sources` 推荐用仓库相对路径（文件级标识），避免绝对路径/临时路径导致跨机不稳定；  
 - `must_include` 只做“最小断言”，不要写成完整答案；  
-- 运行端到端评测时，建议把 `--timeout` 提高到 120–180，并使用 `--trust-env auto` 避免本地代理劫持 127.0.0.1。  
-**推荐命令（最小闭环）**：
+- `run_eval_retrieval.py` 默认 `--retrieval-mode hybrid`（dense + keyword；RRF 融合）。要做“只看向量召回/隔离变量”，可显式指定 `--retrieval-mode dense`；  
+- baseline 对比的 `config_mismatch` 经常来自“旧 baseline 没有记录新字段”（例如从 dense-only 升级到 hybrid 后 `baseline.retrieval_mode` 为空）。这类 mismatch 与 CUDA/CPU 建库口径不是同一类问题；按下方流程重建 baseline 即可；  
+- **跨平台**：为同时兼容 Linux gate，推荐命令统一写 `python tools/xxx.py`（使用 `/`），避免 `tools\xxx.py` 触发平台分支。
+
+**推荐命令（最小闭环 + gate 对齐）**：
 ```cmd
 :: 1) 初始化（只生成/维护用例集骨架）
-python tools\init_eval_cases.py --root .
-或者新增的:
-rag-init-eval-cases
+python tools/init_eval_cases.py --root .
+:: 别名：rag-init-eval-cases
 
 :: 2) 取证：为某条 query 推荐 expected_sources（可复制进用例）
-python tools\suggest_expected_sources.py --root . --query "存档导入与导出怎么做？" --db chroma_db --collection rag_chunks --k 8 --pick 2 --embed-model BAAI/bge-m3 --device cpu
+python tools/suggest_expected_sources.py --root . --query "存档导入与导出怎么做？" --db chroma_db --collection rag_chunks --k 8 --pick 2 --embed-backend auto --embed-model BAAI/bge-m3 --device auto
 
 :: 3) 用例集门禁（强烈建议每次评测前跑）
-python tools\validate_eval_cases.py --root . --check-sources-exist
+python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl --check-sources-exist
 
-:: 4) 检索回归（hit@k）
-python tools\run_eval_retrieval.py --root . --db chroma_db --collection rag_chunks --k 5 --embed-model BAAI/bge-m3
+:: 4) 检索回归（hit@k；hybrid 默认，显式写出便于审计与复现）
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --embed-backend auto --embed-model BAAI/bge-m3 --device auto --out data_processed/build_reports/eval_retrieval_report.json --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl --progress auto
 
-:: 5) 端到端回归（must_include）
-python tools\run_eval_rag.py --root . --db chroma_db --collection rag_chunks --base-url http://127.0.0.1:8000/v1 --k 5 --embed-model BAAI/bge-m3 --timeout 120 --trust-env auto
+:: 5) 固化 baseline（只在“你认可当前结果作为新基线”时执行）
+python tools/snapshot_eval_retrieval_baseline.py --root . --report data_processed/build_reports/eval_retrieval_report.json --baseline-out data_processed/baselines/eval_retrieval_baseline.json
 
-:: 6) 汇总解读（可落盘 Markdown）
-python tools\view_stage2_reports.py --root . --md-out data_processed\build_reports\stage2_summary.md
+:: 6) 基线对比（门禁；allowed-drop=0 表示不允许下降）
+python tools/compare_eval_retrieval_baseline.py --root . --baseline data_processed/baselines/eval_retrieval_baseline.json --report data_processed/build_reports/eval_retrieval_report.json --allowed-drop 0.0 --bucket-allowed-drop 0.0 --out data_processed/build_reports/eval_retrieval_baseline_compare_report.json
+
+:: 7) 端到端回归（must_include，可选）
+python tools/run_eval_rag.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --base-url http://127.0.0.1:8000/v1 --k 5 --embed-backend auto --embed-model BAAI/bge-m3 --timeout 120 --trust-env auto --out data_processed/build_reports/eval_rag_report.json
+
+:: 8) 汇总解读（可落盘 Markdown）
+python tools/view_stage2_reports.py --root . --md-out data_processed/build_reports/stage2_summary.md
 ```
+
+**Gate 对齐说明**：
+- gate 的 Stage-2 闭环门禁通常是：`validate_eval_cases` → `run_eval_retrieval` → `compare_eval_retrieval_baseline`（baseline 缺失会导致 compare FAIL，属于“基线未建立”的明确信号）。
+- Linux/macOS 运行 gate 时，命令保持一致：`python tools/gate.py --profile ci --root .`（不要依赖 `.cmd` 批处理）。
+
 **进一步说明**：分别见工具自带说明：  
 - [`tools/init_eval_cases_README.md`](../../tools/init_eval_cases_README.md)  
 - [`tools/suggest_expected_sources_README_v2.md`](../../tools/suggest_expected_sources_README_v2.md)  
 - [`tools/validate_eval_cases_README.md`](../../tools/validate_eval_cases_README.md)  
 - [`tools/run_eval_retrieval_README.md`](../../tools/run_eval_retrieval_README.md)  
+- [`tools/snapshot_eval_retrieval_baseline_README.md`](../../tools/snapshot_eval_retrieval_baseline_README.md)  
+- [`tools/compare_eval_retrieval_baseline_README.md`](../../tools/compare_eval_retrieval_baseline_README.md)  
 - [`tools/run_eval_rag_README.md`](../../tools/run_eval_rag_README.md)  
 - [`tools/view_stage2_reports_README.md`](../../tools/view_stage2_reports_README.md)
 
 ---
-
 ### Step 12：文档工程门禁（docs 规范与链接可用性）
 **做什么**：当你批量处理 `docs/`（例如自动插入目录 TOC、统一标题、迁移文件）后，建议用两个脚本做门禁：  
 1) `tools/check_docs_conventions.py`：检查每个 docs Markdown 的“首个标题必须为 `# {文件名}目录：`”以及目录标题后“两行空行”等工程约定；  

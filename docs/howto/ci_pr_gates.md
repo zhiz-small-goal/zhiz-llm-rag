@@ -1,7 +1,7 @@
 ---
 title: How-to：PR/CI Lite 门禁（快速回归）
-version: v1.3
-last_updated: 2026-01-14
+version: v1.4
+last_updated: 2026-01-25
 ---
 
 # How-to：PR/CI Lite 门禁（快速回归）
@@ -56,12 +56,24 @@ python tools/gate.py --profile release --root .
 
 ### 2.1 Windows CMD（最不易误用：FAIL 会自动停止后续步骤）
 ```cmd
-tools\run_ci_gates.cmd
+tools/run_ci_gates.cmd
 ```
 
 可选：如果你想把 Stage-2 的 embed 依赖也顺手装上（不推荐放进 PR/CI Lite，但本地自测可用）：
 ```cmd
-tools\run_ci_gates.cmd --with-embed
+tools/run_ci_gates.cmd --with-embed
+```
+
+### 2.1a Linux/macOS（bash，一键 fail-fast）
+```bash
+bash tools/run_ci_gates.sh
+```
+
+可选示例：
+```bash
+bash tools/run_ci_gates.sh --with-embed
+bash tools/run_ci_gates.sh --no-install
+bash tools/run_ci_gates.sh --venv .venv_ci_py312
 ```
 
 ### 2.2 如果你坚持手动逐条跑（务必用 && 串联实现 fail-fast）

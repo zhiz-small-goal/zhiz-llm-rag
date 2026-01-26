@@ -1,7 +1,7 @@
 ---
 title: run_ci_gates.cmd 使用说明
 version: v1.1
-last_updated: 2026-01-20
+last_updated: 2026-01-25
 tool_id: run_ci_gates
 
 impl:
@@ -64,6 +64,13 @@ cli_framework: other
 ```cmd
 tools\run_ci_gates.cmd
 ```
+
+> Linux/macOS：使用 bash 版本脚本（参数与 cmd 保持一致；仍然遵循 fail-fast 语义）
+
+```bash
+bash tools/run_ci_gates.sh
+```
+
 
 可选示例：
 

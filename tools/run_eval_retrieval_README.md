@@ -1,7 +1,7 @@
 ---
 title: "`run_eval_retrieval.py` 使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）"
-version: v1.0
-last_updated: 2026-01-20
+version: v1.1
+last_updated: 2026-01-25
 tool_id: run_eval_retrieval
 
 impl:
@@ -138,17 +138,18 @@ python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cas
 ### 7.1 开启 items 事件流（JSONL）
 
 ```bash
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5   --out data_processed/build_reports/eval_retrieval_report.json   --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl   --progress on --progress-min-interval-ms 500
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60   --out data_processed/build_reports/eval_retrieval_report.json   --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl   --progress on --progress-min-interval-ms 500
 ```
 
 说明：
+- `--skip-if-missing` 用于 gate/CI：当 db/collection/cases 不存在时，以 WARN 退出 0（避免在“未建库/未准备用例”阶段阻断其它门禁）。
 - `--events-out` 写出 JSONL（每行一个 v2 `item`），用于实时查看与中断后重放。
 - `--progress` 输出到 stderr；`--progress-min-interval-ms` 用于节流。
 
 ### 7.2 Windows 下实时观察（PowerShell）
 
 ```powershell
-Get-Content -Path data_processeduild_reports\eval_retrieval_report.events.jsonl -Wait
+Get-Content -Path data_processed\build_reports\eval_retrieval_report.events.jsonl -Wait
 ```
 
 ### 7.3 事件记录语义（简述）

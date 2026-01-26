@@ -1,7 +1,7 @@
 ---
 title: 观测长任务（进度与 items 事件流）
-version: 2
-last_updated: 2026-01-21
+version: 3
+last_updated: 2026-01-25
 timezone: America/Los_Angeles
 ---
 
@@ -50,7 +50,7 @@ events 的结构来源：`src/mhy_ai_rag_data/tools/report_events.py`；完整 i
 ## 3. run_eval_retrieval：观测示例
 
 ```bash
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5   --out data_processed/build_reports/eval_retrieval_report.json   --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl   --progress on --progress-min-interval-ms 500
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --out data_processed/build_reports/eval_retrieval_report.json   --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl   --progress on --progress-min-interval-ms 500
 ```
 
 你会得到两类信号：
@@ -74,9 +74,9 @@ python tools/run_eval_rag.py --root . --db chroma_db --collection rag_chunks --b
 
 ```powershell
 # 实时查看 jsonl items 事件流
-Get-Content -Wait data_processeduild_reports\eval_retrieval_report.events.jsonl
+Get-Content -Wait data_processed\build_reports\eval_retrieval_report.events.jsonl
 
-Get-Content -Wait data_processeduild_reports\eval_rag_report.events.jsonl
+Get-Content -Wait data_processed\build_reports\eval_rag_report.events.jsonl
 ```
 
 ---
