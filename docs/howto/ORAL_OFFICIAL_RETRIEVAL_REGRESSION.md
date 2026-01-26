@@ -1,7 +1,7 @@
 ---
 title: How-to：建立“口语 vs 官方术语”检索回归（防止 topK 漏召回）
-version: v1.0
-last_updated: 2026-01-13
+version: v1.1
+last_updated: 2026-01-25
 ---
 
 # How-to：建立“口语 vs 官方术语”检索回归（防止 topK 漏召回）
@@ -22,7 +22,7 @@ last_updated: 2026-01-13
 
 ## 1. 你要达成的验收目标
 
-你要解决的问题是：用户口语表达与文档官方术语不一致，导致 dense topK 候选窗里没有目标 chunk，从而出现漏召回。
+你要解决的问题是：用户口语表达与文档官方术语不一致，导致候选窗（dense 或 hybrid 融合 topK）里没有目标 chunk，从而出现漏召回。
 
 因此验收目标应以 **oral 分桶**为主：
 
@@ -73,7 +73,11 @@ python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_ca
 **相关文档**: [使用说明（Stage-2：检索侧回归 hit@k + 分桶回归）](../../tools/run_eval_retrieval_README.md)
 
 ```bash
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --embed-backend auto --embed-model BAAI/bge-m3 --device cpu --out data_processed/build_reports/eval_retrieval_report.json
+# 诊断：只看向量召回（隔离 keyword 侧变量）
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --retrieval-mode dense --embed-backend auto --embed-model BAAI/bge-m3 --device auto --out data_processed/build_reports/eval_retrieval_report.dense.json
+
+# 常规：hybrid（dense + keyword；RRF 融合；用于门禁与日常回归）
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --embed-backend auto --embed-model BAAI/bge-m3 --device auto --out data_processed/build_reports/eval_retrieval_report.json
 ```
 
 输出重点：
@@ -107,3 +111,13 @@ python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cas
 - 阶段 B（再收紧阈值）：对 `buckets.oral.hit_rate` 设置“不低于基线”的门禁；失败时输出 fail cases 列表以便定位。
 
 当 oral 桶长期低于目标或修复收益停滞，再触发引入更高成本方案（hybrid / rerank / 引擎升级）。
+
+
+补充（基线对比与 gate 闭环）：
+
+- 当你认可某次 Stage-2 结果作为新基线时，用 `snapshot_eval_retrieval_baseline.py` 固化：
+  - `python tools/snapshot_eval_retrieval_baseline.py --root . --report data_processed/build_reports/eval_retrieval_report.json --baseline-out data_processed/baselines/eval_retrieval_baseline.json`
+- 日常回归/CI 用 `compare_eval_retrieval_baseline.py` 做门禁：
+  - `python tools/compare_eval_retrieval_baseline.py --root . --baseline data_processed/baselines/eval_retrieval_baseline.json --report data_processed/build_reports/eval_retrieval_report.json --allowed-drop 0.0 --bucket-allowed-drop 0.0`
+
+这一步的 `config_mismatch` 常见原因是 baseline 版本旧（例如 baseline 未记录 `retrieval_mode`）；处理方式是重新 snapshot baseline，而不是调整 GPU/CPU 设备。

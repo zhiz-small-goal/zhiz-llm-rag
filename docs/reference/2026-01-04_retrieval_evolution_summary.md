@@ -15,6 +15,8 @@
 
 ---
 
+> 更新（2026-01-25）：本仓库 Stage-2 已将 `run_eval_retrieval.py` 默认切换为 `--retrieval-mode hybrid`，并新增 `snapshot_eval_retrieval_baseline.py` / `compare_eval_retrieval_baseline.py` 形成“评测→门禁→基线对比”闭环；最新口径以 `docs/explanation/HANDOFF.md` 与 `docs/howto/OPERATION_GUIDE.md` 为准。
+
 <a id="toc"></a>
 ## 目录
 - [结论](#conclusion)
