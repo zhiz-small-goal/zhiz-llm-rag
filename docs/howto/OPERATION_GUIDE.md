@@ -1,7 +1,7 @@
 ---
 title: OPERATION GUIDE（运行手册）
 version: v1.3
-last_updated: 2026-01-25
+last_updated: 2026-01-26
 timezone: "America/Los_Angeles"
 owner: "zhiz"
 status: "active"
@@ -128,7 +128,7 @@ python -c "import chromadb; import sentence_transformers; print('embed imports O
 **做什么**：确认你在项目根目录运行（与 `inventory.csv` 同级）。重要目录与文件约定如下：  
 - `inventory.csv`：资产清单（扫描产物）；  
 - `data_processed/text_units.jsonl`：units（每个 source 一条记录）；  
-- `data_processed/chunk_plan.json`：plan 产物（planned_chunks、type_breakdown、chunk 参数）；  
+- `data_processed/chunk_plan.json`：plan 产物（report-output-v2；planned_chunks 在 `data.planned_chunks`；含 type_breakdown/chunk 参数/include_media_stub）；  
 - `chroma_db/`：Chroma 向量库持久化目录；  
 - `data_processed/build_reports/`：构建/计时等报告落盘目录（建议保留用于复盘对比）。  
 **为何（因果）**：你遇到过“以为卡住/以为漏写/以为没生效”，根因往往是输出目录没对上或旧库混入。强制统一“根目录运行 + 固定相对路径”能把此类问题压到最低。  
@@ -157,12 +157,15 @@ python validate_rag_units.py --max-samples 50 --json-stdout
 ### Step 4：plan（dry-run）——用“同参数计划数”取代手填 expected
 **做什么**：运行 `tools/plan_chunks_from_units.py` 生成 `data_processed/chunk_plan.json`。该脚本会调用项目内的 chunking 逻辑，按 Scheme B 口径计算 planned_chunks，并输出按 `source_type` 的 breakdown。  
 **为何（因果）**：你此前的争议点是“为什么 694 而不是 705”，本质是 expected 来自手填常量且不可追溯。plan 的价值是：把 expected 变成**可复现的计算结果**，并且与 build 共享同参数（chunk_chars/overlap/min/include_media_stub），从源头消灭误报。  
-**关键参数/注意**：plan 与 build 的 chunk 参数必须完全一致；如果你只改了 build 的参数而没改 plan，那么 check 将必然 FAIL，这种 FAIL 是健康的（它在提醒你口径漂移）。  
+**关键参数/注意**：plan 与 build 的 chunk 参数必须完全一致；如果你只改了 build 的参数而没改 plan，那么 check 将必然 FAIL，这种 FAIL 是健康的（它在提醒你口径漂移）。此外 `chunk_plan.json` 当前为 report-output-v2（schema_version=2），planned_chunks 位于 `data.planned_chunks`（兼容历史顶层字段）。  
 **推荐命令**：
 ```cmd
 python tools\plan_chunks_from_units.py --root . --units data_processed/text_units.jsonl ^
   --chunk-chars 1200 --overlap-chars 120 --min-chunk-chars 200 ^
   --include-media-stub true --out data_processed\chunk_plan.json
+
+:: 可选：快速确认 planned_chunks（兼容 schema_version=1/2）
+python -c "import json;obj=json.loads(open('data_processed/chunk_plan.json',encoding='utf-8').read());print(obj.get('planned_chunks') or obj.get('data',{}).get('planned_chunks'))"
 ```
 
 ---
@@ -184,7 +187,7 @@ python tools\plan_chunks_from_units.py --root . --units data_processed/text_unit
 python tools\run_profile_with_timing.py --profile build_profile_schemeB.json --smoke
 ```
 - 生成的时间报告在 `JSON 报告：data_processed/build_reports/time_report_*.json`
-- 
+
 **Option B（仅 build：不生成 time_report）**：
 ```cmd
 python tools\run_build_profile.py --profile build_profile_schemeB.json
@@ -259,6 +262,7 @@ python tools\write_db_build_stamp.py --db chroma_db --collection rag_chunks --pl
 **做什么**：执行 `check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json`。该检查的核心判据是：`collection.count == planned_chunks`。  
 **为何（因果）**：你需要一个“可落地的稳定验收信号”，而不是凭感觉看日志。check 的定位非常明确：若 FAIL，则要么 build 未完成/被中断，要么 plan/build 参数不一致（口径漂移），要么写库发生异常。它把问题域收敛到可操作的范围。  
 **关键参数/注意**：不要再维护任何手填 `expected_chunks` 常量；若你确实要临时覆盖 expected，应明确标注“覆盖值”，并且不建议作为长期流程。  
+**补充（2026-01-26）**：`chunk_plan.json` 的 plan 输出已统一为 report-output-v2（schema_version=2），planned_chunks 在 `data.planned_chunks`。`check_chroma_build.py` 兼容读取两种格式，避免出现“plan 已生成但 check 读不到字段”的误 FAIL（典型报错：`plan missing planned_chunks`）。  
 **推荐命令**：
 ```cmd
 python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json
@@ -364,6 +368,7 @@ python tools\compare_stage1_baseline_snapshots.py ^
 - `expected_sources` 推荐用仓库相对路径（文件级标识），避免绝对路径/临时路径导致跨机不稳定；  
 - `must_include` 只做“最小断言”，不要写成完整答案；  
 - `run_eval_retrieval.py` 默认 `--retrieval-mode hybrid`（dense + keyword；RRF 融合）。要做“只看向量召回/隔离变量”，可显式指定 `--retrieval-mode dense`；  
+- `--device` 建议显式用 `cpu` 或 `cuda`（/`cuda:0`）；`auto` 在部分后端/版本下可能可用，但不作为可复现契约（以脚本 `-h` 与运行日志为准）。  
 - baseline 对比的 `config_mismatch` 经常来自“旧 baseline 没有记录新字段”（例如从 dense-only 升级到 hybrid 后 `baseline.retrieval_mode` 为空）。这类 mismatch 与 CUDA/CPU 建库口径不是同一类问题；按下方流程重建 baseline 即可；  
 - **跨平台**：为同时兼容 Linux gate，推荐命令统一写 `python tools/xxx.py`（使用 `/`），避免 `tools\xxx.py` 触发平台分支。
 
@@ -374,13 +379,13 @@ python tools/init_eval_cases.py --root .
 :: 别名：rag-init-eval-cases
 
 :: 2) 取证：为某条 query 推荐 expected_sources（可复制进用例）
-python tools/suggest_expected_sources.py --root . --query "存档导入与导出怎么做？" --db chroma_db --collection rag_chunks --k 8 --pick 2 --embed-backend auto --embed-model BAAI/bge-m3 --device auto
+python tools/suggest_expected_sources.py --root . --query "存档导入与导出怎么做？" --db chroma_db --collection rag_chunks --k 8 --pick 2 --embed-backend auto --embed-model BAAI/bge-m3 --device cuda
 
 :: 3) 用例集门禁（强烈建议每次评测前跑）
 python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl --check-sources-exist
 
 :: 4) 检索回归（hit@k；hybrid 默认，显式写出便于审计与复现）
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --embed-backend auto --embed-model BAAI/bge-m3 --device auto --out data_processed/build_reports/eval_retrieval_report.json --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl --progress auto
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --embed-backend auto --embed-model BAAI/bge-m3 --device cuda --out data_processed/build_reports/eval_retrieval_report.json --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl --progress auto
 
 :: 5) 固化 baseline（只在“你认可当前结果作为新基线”时执行）
 python tools/snapshot_eval_retrieval_baseline.py --root . --report data_processed/build_reports/eval_retrieval_report.json --baseline-out data_processed/baselines/eval_retrieval_baseline.json
@@ -418,7 +423,7 @@ python tools/view_stage2_reports.py --root . --md-out data_processed/build_repor
 **关键参数/注意**：`verify_postmortems_and_troubleshooting.py` 默认不以断链退出非 0（便于交互调试）；需要严格失败时加 `--strict`。  
 **推荐命令**：
 ```cmd
-python tools\check_docs_conventions.py --root . --docs-dir docs
+python tools\check_docs_conventions.py --root . --dirs docs
 
 python tools\verify_postmortems_and_troubleshooting.py
 python tools\verify_postmortems_and_troubleshooting.py --strict
@@ -464,7 +469,7 @@ python tools\verify_reports_schema.py --report data_processed\build_reports\unit
 构建完成后你通常需要回答两件事：**这次跑了什么参数**、**花了多久**。建议每次构建至少保留以下三类产物：
 
 - `data_processed/env_report.json`：环境快照（Python/依赖/torch/cuda 等）
-- `data_processed/chunk_plan.json`：plan 结果（planned_chunks、type_breakdown、chunk 参数、include_media_stub）
+- `data_processed/chunk_plan.json`：plan 结果（report-output-v2；planned_chunks 在 `data.planned_chunks`；含 type_breakdown/chunk 参数/include_media_stub）
 - `data_processed/build_reports/time_report_*.json`：分步计时（validate/plan/build/check），用于比较不同 batch/device 的成本
 
 推荐使用计时 wrapper（可选）：

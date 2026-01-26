@@ -1,7 +1,7 @@
 ---
 title: 排障手册（Runbook）
 version: v1.0
-last_updated: 2026-01-13
+last_updated: 2026-01-26
 ---
 
 # 排障手册（Runbook）
@@ -26,10 +26,12 @@ last_updated: 2026-01-13
 
 ### Step 3：计划层（plan）是否可解释
 **做什么**：运行 plan 生成 `data_processed/chunk_plan.json`，重点看：
-- `planned_chunks` 是否合理
+- `planned_chunks` 是否合理（chunk_plan.json 为 report-output-v2 时字段在 `data.planned_chunks`）
 - `type_breakdown` 中各类（md/image/video）indexed/chunks 是否符合当前 Scheme  
 **为何（因果）**：plan 是你“expected”的唯一合法来源；如果 plan 输出不可解释，后面的 build/check 都没有讨论基础。  
-**快速验证**：`python tools/plan_chunks_from_units.py ... --include-media-stub true`.
+**快速验证**：`python tools/plan_chunks_from_units.py ... --include-media-stub true`。
+可选：快速打印 planned_chunks（兼容 schema_version=1/2）：
+`python -c "import json;obj=json.loads(open('data_processed/chunk_plan.json',encoding='utf-8').read());print(obj.get('planned_chunks') or obj.get('data',{}).get('planned_chunks'))"`
 
 ### Step 3a：plan 阶段报 `No module named 'chromadb'`（Stage-1 依赖泄漏）
 **现象**：你在只安装了 Stage-1/CI 依赖（例如 `.venv_ci` 里仅 `pip install -e .[ci]`）的情况下运行 `rag-plan` 或 `tools/plan_chunks_from_units.py`，却出现：`[FATAL] cannot import ... No module named 'chromadb'`。  

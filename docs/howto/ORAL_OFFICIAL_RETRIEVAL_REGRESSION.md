@@ -1,7 +1,7 @@
 ---
 title: How-to：建立“口语 vs 官方术语”检索回归（防止 topK 漏召回）
 version: v1.1
-last_updated: 2026-01-25
+last_updated: 2026-01-26
 ---
 
 # How-to：建立“口语 vs 官方术语”检索回归（防止 topK 漏召回）
@@ -74,10 +74,10 @@ python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_ca
 
 ```bash
 # 诊断：只看向量召回（隔离 keyword 侧变量）
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --retrieval-mode dense --embed-backend auto --embed-model BAAI/bge-m3 --device auto --out data_processed/build_reports/eval_retrieval_report.dense.json
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --retrieval-mode dense --embed-backend auto --embed-model BAAI/bge-m3 --device cuda --out data_processed/build_reports/eval_retrieval_report.dense.json
 
 # 常规：hybrid（dense + keyword；RRF 融合；用于门禁与日常回归）
-python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --embed-backend auto --embed-model BAAI/bge-m3 --device auto --out data_processed/build_reports/eval_retrieval_report.json
+python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 20 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --embed-backend auto --embed-model BAAI/bge-m3 --device cuda --out data_processed/build_reports/eval_retrieval_report.json
 ```
 
 输出重点：
