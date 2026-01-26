@@ -10,6 +10,12 @@ tools/build_chroma_index_flagembedding.py
   - sync-mode=delete-stale：对删除/变更文档先删除旧 chunk_id 再全量 upsert（稳定但仍 O(N) embedding）
   - sync-mode=incremental：对删除/变更文档删除旧 chunk_id，只对新增/变更文档 embedding+upsert（长期 O(Δ)）
 
+控制台输出策略（本次改动）：
+- 默认只显示一个“总体进度条”（doc 维度），用于感知写入进度；
+- 其余 INFO 级过程信息写入日志文件；
+- WARNING/ERROR 级信息仍会即时在控制台提示（不吞掉关键告警/失败原因）；
+- FlagEmbedding 内部的 tqdm 文本（如 “Inference Embeddings / pre tokenize”）默认抑制，避免污染进度条。
+
 核心约束（与你项目现有的 check_chroma_build.py 对齐）：
 - chunk_id 生成策略：chunk_id = f"{doc_id}:{chunk_index}"（与 build_chroma_index.py 一致）
 - chunk_conf/include_media_stub/embed_model 任一变化会触发 schema_hash 变化（建议视为“新索引版本”）
@@ -20,7 +26,7 @@ tools/build_chroma_index_flagembedding.py
 
 注意：
 - 删除操作 collection.delete(ids=...) 属于 destructive；脚本默认仅在能定位到“上一轮该文档的 n_chunks”时删除。
-- 若找不到 state 但 collection 已非空，默认执行“重置 collection 后全量构建”（可用参数调整）。
+- 若找不到 state 但 collection 已非空，默认拒绝继续（fail）；如需重置需显式指定（DESTRUCTIVE）。
 """
 
 from __future__ import annotations
@@ -32,9 +38,18 @@ import time
 import json
 import os
 import uuid
+import logging
+import logging.handlers
+import sys
+from contextlib import contextmanager, redirect_stderr
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, cast
+
+try:
+    from tqdm import tqdm
+except Exception:  # tqdm not installed
+    tqdm = None
 
 
 # Tool self-description for report-output-v2 gates (static-AST friendly)
@@ -48,13 +63,11 @@ REPORT_TOOL_META = {
     "entrypoint": "python tools/build_chroma_index_flagembedding.py",
 }
 
-
 # Chroma metadata values are scalars, but stubs also allow SparseVector; keep Any for compatibility.
 MetaValue = Any
 
+
 # -------- shared loader --------
-
-
 def _load_build_logic() -> Any:
     """Import shared chunking/indexing logic from the installed package.
 
@@ -70,17 +83,83 @@ def _chunk_id(doc_id: str, idx: int) -> str:
     return f"{doc_id}:{idx}"
 
 
-def _batched(seq: List[str], batch_size: int) -> Any:
-    for i in range(0, len(seq), batch_size):
-        yield seq[i : i + batch_size]
-
-
 def _safe_bool(s: str) -> bool:
     return str(s).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
-# -------- WAL / resume helpers --------
+@contextmanager
+def _suppress_stderr(enabled: bool) -> Any:
+    """Suppress writes to stderr in a scoped region (used to silence third-party tqdm noise)."""
+    if not enabled:
+        yield
+        return
+    devnull = None
+    try:
+        devnull = open(os.devnull, "w", encoding="utf-8", errors="ignore")
+        with redirect_stderr(devnull):
+            yield
+    finally:
+        try:
+            if devnull:
+                devnull.close()
+        except Exception:
+            pass
 
+
+class _TqdmConsoleHandler(logging.Handler):
+    """Console handler that cooperates with tqdm progress bars (no progress line corruption)."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        msg = self.format(record)
+        if tqdm is not None:
+            try:
+                tqdm.write(msg)
+                return
+            except Exception:
+                pass
+        try:
+            sys.stderr.write(msg + "\n")
+        except Exception:
+            pass
+
+
+def _setup_logging(*, log_path: Path, level: str) -> logging.Logger:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    logger = logging.getLogger("build_chroma_index_flagembedding")
+    logger.setLevel(logging.DEBUG)  # handlers decide effective level
+    logger.handlers.clear()
+    logger.propagate = False
+
+    lvl = getattr(logging, str(level).upper(), logging.INFO)
+
+    fmt = logging.Formatter(
+        fmt="%(asctime)s %(levelname)s %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # File handler: keep more details
+    fh = logging.handlers.RotatingFileHandler(
+        filename=str(log_path),
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
+    fh.setLevel(lvl)
+    fh.setFormatter(fmt)
+    logger.addHandler(fh)
+
+    # Console handler: warnings/errors only (to preserve a clean progress line)
+    ch = _TqdmConsoleHandler()
+    ch.setLevel(logging.WARNING)
+    ch.setFormatter(fmt)
+    logger.addHandler(ch)
+
+    logger.info("logging initialized: log_file=%s log_level=%s", log_path.as_posix(), str(level).upper())
+    return logger
+
+
+# -------- WAL / resume helpers --------
 WAL_VERSION = 1
 WAL_FILENAME = "index_state.stage.jsonl"
 
@@ -143,7 +222,6 @@ def read_wal(
     Tail truncation tolerance: if the last line is partially written, stop reading and mark
     truncated_tail_ignored.
     """
-
     if not wal_path.exists():
         return None
 
@@ -337,8 +415,6 @@ class WriterLock:
 
 
 # -------- main --------
-
-
 def main() -> int:
     # Two-pass parse: make `--selftest` work without requiring a subcommand.
     pre = argparse.ArgumentParser(add_help=False)
@@ -383,6 +459,28 @@ def main() -> int:
     b.add_argument("--include-media-stub", action="store_true", help="index media stubs too")
     b.add_argument("--hnsw-space", default="cosine", help="cosine/l2/ip (stored in collection metadata)")
 
+    # console / logging / progress
+    b.add_argument(
+        "--progress",
+        default="true",
+        help="true/false: show a single overall progress bar in console.",
+    )
+    b.add_argument(
+        "--suppress-embed-progress",
+        default="true",
+        help="true/false: suppress FlagEmbedding internal tqdm output (Inference Embeddings / pre tokenize).",
+    )
+    b.add_argument(
+        "--log-file",
+        default="",
+        help="Log file path. Default: <state_dir>/build.log . Relative paths are resolved from --root.",
+    )
+    b.add_argument(
+        "--log-level",
+        default="INFO",
+        help="Logging level for file log: DEBUG/INFO/WARNING/ERROR.",
+    )
+
     # sync / state
     b.add_argument(
         "--sync-mode",
@@ -397,15 +495,15 @@ def main() -> int:
     )
     b.add_argument(
         "--on-missing-state",
-        default="reset",
+        default="fail",
         choices=["reset", "fail", "full-upsert"],
-        help="If state missing but collection is non-empty: reset collection / fail / proceed with full upsert (may keep stale).",
+        help="If state missing but collection is non-empty: reset collection (DESTRUCTIVE: delete+recreate) / fail / proceed with full upsert (may keep stale).",
     )
     b.add_argument(
         "--schema-change",
-        default="reset",
+        default="fail",
         choices=["reset", "fail"],
-        help="If schema_hash differs from LATEST pointer: reset collection (recommended) or fail.",
+        help="If schema_hash differs from LATEST pointer: reset collection (DESTRUCTIVE: delete+recreate) or fail.",
     )
     b.add_argument("--delete-batch", type=int, default=5000, help="Batch size for collection.delete(ids=...).")
     b.add_argument(
@@ -544,12 +642,15 @@ def main() -> int:
             print("[FATAL] " + msg)
             return 2
         print("[WARN] " + msg)
-        print("[WARN] schema-change=reset -> will reset collection and create a new state version")
+        print("[DESTRUCTIVE] schema-change=reset will DELETE and RECREATE the collection.")
+        print("[DESTRUCTIVE] target: db_path=%s collection=%s" % (db_path.as_posix(), str(args.collection)))
+        print(
+            "[DESTRUCTIVE] to avoid this, use --schema-change fail and choose a new --collection (versioned) or new --db."
+        )
         # Reset collection: easiest to guarantee correctness
         try:
             client.delete_collection(name=args.collection)
         except Exception as e:
-            # If delete_collection is unavailable or fails, fall back to drop-and-recreate via db dir is NOT safe here.
             print(f"[FATAL] failed to delete_collection(name={args.collection}): {e}")
             return 2
         try:
@@ -573,6 +674,28 @@ def main() -> int:
     resume_mode = str(args.resume).strip().lower()
     db_path_posix = db_path.as_posix()
 
+    # logging init: now we have state_dir
+    log_file_arg = str(getattr(args, "log_file", "") or "").strip()
+    if not log_file_arg:
+        log_path = state_dir / "build.log"
+    else:
+        p = Path(log_file_arg)
+        log_path = (root / p).resolve() if not p.is_absolute() else p.resolve()
+    logger = _setup_logging(log_path=log_path, level=str(getattr(args, "log_level", "INFO")))
+
+    logger.info(
+        "start: db=%s collection=%s schema_hash=%s sync_mode=%s",
+        db_path.as_posix(),
+        str(args.collection),
+        schema_hash,
+        str(args.sync_mode),
+    )
+    logger.info(
+        "progress=%s suppress_embed_progress=%s",
+        str(getattr(args, "progress", "true")),
+        str(getattr(args, "suppress_embed_progress", "true")),
+    )
+
     run_id = f"{int(time.time())}-{uuid.uuid4().hex[:8]}"
 
     wal_snapshot: WalSnapshot | None = None
@@ -585,7 +708,7 @@ def main() -> int:
                 db_path_posix=db_path_posix,
             )
         except Exception as e:
-            print(f"[WARN] failed to read WAL: {wal_path} ({type(e).__name__}: {e})")
+            logger.warning("failed to read WAL: %s (%s: %s)", wal_path.as_posix(), type(e).__name__, str(e))
             wal_snapshot = None
 
     resume_active = bool(wal_snapshot is not None and not wal_snapshot.finished_ok)
@@ -635,7 +758,7 @@ def main() -> int:
             try:
                 rotated = wal_path.with_suffix(wal_path.suffix + f".prev-{int(time.time())}")
                 os.replace(str(wal_path), str(rotated))
-                print(f"[WARN] existing WAL rotated: {rotated.as_posix()}")
+                logger.warning("existing WAL rotated: %s", rotated.as_posix())
             except Exception:
                 pass
 
@@ -663,10 +786,10 @@ def main() -> int:
         # 状态缺失但库非空：无法可靠定位“多余 ids”。
         # 若 WAL 可恢复：优先续跑（跳过 reset），避免重复写入。
         policy = str(args.on_missing_state)
-        print(f"[WARN] index_state missing but collection.count={existing_count}. policy={policy}")
+        logger.warning("index_state missing but collection.count=%s. policy=%s", str(existing_count), policy)
         if resume_active:
-            print(
-                f"[WARN] WAL indicates resumable progress; ignore on-missing-state={policy} and continue with resume."
+            logger.warning(
+                "WAL indicates resumable progress; ignore on-missing-state=%s and continue with resume.", policy
             )
         else:
             if policy == "fail":
@@ -677,6 +800,11 @@ def main() -> int:
                     writer_lock.release()
                 return 2
             if policy == "reset":
+                print("[DESTRUCTIVE] on-missing-state=reset will DELETE and RECREATE the collection.")
+                print("[DESTRUCTIVE] target: db_path=%s collection=%s" % (db_path.as_posix(), str(args.collection)))
+                print(
+                    "[DESTRUCTIVE] to avoid this, use --on-missing-state fail (recommended) or rebuild into a new --collection."
+                )
                 try:
                     client.delete_collection(name=args.collection)
                 except Exception as e:
@@ -740,29 +868,48 @@ def main() -> int:
 
     sync_mode = str(args.sync_mode)
     if sync_mode == "none":
-        # legacy: treat everything as "changed" to force full upsert (no delete)
         to_process_uris = sorted(cur_uris)
         do_delete = False
     elif sync_mode == "delete-stale":
-        # stable sync: delete old for deleted + changed, then full upsert all current
         to_process_uris = sorted(cur_uris)
         do_delete = True
     else:
-        # incremental: delete old for deleted + changed, embed only added+changed
         to_process_uris = sorted(set(added_uris) | set(changed_uris))
         do_delete = True
 
     # expected chunks (for strict check)
     expected_chunks = 0
-    # for unchanged docs (incremental), expected comes from previous n_chunks
     if sync_mode == "incremental" and prev_state is not None:
         for uri in unchanged_uris:
             expected_chunks += int((prev_docs.get(uri) or {}).get("n_chunks", 0))
 
+    logger.info(
+        "delta: docs_current=%s added=%s changed=%s deleted=%s unchanged=%s to_process=%s do_delete=%s",
+        len(cur_docs),
+        len(added_uris),
+        len(changed_uris),
+        len(deleted_uris),
+        len(unchanged_uris),
+        len(to_process_uris),
+        do_delete,
+    )
+
+    # Overall progress bar (single)
+    progress_enabled = _safe_bool(str(getattr(args, "progress", "true"))) and (tqdm is not None)
+    pbar = None
+    if progress_enabled:
+        pbar = tqdm(total=len(to_process_uris), desc="Chroma Write", unit="doc", dynamic_ncols=True)
+        # If resuming, we still advance per-doc when we actually skip/process them; no fake initial offset.
+
+    def _pbar_postfix() -> Dict[str, Any]:
+        return {
+            "docs": f"{docs_processed}/{len(to_process_uris)}",
+            "chunks": int(chunks_upserted),
+            "upserted": int(upsert_rows_committed_total),
+            "batches": int(wal_committed_batches),
+        }
+
     # 7) delete stale chunks (no global ids enumeration)
-    # - deleted_uris: delete all old ids
-    # - changed_uris: do NOT delete all upfront; we will delete only the stale tail after upserting the new version
-    #   (safe even across interruption, because it does not overlap the new ids range)
     chunks_deleted_removed = 0
     docs_deleted_removed = 0
     chunks_deleted_changed_tail = 0
@@ -784,6 +931,8 @@ def main() -> int:
                 try:
                     collection.delete(ids=batch)
                 except Exception as e:
+                    if pbar is not None:
+                        pbar.close()
                     print(f"[FATAL] collection.delete failed (doc_id={doc_id}, batch={len(batch)}): {e}")
                     raise
                 deleted += len(batch)
@@ -793,6 +942,8 @@ def main() -> int:
             try:
                 collection.delete(ids=batch)
             except Exception as e:
+                if pbar is not None:
+                    pbar.close()
                 print(f"[FATAL] collection.delete failed (doc_id={doc_id}, batch={len(batch)}): {e}")
                 raise
             deleted += len(batch)
@@ -806,7 +957,6 @@ def main() -> int:
     changed_prev: Dict[str, Dict[str, Any]] = {}
 
     if do_delete and prev_state is not None:
-        # delete removed docs
         for uri in deleted_uris:
             prev = prev_docs.get(uri) or {}
             doc_id = str(prev.get("doc_id") or "")
@@ -821,15 +971,13 @@ def main() -> int:
                     )
                 if writer_lock:
                     writer_lock.release()
+                if pbar is not None:
+                    pbar.close()
                 return 2
 
-        # record changed docs old shape (tail cleanup after upsert)
         for uri in changed_uris:
             prev = prev_docs.get(uri) or {}
-            changed_prev[uri] = {
-                "doc_id": str(prev.get("doc_id") or ""),
-                "n_chunks": int(prev.get("n_chunks") or 0),
-            }
+            changed_prev[uri] = {"doc_id": str(prev.get("doc_id") or ""), "n_chunks": int(prev.get("n_chunks") or 0)}
 
     # 8) embed + upsert (for selected docs)
     ids_buf: List[str] = []
@@ -859,14 +1007,9 @@ def main() -> int:
 
         metas_for_upsert = cast(List[Mapping[str, MetaValue]], metas_buf)
         try:
-            collection.upsert(
-                ids=ids_buf,
-                documents=docs_buf,
-                metadatas=metas_for_upsert,
-                embeddings=vecs,
-            )
+            collection.upsert(ids=ids_buf, documents=docs_buf, metadatas=metas_for_upsert, embeddings=vecs)
         except Exception as e:
-            print(f"[FATAL] collection.upsert failed (batch={len(ids_buf)}): {e}")
+            logger.error("collection.upsert failed (batch=%s): %s", len(ids_buf), str(e))
             raise
 
         batch_size = int(len(ids_buf))
@@ -887,10 +1030,8 @@ def main() -> int:
 
     t0 = time.perf_counter()
 
-    # prepare new docs state mapping
     new_docs_state: Dict[str, Dict[str, Any]] = {}
 
-    # first: carry over unchanged docs state (incremental mode)
     if sync_mode == "incremental" and prev_state is not None:
         for uri in unchanged_uris:
             prev = prev_docs.get(uri) or {}
@@ -901,12 +1042,16 @@ def main() -> int:
     docs_processed = 0
     docs_skipped_resume = 0
 
+    suppress_embed_progress = _safe_bool(str(getattr(args, "suppress_embed_progress", "true")))
+
     for uri in to_process_uris:
         info = cur_docs.get(uri)
         if not info:
+            if pbar is not None:
+                pbar.update(1)
+                pbar.set_postfix(_pbar_postfix())
             continue
 
-        # Ensure we do not mix multiple docs in a single upsert batch: flush at doc boundary.
         if ids_buf:
             try:
                 flush()
@@ -915,11 +1060,12 @@ def main() -> int:
                     wal_writer.write_event("RUN_FINISH", {"ok": False, "reason": "upsert_failed"})
                 if writer_lock:
                     writer_lock.release()
+                if pbar is not None:
+                    pbar.close()
                 return 2
 
         cur_sha = str(info.get("content_sha256") or "")
 
-        # Resume: skip docs that are already committed (content_sha256 match).
         wal_doc = wal_done_docs.get(uri) if resume_active else None
         if wal_doc and str(wal_doc.content_sha256) == cur_sha:
             n_chunks = int(wal_doc.n_chunks)
@@ -948,7 +1094,6 @@ def main() -> int:
                 if str(args.wal_fsync) == "doc":
                     wal_writer.fsync_now()
 
-            # For changed docs: delete only the stale tail (ids >= new_n_chunks) if needed.
             if uri in changed_prev:
                 prev_doc_id = str((changed_prev.get(uri) or {}).get("doc_id") or "")
                 prev_n = int((changed_prev.get(uri) or {}).get("n_chunks") or 0)
@@ -966,37 +1111,34 @@ def main() -> int:
                             chunks_deleted_changed_tail += int(deleted_tail)
                             docs_changed_tail_deleted += 1
                 except Exception as e:
-                    print(f"[FATAL] delete changed-tail failed (source_uri={uri}): {e}")
+                    logger.error("delete changed-tail failed (source_uri=%s): %s", uri, str(e))
                     if wal_writer:
                         wal_writer.write_event(
-                            "RUN_FINISH",
-                            {"ok": False, "reason": "delete_changed_tail_failed", "source_uri": uri},
+                            "RUN_FINISH", {"ok": False, "reason": "delete_changed_tail_failed", "source_uri": uri}
                         )
                     if writer_lock:
                         writer_lock.release()
+                    if pbar is not None:
+                        pbar.close()
                     return 2
 
+            if pbar is not None:
+                pbar.update(1)
+                pbar.set_postfix(_pbar_postfix())
             continue
 
         unit = info["unit"]
 
         if wal_writer:
             wal_writer.write_event(
-                "DOC_BEGIN",
-                {
-                    "source_uri": uri,
-                    "doc_id": str(info.get("doc_id") or ""),
-                    "content_sha256": cur_sha,
-                },
+                "DOC_BEGIN", {"source_uri": uri, "doc_id": str(info.get("doc_id") or ""), "content_sha256": cur_sha}
             )
 
         chunk_texts, base_md = build_chunks_from_unit(unit, conf)
-        # NOTE: build_chunks_from_unit may return [] for some corner cases; treat as 0 chunks.
         doc_id = str(base_md.get("doc_id") or info.get("doc_id") or "")
         n_chunks = len(chunk_texts or [])
         expected_chunks += n_chunks
 
-        # update state for this doc
         new_docs_state[uri] = {
             "doc_id": doc_id,
             "source_uri": uri,
@@ -1007,15 +1149,13 @@ def main() -> int:
         }
 
         if not chunk_texts:
-            # Still consider this doc committed (0 chunks).
-            wal_doc_entry = WalDoc(
+            wal_done_docs[uri] = WalDoc(
                 source_uri=uri,
                 doc_id=doc_id,
                 content_sha256=cur_sha,
                 n_chunks=0,
                 updated_at=str(info.get("updated_at") or ""),
             )
-            wal_done_docs[uri] = wal_doc_entry
             if wal_writer:
                 wal_writer.write_event(
                     "DOC_COMMITTED",
@@ -1030,7 +1170,6 @@ def main() -> int:
                 if str(args.wal_fsync) == "doc":
                     wal_writer.fsync_now()
 
-            # changed-tail cleanup (safe even if no chunks)
             if uri in changed_prev:
                 prev_doc_id = str((changed_prev.get(uri) or {}).get("doc_id") or "")
                 prev_n = int((changed_prev.get(uri) or {}).get("n_chunks") or 0)
@@ -1044,17 +1183,21 @@ def main() -> int:
                             chunks_deleted_changed_tail += int(deleted_tail)
                             docs_changed_tail_deleted += 1
                 except Exception as e:
-                    print(f"[FATAL] delete changed-tail failed (source_uri={uri}): {e}")
+                    logger.error("delete changed-tail failed (source_uri=%s): %s", uri, str(e))
                     if wal_writer:
                         wal_writer.write_event(
-                            "RUN_FINISH",
-                            {"ok": False, "reason": "delete_changed_tail_failed", "source_uri": uri},
+                            "RUN_FINISH", {"ok": False, "reason": "delete_changed_tail_failed", "source_uri": uri}
                         )
                     if writer_lock:
                         writer_lock.release()
+                    if pbar is not None:
+                        pbar.close()
                     return 2
 
             docs_processed += 1
+            if pbar is not None:
+                pbar.update(1)
+                pbar.set_postfix(_pbar_postfix())
             continue
 
         # Load model only when we are about to embed.
@@ -1065,6 +1208,8 @@ def main() -> int:
                 wal_writer.write_event("RUN_FINISH", {"ok": False, "reason": "embed_model_load_failed"})
             if writer_lock:
                 writer_lock.release()
+            if pbar is not None:
+                pbar.close()
             return 2
 
         # Embed chunk_texts in batches
@@ -1072,24 +1217,36 @@ def main() -> int:
             batch_texts = chunk_texts[i : i + int(args.embed_batch)]
 
             try:
-                out = model.encode(
-                    batch_texts,
-                    batch_size=len(batch_texts),
-                    max_length=8192,
-                    return_dense=True,
-                    return_sparse=False,
-                    return_colbert_vecs=False,
-                )
+                with _suppress_stderr(suppress_embed_progress):
+                    # Prefer an explicit "no progress bar" kw; fall back if current FlagEmbedding version rejects it.
+                    try:
+                        out = model.encode(
+                            batch_texts,
+                            batch_size=len(batch_texts),
+                            max_length=8192,
+                            return_dense=True,
+                            return_sparse=False,
+                            return_colbert_vecs=False,
+                            show_progress_bar=False,
+                        )
+                    except TypeError:
+                        out = model.encode(
+                            batch_texts,
+                            batch_size=len(batch_texts),
+                            max_length=8192,
+                            return_dense=True,
+                            return_sparse=False,
+                            return_colbert_vecs=False,
+                        )
                 dense = out["dense_vecs"]
             except Exception as e:
-                print(f"[FATAL] embedding failed for doc={uri}: {e}")
+                logger.error("embedding failed for doc=%s: %s", uri, str(e))
                 if wal_writer:
-                    wal_writer.write_event(
-                        "RUN_FINISH",
-                        {"ok": False, "reason": "embed_failed", "source_uri": uri},
-                    )
+                    wal_writer.write_event("RUN_FINISH", {"ok": False, "reason": "embed_failed", "source_uri": uri})
                 if writer_lock:
                     writer_lock.release()
+                if pbar is not None:
+                    pbar.close()
                 return 2
 
             for j, ct in enumerate(batch_texts):
@@ -1114,9 +1271,10 @@ def main() -> int:
                             wal_writer.write_event("RUN_FINISH", {"ok": False, "reason": "upsert_failed"})
                         if writer_lock:
                             writer_lock.release()
+                        if pbar is not None:
+                            pbar.close()
                         return 2
 
-        # doc boundary flush (ensures this doc's side-effects are committed before writing DOC_COMMITTED)
         try:
             flush()
         except Exception:
@@ -1124,16 +1282,17 @@ def main() -> int:
                 wal_writer.write_event("RUN_FINISH", {"ok": False, "reason": "upsert_failed"})
             if writer_lock:
                 writer_lock.release()
+            if pbar is not None:
+                pbar.close()
             return 2
 
-        wal_doc_entry = WalDoc(
+        wal_done_docs[uri] = WalDoc(
             source_uri=uri,
             doc_id=doc_id,
             content_sha256=cur_sha,
             n_chunks=int(n_chunks),
             updated_at=str(info.get("updated_at") or ""),
         )
-        wal_done_docs[uri] = wal_doc_entry
 
         if wal_writer:
             wal_writer.write_event(
@@ -1149,7 +1308,6 @@ def main() -> int:
             if str(args.wal_fsync) == "doc":
                 wal_writer.fsync_now()
 
-        # For changed docs: delete only the stale tail (ids >= new_n_chunks) if needed.
         if uri in changed_prev:
             prev_doc_id = str((changed_prev.get(uri) or {}).get("doc_id") or "")
             prev_n = int((changed_prev.get(uri) or {}).get("n_chunks") or 0)
@@ -1165,19 +1323,22 @@ def main() -> int:
                         chunks_deleted_changed_tail += int(deleted_tail)
                         docs_changed_tail_deleted += 1
             except Exception as e:
-                print(f"[FATAL] delete changed-tail failed (source_uri={uri}): {e}")
+                logger.error("delete changed-tail failed (source_uri=%s): %s", uri, str(e))
                 if wal_writer:
                     wal_writer.write_event(
-                        "RUN_FINISH",
-                        {"ok": False, "reason": "delete_changed_tail_failed", "source_uri": uri},
+                        "RUN_FINISH", {"ok": False, "reason": "delete_changed_tail_failed", "source_uri": uri}
                     )
                 if writer_lock:
                     writer_lock.release()
+                if pbar is not None:
+                    pbar.close()
                 return 2
 
         docs_processed += 1
+        if pbar is not None:
+            pbar.update(1)
+            pbar.set_postfix(_pbar_postfix())
 
-    # Final safety flush
     if ids_buf:
         try:
             flush()
@@ -1186,9 +1347,14 @@ def main() -> int:
                 wal_writer.write_event("RUN_FINISH", {"ok": False, "reason": "upsert_failed"})
             if writer_lock:
                 writer_lock.release()
+            if pbar is not None:
+                pbar.close()
             return 2
 
     dt = time.perf_counter() - t0
+
+    if pbar is not None:
+        pbar.close()
 
     # 9) strict sync check (optional)
     strict_sync = _safe_bool(args.strict_sync)
@@ -1206,7 +1372,6 @@ def main() -> int:
     # 10) write state (only on success)
     write_state = _safe_bool(args.write_state)
     if ok and write_state:
-        # NOTE: index_state 作为状态元数据，也纳入 schema_version=2 report output 契约（写入侧 SSOT 在 index_state.py）。
         tool_name = "index_state"
 
         raw_items: list[dict[str, Any]] = []
@@ -1252,10 +1417,8 @@ def main() -> int:
             "units_skipped": skipped_units,
             "docs_current": len(cur_docs),
             "docs_processed": docs_processed,
-            # Backward-compatible totals
             "docs_deleted": int(docs_deleted_removed),
             "chunks_deleted": int(chunks_deleted_removed + chunks_deleted_changed_tail),
-            # More precise breakdown
             "docs_deleted_removed": int(docs_deleted_removed),
             "docs_changed_tail_deleted": int(docs_changed_tail_deleted),
             "chunks_deleted_removed": int(chunks_deleted_removed),
@@ -1264,12 +1427,12 @@ def main() -> int:
             "expected_chunks": expected_chunks,
             "collection_count": final_count,
             "build_seconds": round(float(dt), 3),
-            # Resume/WAL observability
             "resume_active": bool(resume_active),
             "docs_skipped_resume": int(docs_skipped_resume),
             "wal_path": wal_path.as_posix(),
             "wal_committed_batches": int(wal_committed_batches),
             "wal_upsert_rows_committed_total": int(upsert_rows_committed_total),
+            "log_file": log_path.as_posix(),
         }
 
         ist.write_index_state_report(
@@ -1286,7 +1449,7 @@ def main() -> int:
             items=raw_items,
         )
 
-    # 11) summary
+    # 11) summary (kept on console as key info)
     print("=== BUILD SUMMARY (FlagEmbedding) ===")
     print(f"db_path={db_path}")
     print(f"collection={args.collection}")
@@ -1296,6 +1459,7 @@ def main() -> int:
     if latest:
         print(f"latest_schema={latest}")
     print(f"state_file={state_file}")
+    print(f"log_file={log_path}")
     print(f"units_total={total_units} units_indexed={indexed_units} units_skipped={skipped_units}")
     print(
         f"docs_current={len(cur_docs)} added={len(added_uris)} changed={len(changed_uris)} deleted={len(deleted_uris)} unchanged={len(unchanged_uris)}"
@@ -1362,6 +1526,7 @@ def main() -> int:
         )
         print(f"[OK] wrote db_build_stamp: {stamp_out}")
     except Exception as e:  # noqa: BLE001
+        logger.warning("failed to write db_build_stamp.json: %s: %s", type(e).__name__, str(e))
         print(f"[WARN] failed to write db_build_stamp.json: {type(e).__name__}: {e}")
 
     # WAL finalization / cleanup
@@ -1385,7 +1550,6 @@ def main() -> int:
         except Exception:
             pass
 
-        # If everything is OK and state is written, remove WAL unless explicitly requested.
         if bool(ok) and bool(write_state) and (not bool(args.keep_wal)):
             try:
                 if wal_path.exists():
@@ -1399,6 +1563,13 @@ def main() -> int:
         except Exception:
             pass
 
+    logger.info(
+        "finish: ok=%s docs_processed=%s expected_chunks=%s collection_count=%s",
+        bool(ok),
+        docs_processed,
+        expected_chunks,
+        final_count,
+    )
     return 0
 
 

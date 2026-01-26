@@ -263,17 +263,21 @@ python tools\build_chroma_index_flagembedding.py build --root . --device cuda --
 | `--hnsw-space` | — | 'cosine' | cosine/l2/ip (stored in collection metadata) |
 | `--include-media-stub` | — | — | action=store_true；index media stubs too |
 | `--keep-wal` | — | — | action=store_true；Do not delete WAL on success. |
+| `--log-file` | — | '' | Log file path. Default: <state_dir>/build.log . Relative paths are resolved from --root. |
+| `--log-level` | — | 'INFO' | Logging level for file log: DEBUG/INFO/WARNING/ERROR. |
 | `--min-chunk-chars` | — | 200 | type=int |
-| `--on-missing-state` | — | 'reset' | If state missing but collection is non-empty: reset collection / fail / proceed with full upsert (may keep stale). |
+| `--on-missing-state` | — | 'fail' | If state missing but collection is non-empty: reset collection (DESTRUCTIVE: delete+recreate) / fail / proceed with full upsert (may keep stale). |
 | `--overlap-chars` | — | 120 | type=int |
 | `--plan` | — | None | Optional: chunk_plan.json path used only for db_build_stamp traceability. |
+| `--progress` | — | 'true' | true/false: show a single overall progress bar in console. |
 | `--resume` | — | 'auto' | Resume behavior when WAL exists: auto/off/force. |
 | `--resume-status` | — | — | action=store_true；Inspect state/WAL and exit (read-only). |
 | `--root` | — | '.' | Project root |
 | `--root` | — | '.' | Project root |
-| `--schema-change` | — | 'reset' | If schema_hash differs from LATEST pointer: reset collection (recommended) or fail. |
+| `--schema-change` | — | 'fail' | If schema_hash differs from LATEST pointer: reset collection (DESTRUCTIVE: delete+recreate) or fail. |
 | `--state-root` | — | 'data_processed/index_state' | Directory to store index_state/manifest (relative to root). |
 | `--strict-sync` | — | 'true' | true/false: fail if collection.count != expected_chunks after build. |
+| `--suppress-embed-progress` | — | 'true' | true/false: suppress FlagEmbedding internal tqdm output (Inference Embeddings / pre tokenize). |
 | `--sync-mode` | — | 'incremental' | Sync semantics: none/upsert-only; delete-stale=delete old per-doc then full upsert; incremental=delete old per-doc and only embed changed docs. |
 | `--units` | — | 'data_processed/text_units.jsonl' | — |
 | `--upsert-batch` | — | 256 | type=int |
