@@ -214,6 +214,28 @@ def _default_commands(*, profile_path: Optional[Path]) -> Dict[str, List[str]]:
             "python -m tools.snapshot_stage1_baseline --root . --out data_processed/build_reports/stage1_baseline_snapshot.json",
             "python -m mhy_ai_rag_data.tools.snapshot_stage1_baseline --root . --out data_processed/build_reports/stage1_baseline_snapshot.json",
         ],
+        # Stage-2 (retrieval) workflow (aligned with docs/howto/OPERATION_GUIDE.md Step 11).
+        "stage2_init_eval_cases": [
+            "rag-init-eval-cases",
+            "python tools/init_eval_cases.py --root .",
+            'python tools/suggest_expected_sources.py --root . --query "存档导入与导出怎么做？" --db chroma_db --collection rag_chunks --k 8 --pick 2 --embed-backend auto --embed-model BAAI/bge-m3 --device cpu',
+        ],
+        "stage2_validate_eval_cases": [
+            "python tools/validate_eval_cases.py --root . --cases data_processed/eval/eval_cases.jsonl --check-sources-exist --out data_processed/build_reports/eval_cases_validation.json",
+        ],
+        "stage2_eval_retrieval": [
+            "python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --out data_processed/build_reports/eval_retrieval_report.json",
+            "python tools/run_eval_retrieval.py --root . --cases data_processed/eval/eval_cases.jsonl --db chroma_db --collection rag_chunks --k 5 --retrieval-mode hybrid --dense-topk 50 --keyword-topk 50 --fusion-method rrf --rrf-k 60 --embed-backend auto --embed-model BAAI/bge-m3 --device cpu --out data_processed/build_reports/eval_retrieval_report.json --events-out data_processed/build_reports/eval_retrieval_report.events.jsonl --progress auto",
+        ],
+        "stage2_snapshot_eval_retrieval_baseline": [
+            "python tools/snapshot_eval_retrieval_baseline.py --root . --report data_processed/build_reports/eval_retrieval_report.json --baseline-out data_processed/baselines/eval_retrieval_baseline.json",
+        ],
+        "stage2_compare_eval_retrieval_baseline": [
+            "python tools/compare_eval_retrieval_baseline.py --root . --baseline data_processed/baselines/eval_retrieval_baseline.json --report data_processed/build_reports/eval_retrieval_report.json --allowed-drop 0.0 --bucket-allowed-drop 0.0 --out data_processed/build_reports/eval_retrieval_baseline_compare_report.json",
+        ],
+        "stage2_view_stage2_reports": [
+            "python tools/view_stage2_reports.py --root . --md-out data_processed/build_reports/stage2_summary.md",
+        ],
     }
 
 
@@ -236,6 +258,14 @@ def _make_checks(
     llm_report = reports_dir / "llm_probe.json"
     stage1_verify = reports_dir / "stage1_verify.json"
     stage1_snapshot = reports_dir / "stage1_baseline_snapshot.json"
+
+    # Stage-2 (retrieval) artifacts (all optional; Stage-1 should not require embed deps).
+    eval_cases = root / "data_processed" / "eval" / "eval_cases.jsonl"
+    eval_cases_validation = reports_dir / "eval_cases_validation.json"
+    eval_retrieval_report = reports_dir / "eval_retrieval_report.json"
+    eval_retrieval_baseline = root / "data_processed" / "baselines" / "eval_retrieval_baseline.json"
+    eval_retrieval_baseline_compare = reports_dir / "eval_retrieval_baseline_compare_report.json"
+    stage2_summary = reports_dir / "stage2_summary.md"
 
     # A stable DB freshness basis (updated only on successful write-to-db operations).
     state_dir = state_root if state_root is not None else (root / "data_processed" / "index_state")
@@ -276,6 +306,47 @@ def _make_checks(
             "stage1_baseline_snapshot.json（Stage-1 基线快照）",
             "stage1_snapshot",
             stage1_snapshot,
+            optional=True,
+        ),
+        CheckItem("eval_cases", "eval_cases.jsonl（Stage-2 用例集）", "file", eval_cases, optional=True),
+        CheckItem(
+            "eval_cases_validation",
+            "eval_cases_validation.json（Stage-2 用例集门禁）",
+            "report_v1",
+            eval_cases_validation,
+            inputs=(eval_cases,),
+            optional=True,
+        ),
+        CheckItem(
+            "eval_retrieval_report",
+            "eval_retrieval_report.json（Stage-2 检索回归）",
+            "report_v1",
+            eval_retrieval_report,
+            inputs=(eval_cases, stamp_path) if stamp_exists else (eval_cases, chroma_dir),
+            optional=True,
+        ),
+        # Baseline is intentionally stable (a chosen reference point); do NOT mark it stale based on newer reports.
+        CheckItem(
+            "eval_retrieval_baseline",
+            "eval_retrieval_baseline.json（Stage-2 检索基线）",
+            "json",
+            eval_retrieval_baseline,
+            optional=True,
+        ),
+        CheckItem(
+            "eval_retrieval_baseline_compare_report",
+            "eval_retrieval_baseline_compare_report.json（Stage-2 基线对比）",
+            "report_v1",
+            eval_retrieval_baseline_compare,
+            inputs=(eval_retrieval_report, eval_retrieval_baseline),
+            optional=True,
+        ),
+        CheckItem(
+            "stage2_summary",
+            "stage2_summary.md（Stage-2 汇总）",
+            "file",
+            stage2_summary,
+            inputs=(eval_cases, eval_cases_validation, eval_retrieval_report, eval_retrieval_baseline_compare),
             optional=True,
         ),
     ]
@@ -457,6 +528,20 @@ def _pick_next(evals: Dict[str, Dict[str, Any]], cmds: Dict[str, List[str]]) -> 
         ("llm_probe", "Step 8（probe llm）", "probe_llm"),
         ("stage1_verify", "Step 9（verify stage1）", "verify_stage1"),
         ("stage1_snapshot", "Step 10（snapshot stage1）", "snapshot_stage1"),
+        ("eval_cases", "Step 11（init eval cases）", "stage2_init_eval_cases"),
+        ("eval_cases_validation", "Step 11（validate eval cases）", "stage2_validate_eval_cases"),
+        ("eval_retrieval_report", "Step 11（eval retrieval）", "stage2_eval_retrieval"),
+        (
+            "eval_retrieval_baseline",
+            "Step 11（snapshot eval retrieval baseline）",
+            "stage2_snapshot_eval_retrieval_baseline",
+        ),
+        (
+            "eval_retrieval_baseline_compare_report",
+            "Step 11（compare eval retrieval baseline）",
+            "stage2_compare_eval_retrieval_baseline",
+        ),
+        ("stage2_summary", "Step 11（stage2 summary）", "stage2_view_stage2_reports"),
     ]
 
     # inventory is optional unless units missing
@@ -517,8 +602,8 @@ def _pick_next(evals: Dict[str, Dict[str, Any]], cmds: Dict[str, List[str]]) -> 
 
     return {
         "stage": "complete",
-        "why": "核心产物已齐全（含 plan/db/check 等）；可进入 Stage-2 评测或继续做质量回归。",
-        "commands": ["rag-check-all", "python -m tools.view_stage2_reports  # 若你已跑过 Stage-2"],
+        "why": "Stage-1/Stage-2 关键产物已齐全；可继续做端到端评测（run_eval_rag）或仅查看 Stage-2 汇总。",
+        "commands": cmds.get("stage2_view_stage2_reports", ["python tools/view_stage2_reports.py --root ."]),
     }
 
 
@@ -555,6 +640,12 @@ def _print_human(root: Path, cfg: Dict[str, Any], evals: Dict[str, Dict[str, Any
         "llm_probe",
         "stage1_verify",
         "stage1_snapshot",
+        "eval_cases",
+        "eval_cases_validation",
+        "eval_retrieval_report",
+        "eval_retrieval_baseline",
+        "eval_retrieval_baseline_compare_report",
+        "stage2_summary",
         "index_state",
     ]
     for k in keys:

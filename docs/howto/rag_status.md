@@ -1,7 +1,7 @@
 ---
 title: rag-status 使用说明
 version: v1.0
-last_updated: 2026-01-13
+last_updated: 2026-01-26
 ---
 
 # rag-status 使用说明
@@ -20,6 +20,8 @@ last_updated: 2026-01-13
 2) 下一步建议（NEXT/WHY/CMDS）。
 
 该命令默认不作为门禁（INFO 级别），但可以作为“我现在该跑哪一步”的稳定导航。
+
+补充：当 Stage-1 关键产物齐全后，`rag-status` 也会把 Stage-2（retrieval）常用落盘产物纳入检查与导航（均为 optional）：`eval_cases.jsonl` / `eval_cases_validation.json` / `eval_retrieval_report.json` / baseline/compare / `stage2_summary.md`。
 
 ## 相关文档（权威定义与可执行主线）
 - 日常操作主线（什么时候该跑哪一步、验收口径）：[`OPERATION_GUIDE.md`](OPERATION_GUIDE.md)
