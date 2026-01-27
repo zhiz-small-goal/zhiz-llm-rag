@@ -156,6 +156,13 @@ def render_console(report: Dict[str, Any], *, title: str = "report") -> str:
     lines.extend(_sev_bucket_lines(sev_map, order="asc"))
     lines.append("")
 
+    metrics = summ.get("metrics") if isinstance(summ, dict) else None
+    if isinstance(metrics, dict) and metrics:
+        lines.append("metrics:")
+        for k in sorted(metrics.keys()):
+            lines.append(f"- {k}: {metrics[k]}")
+        lines.append("")
+
     # generated_at metadata (after summary)
     if gen:
         lines.append(f"generated_at: {gen}")
@@ -219,6 +226,12 @@ def render_markdown(
     lines.append("- counts_by_severity (high->low):")
     for line in _sev_bucket_lines(sev_map, order="desc"):
         lines.append(f"  {line}")
+
+    metrics = summ.get("metrics") if isinstance(summ, dict) else None
+    if isinstance(metrics, dict) and metrics:
+        lines.append("- metrics:")
+        for k in sorted(metrics.keys()):
+            lines.append(f"  - {k}: {metrics[k]}")
 
     lines.append("")
 

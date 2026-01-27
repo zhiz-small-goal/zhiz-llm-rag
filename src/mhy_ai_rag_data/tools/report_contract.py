@@ -340,7 +340,15 @@ def ensure_report_v2(obj: Any) -> Dict[str, Any]:
                 for it in (obj.get("items") or [])
                 if isinstance(it, Mapping)
             ]
-            summary = compute_summary(normalized_items).to_dict()
+            base_summary = compute_summary(normalized_items).to_dict()
+            # Preserve user-provided extras in summary (e.g., metrics), without
+            # overwriting core summary fields.
+            extras: Dict[str, Any] = {}
+            for k, v in (obj.get("summary") or {}).items():
+                if k not in base_summary:
+                    extras[k] = v
+            summary = dict(base_summary)
+            summary.update(extras)
             out: Dict[str, Any] = dict(obj)
             out["schema_version"] = 2
             out["tool"] = tool

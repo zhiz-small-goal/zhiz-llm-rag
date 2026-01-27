@@ -272,6 +272,11 @@ def main() -> int:
     finished_at = datetime.now().isoformat(timespec="seconds")
     ok = all(r["returncode"] == 0 for r in results)
 
+    summary_metrics = {
+        "total_seconds": round(total_dt, 3),
+        "steps": len(results),
+    }
+
     report = {
         "started_at": started_at,
         "finished_at": finished_at,
@@ -316,7 +321,7 @@ def main() -> int:
         "generated_at": finished_at,
         "tool": "run_profile_with_timing",
         "root": cwd.as_posix(),
-        "summary": {},
+        "summary": {"metrics": summary_metrics},
         "items": items,
         "data": report,
     }
