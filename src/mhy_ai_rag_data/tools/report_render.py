@@ -96,8 +96,6 @@ def render_console(report: Dict[str, Any], *, title: str = "report") -> str:
     lines.append(f"# {title}")
     if root:
         lines.append(f"root: {root}")
-    if gen:
-        lines.append(f"generated_at: {gen}")
     lines.append("")
 
     lines.append("## details (most severe last)")
@@ -156,6 +154,11 @@ def render_console(report: Dict[str, Any], *, title: str = "report") -> str:
     sev_map = _counts_by_severity(items)
     lines.append("counts_by_severity (low->high):")
     lines.extend(_sev_bucket_lines(sev_map, order="asc"))
+    lines.append("")
+
+    # generated_at metadata (after summary)
+    if gen:
+        lines.append(f"generated_at: {gen}")
 
     # must end with an extra blank line for prompt separation ("\n\n")
     lines.append("")
