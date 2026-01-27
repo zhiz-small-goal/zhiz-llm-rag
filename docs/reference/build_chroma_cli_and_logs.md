@@ -1,7 +1,7 @@
 ---
 title: build_chroma_index_flagembedding CLI 与日志真相表（SSOT）
-version: v1.0
-last_updated: 2026-01-23
+version: v1.1
+last_updated: 2026-01-27
 timezone: America/Los_Angeles
 owner: zhiz
 status: active
@@ -68,6 +68,7 @@ status: active
 ## 2. 组合语义（关键因果规则）
 
 1) **`--resume-status` 只读**：不会加载 embedding 模型，不写入 collection，不写 WAL，不创建 writer lock；用于低成本预检。  
+   - 注意：`schema_hash` 由 `embed_model/chunk_conf/include_media_stub` 等口径参数计算；`--resume-status` 也会基于“当前命令行参数”计算 `schema_hash`。若你漏带 `--include-media-stub`（默认 false），就会得到不同 `schema_hash`，可能触发 `[FATAL] [SCHEMA] LATEST != current`。  
 2) **State 缺失 + collection 非空**：会打印一条“默认评估”WARN：`index_state missing ... policy=<on-missing-state>`。  
 3) **WAL 可续跑覆盖 reset**：若 WAL 表示可续跑（`resume_active=true`），会追加第二条 WARN：`WAL indicates resumable progress; ignore on-missing-state=reset and continue with resume.`，并进入 resume 路径。  
 4) **resume=force**：若无可续跑 WAL，则直接 FATAL 退出。  
@@ -118,6 +119,11 @@ status: active
 
 只读预检（推荐作为 runbook 第一步）：
 ```cmd
+rem 注意：要检查“哪套索引口径”，就要带上同口径参数（尤其 --include-media-stub）
+rem Scheme B（include_media_stub=true）：
+python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status --include-media-stub
+
+rem 文本-only（include_media_stub=false，默认）：
 python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
 ```
 

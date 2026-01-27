@@ -1,7 +1,7 @@
 ---
 title: OPERATION GUIDE（运行手册）
-version: v1.3
-last_updated: 2026-01-26
+version: v1.4
+last_updated: 2026-01-27
 timezone: "America/Los_Angeles"
 owner: "zhiz"
 status: "active"
@@ -210,7 +210,7 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
 **关键参数/注意**：
 - 只读预检查：
   ```cmd
-  python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
+  python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status --include-media-stub
   ```
 - 典型 WARN 含义：
   - `index_state missing ... policy=reset`：分支评估（当你将 `--on-missing-state` 设为 `reset`，且缺 manifest 且库非空时）。
@@ -229,6 +229,11 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
 **Schema mismatch（出现 `[FATAL] [SCHEMA] LATEST != current`）怎么处理**：
 - 只读预检（不写库、不删库）：
   ```cmd
+  rem 注意：--resume-status 也会计算 current schema_hash；必须携带与目标索引一致的口径参数（尤其 include_media_stub）
+  rem Scheme B（include_media_stub=true）：
+  python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status --include-media-stub
+
+  rem 文本-only（include_media_stub=false，默认）：
   python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
   ```
 - 保留旧索引（不覆盖旧 collection）：

@@ -1,7 +1,7 @@
 ---
 title: build_chroma_index_flagembedding.py 使用说明（FlagEmbedding 构建 Chroma 索引）
-version: v1.2
-last_updated: 2026-01-23
+version: v1.3
+last_updated: 2026-01-27
 tool_id: build_chroma_index_flagembedding
 
 impl:
@@ -224,6 +224,18 @@ python tools\build_chroma_index_flagembedding.py build --root .
 
 ### 3) 切换 chunk_conf 后报 schema 不匹配
 这是预期行为。chunk_conf 变化 → schema_hash 变化 → 需要重建索引
+
+### 3.5) 只跑 `--resume-status` 也报：`[SCHEMA] LATEST != current`
+**原因**：`--resume-status` 虽然是只读预检，但它仍会基于**当前命令行参数**计算 `schema_hash`（口径指纹）。如果你之前构建的是 Scheme B（`--include-media-stub`），而预检时漏带该 flag（默认 `include_media_stub=false`），就会得到不同的 `current`，从而触发 mismatch。
+
+**处理**：用与目标索引一致的口径参数执行预检：
+```cmd
+rem Scheme B（include_media_stub=true）
+python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status --include-media-stub
+
+rem 文本-only（include_media_stub=false，默认）
+python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
+```
 
 ### 4) CUDA out of memory
 降低 `--embed-batch` 和 `--upsert-batch`：

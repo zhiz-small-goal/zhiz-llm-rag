@@ -1,7 +1,7 @@
 ---
 title: HANDOFF (SSOT) - zhiz-llm-rag
-version: 11
-last_updated: 2026-01-25
+version: 12
+last_updated: 2026-01-27
 timezone: America/Los_Angeles
 owner: zhiz
 status: active
@@ -256,7 +256,9 @@ python tools\gen_doc_inventory.py --root . --include-untracked --write
 
 - Step3：只读预检（runbook 第一入口）
 ```cmd
-python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
+rem 注意：--resume-status 也会计算 current schema_hash；必须携带与目标索引一致的口径参数（尤其 include_media_stub）
+rem Scheme B（include_media_stub=true）
+python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status --include-media-stub
 ```
 
 - Step6：文档门禁（links/terms/front-matter）
