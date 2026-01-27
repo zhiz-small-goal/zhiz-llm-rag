@@ -1,6 +1,6 @@
 ---
 title: OPERATION GUIDE（运行手册）
-version: v1.5
+version: v1.6
 last_updated: 2026-01-27
 timezone: "America/Los_Angeles"
 owner: "zhiz"
@@ -186,7 +186,8 @@ python -c "import json;obj=json.loads(open('data_processed/chunk_plan.json',enco
 ```cmd
 python tools\run_profile_with_timing.py --profile build_profile_schemeB.json --smoke
 ```
-- 生成的时间报告在 `JSON 报告：data_processed/build_reports/time_report_*.json`
+- 生成 `time_report_<YYYYMMDD_HHMMSS>.json` + `.md`：`data_processed/build_reports/time_report_*.{json,md}`（report-output-v2；计时 payload 位于 `data`）
+- 若带 `--smoke`：会额外计时 `smoke_retriever` / `smoke_pipeline`（同一份 time_report）
 
 **Option B（仅 build：不生成 time_report）**：
 ```cmd
@@ -328,9 +329,10 @@ python retriever_chroma.py --q "存档导入与导出怎么做" --k 5
 （性能计时与成本观测请见 Step 5（build）的“计时版 Option”，闭环步骤只保留正确性路径。）  [性能观测计时 Option](#step-5build向量化--upsert-入库建议用-profile-固化参数并可调-batch)
 
 **建议读报告时优先看**：  
-- `total_seconds`（总耗时）  
-- 每一步 `seconds` + `returncode`（瓶颈在哪、是否有中断）  
-- 参数快照（`device/embed_batch/upsert_batch/chunk_conf/include_media_stub`），用于横向对比  
+- v2 快速判定：`summary.overall_status_label` + `summary.overall_rc`（是否中断/失败）  
+- 总耗时：`data.total_seconds`（配合 `data.started_at` / `data.finished_at`）  
+- 分步耗时：`data.steps[].seconds` + `data.steps[].returncode`（瓶颈在哪、是否有中断；带 `--smoke` 会出现 `smoke_*` 步骤）  
+- 参数快照：`data.params`（`device/embed_batch/upsert_batch/chunk_chars/overlap_chars/min_chunk_chars/include_media_stub/embed_model` 等）  
 
 
 **推荐指令**
@@ -494,7 +496,7 @@ python tools\verify_reports_schema.py --report data_processed\build_reports\unit
 
 - `data_processed/env_report.json`：环境快照（Python/依赖/torch/cuda 等）
 - `data_processed/chunk_plan.json`：plan 结果（report-output-v2；planned_chunks 在 `data.planned_chunks`；含 type_breakdown/chunk 参数/include_media_stub）
-- `data_processed/build_reports/time_report_*.json`：分步计时（validate/plan/build/check），用于比较不同 batch/device 的成本
+- `data_processed/build_reports/time_report_*.{json,md}`：分步计时（capture_env/validate/plan/build/check + 可选 smoke），report-output-v2；关键字段：`summary.*`、`data.total_seconds`、`data.params`、`data.steps[]`
 
 推荐使用计时 wrapper（可选）：
 ```cmd
