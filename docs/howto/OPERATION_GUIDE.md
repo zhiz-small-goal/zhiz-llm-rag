@@ -1,6 +1,6 @@
 ---
 title: OPERATION GUIDE（运行手册）
-version: v1.4
+version: v1.5
 last_updated: 2026-01-27
 timezone: "America/Los_Angeles"
 owner: "zhiz"
@@ -283,9 +283,13 @@ python tools\write_db_build_stamp.py --db chroma_db --collection rag_chunks --pl
 **为何（因果）**：你需要一个“可落地的稳定验收信号”，而不是凭感觉看日志。check 的定位非常明确：若 FAIL，则要么 build 未完成/被中断，要么 plan/build 参数不一致（口径漂移），要么写库发生异常。它把问题域收敛到可操作的范围。  
 **关键参数/注意**：不要再维护任何手填 `expected_chunks` 常量；若你确实要临时覆盖 expected，应明确标注“覆盖值”，并且不建议作为长期流程。  
 **补充（2026-01-26）**：`chunk_plan.json` 的 plan 输出已统一为 report-output-v2（schema_version=2），planned_chunks 在 `data.planned_chunks`。`check_chroma_build.py` 兼容读取两种格式，避免出现“plan 已生成但 check 读不到字段”的误 FAIL（典型报错：`plan missing planned_chunks`）。  
+**补充（2026-01-27）**：`check_chroma_build.py` 默认控制台输出已切换为 report-output-v2 的 v2 渲染（details+summary）。若你需要旧版逐行输出用于 grep/排障（包含 `STATUS: ...`），可加 `--console-format legacy`。  
 **推荐命令**：
 ```cmd
 python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json
+
+:: 可选：旧版逐行输出（包含 STATUS: ...；用于 grep/排障）
+python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json --console-format legacy
 
 :: 可选：落盘 JSON 报告（回归/CI 推荐，固定路径）
 python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed\chunk_plan.json --json-out data_processed\build_reports\check.json

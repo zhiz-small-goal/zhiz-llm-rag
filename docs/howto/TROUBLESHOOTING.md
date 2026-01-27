@@ -1,7 +1,7 @@
 ---
 title: 排障手册（Runbook）
-version: v1.0
-last_updated: 2026-01-26
+version: v1.1
+last_updated: 2026-01-27
 ---
 
 # 排障手册（Runbook）
@@ -120,7 +120,8 @@ last_updated: 2026-01-26
 
 ### 现象
 
-- `check_chroma_build.py` 显示：`STATUS: FAIL (count mismatch ...)`。
+- `check_chroma_build.py` 在 **legacy 控制台模式** 下显示：`STATUS: FAIL (count mismatch ...)`。  
+  说明：默认控制台输出已切换为 report-output-v2 的 v2 渲染（不再包含 `STATUS:` 行）；如需旧输出用于 grep/排障，使用 `--console-format legacy`。
 
 ### 根因（常见）
 
@@ -131,6 +132,7 @@ last_updated: 2026-01-26
 ### 处理
 
 - 只使用 `check_chroma_build.py --plan data_processed/chunk_plan.json` 做强校验。
+- 若你需要旧版逐行输出（包含 `STATUS:`），使用：`check_chroma_build.py --plan data_processed/chunk_plan.json --console-format legacy`。
 - 若 mismatch：先重跑 `tools/plan_chunks_from_units.py`，确认 `planned_chunks` 是否与你预期一致；再对比 build 输出的 `include_media_stub` 与 `chunk_conf`。
 - 若你希望把 md 优先作为回归基线，可在检索侧增加 where 过滤（例如 `source_type=md`）。
 
