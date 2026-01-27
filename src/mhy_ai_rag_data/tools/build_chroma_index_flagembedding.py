@@ -717,8 +717,19 @@ def main() -> int:
         return 2
 
     wal_done_docs: Dict[str, WalDoc] = dict(wal_snapshot.done_docs) if resume_active and wal_snapshot else {}
-    wal_committed_batches = int(wal_snapshot.committed_batches) if resume_active and wal_snapshot else 0
-    upsert_rows_committed_total = int(wal_snapshot.upsert_rows_committed_total) if resume_active and wal_snapshot else 0
+
+    wal_stats: Dict[str, int] = {
+        "committed_batches": int(wal_snapshot.committed_batches) if resume_active and wal_snapshot else 0,
+        "upsert_rows_committed_total": int(wal_snapshot.upsert_rows_committed_total)
+        if resume_active and wal_snapshot
+        else 0,
+    }
+
+    # Backward-compatible aliases (do NOT use as mutation targets in nested functions)
+
+    wal_committed_batches = wal_stats["committed_batches"]
+
+    upsert_rows_committed_total = wal_stats["upsert_rows_committed_total"]
 
     if bool(getattr(args, "resume_status", False)):
         print("=== RESUME STATUS ===")
@@ -995,7 +1006,6 @@ def main() -> int:
         return out
 
     def flush() -> None:
-        nonlocal ids_buf, docs_buf, metas_buf, embeds_buf, upsert_rows_committed_total, wal_committed_batches
         if not ids_buf:
             return
 
@@ -1013,20 +1023,23 @@ def main() -> int:
             raise
 
         batch_size = int(len(ids_buf))
-        upsert_rows_committed_total += batch_size
-        wal_committed_batches += 1
+        wal_stats["upsert_rows_committed_total"] += batch_size
+        wal_stats["committed_batches"] += 1
 
         if wal_writer:
             wal_writer.write_event(
                 "UPSERT_BATCH_COMMITTED",
                 {
                     "batch_size": batch_size,
-                    "upsert_rows_committed_total": upsert_rows_committed_total,
-                    "committed_batches": wal_committed_batches,
+                    "upsert_rows_committed_total": wal_stats["upsert_rows_committed_total"],
+                    "committed_batches": wal_stats["committed_batches"],
                 },
             )
 
-        ids_buf, docs_buf, metas_buf, embeds_buf = [], [], [], []
+        ids_buf.clear()
+        docs_buf.clear()
+        metas_buf.clear()
+        embeds_buf.clear()
 
     t0 = time.perf_counter()
 
@@ -1491,7 +1504,7 @@ def main() -> int:
                     "collection_count": int(final_count),
                     "docs_processed": int(docs_processed),
                     "docs_skipped_resume": int(docs_skipped_resume),
-                    "upsert_rows_committed_total": int(upsert_rows_committed_total),
+                    "upsert_rows_committed_total": int(wal_stats["upsert_rows_committed_total"]),
                 },
             )
             try:
@@ -1539,8 +1552,8 @@ def main() -> int:
                 "docs_processed": int(docs_processed),
                 "docs_skipped_resume": int(docs_skipped_resume),
                 "chunks_upserted": int(chunks_upserted),
-                "upsert_rows_committed_total": int(upsert_rows_committed_total),
-                "committed_batches": int(wal_committed_batches),
+                "upsert_rows_committed_total": int(wal_stats["upsert_rows_committed_total"]),
+                "committed_batches": int(wal_stats["committed_batches"]),
                 "expected_chunks": int(expected_chunks),
                 "collection_count": final_count,
             },
