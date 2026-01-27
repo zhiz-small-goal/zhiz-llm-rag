@@ -213,8 +213,8 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
   python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
   ```
 - 典型 WARN 含义：
-  - `index_state missing ... policy=reset`：默认分支评估（缺 manifest 且库非空）。
-  - `WAL indicates resumable progress; ignore on-missing-state=reset ...`：WAL 匹配且可续跑，最终生效为 resume（不会执行 reset）。
+  - `index_state missing ... policy=reset`：分支评估（当你将 `--on-missing-state` 设为 `reset`，且缺 manifest 且库非空时）。
+  - `WAL indicates resumable progress; ignore on-missing-state=...`：WAL 匹配且可续跑，最终生效为 resume（不会执行 reset）。
 - 若你要强制全量重建：
   ```cmd
   python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume off --on-missing-state reset
@@ -224,12 +224,27 @@ python tools\run_build_profile.py --profile build_profile_schemeB.json
 **做什么**：build 脚本默认启用 `--sync-mode incremental`，会在 `data_processed/index_state/` 下写入索引状态；后续重复运行时：  
 - 只对新增/内容变更文件做 embedding + upsert；  
 - 对删除/内容变更文件先按 doc 粒度 delete 旧 chunk，避免 “count mismatch”；  
-- schema 变化（embed_model/chunk_conf/include_media_stub）会触发自动 reset（默认策略），保证口径一致。
+- schema 变化（embed_model/chunk_conf/include_media_stub）会导致 `schema_hash` 变化；默认策略为 **fail 并退出**（避免不同口径混写到同一 collection）。如需覆盖旧 collection，需显式 `--schema-change reset`（破坏性：delete+recreate）；若希望保留旧索引，可改用新 `--collection` 或新 `--db` 生成新版本索引。
+
+**Schema mismatch（出现 `[FATAL] [SCHEMA] LATEST != current`）怎么处理**：
+- 只读预检（不写库、不删库）：
+  ```cmd
+  python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --resume-status
+  ```
+- 保留旧索引（不覆盖旧 collection）：
+  - 让本次 build 的口径参数与 `LATEST` 对应版本一致（`embed_model/chunk_conf/include_media_stub`），然后再运行 build；或
+  - 使用新版本 collection/db（例如 `--collection rag_chunks_v2` 或新 `--db` 目录）生成新索引版本。
+- 覆盖重建（破坏性）：
+  ```cmd
+  python tools\build_chroma_index_flagembedding.py build --collection rag_chunks --schema-change reset
+  ```
+  > `reset` 会 delete+recreate collection；如需可回滚，请用新 `--collection`/`--db` 并行生成新版本。
 
 **关键参数（只列 runbook 决策会用到的开关；完整参数/默认值以 SSOT 为准）**：
 - `--resume-status`：只读预检（优先执行）。
 - `--resume auto|off|force`：是否使用 WAL 续跑（`off` 表示即便 WAL 存在也不续跑）。
-- `--on-missing-state reset|fail|full-upsert`：state 缺失且库非空时的默认分支评估；若 WAL 可续跑会被覆盖进入 resume。
+- `--on-missing-state reset|fail|full-upsert`：state 缺失且库非空时的分支评估；若 WAL 可续跑会被覆盖进入 resume。
+- `--schema-change fail|reset`：`schema_hash` 与 `LATEST` 不一致时的处理策略（默认 fail；`reset` 为破坏性：delete+recreate）。
 - `--writer-lock true|false`：互斥锁（默认 true）；仅在你能保证“单写入者”时才考虑关闭。
 - `--strict-sync true|false`：构建后强一致验收开关。
 

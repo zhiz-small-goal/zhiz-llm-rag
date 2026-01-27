@@ -48,8 +48,8 @@ status: active
 ### Sync/State
 - `--sync-mode`：默认 `"incremental"`；choices：`none|delete-stale|incremental`
 - `--state-root`：默认 `"data_processed/index_state"`
-- `--on-missing-state`：默认 `"reset"`；choices：`reset|fail|full-upsert`
-- `--schema-change`：默认 `"reset"`；choices：`reset|fail`
+- `--on-missing-state`：默认 `"fail"`；choices：`reset|fail|full-upsert`（`reset` 为破坏性：delete+recreate）
+- `--schema-change`：默认 `"fail"`；choices：`reset|fail`（`reset` 为破坏性：delete+recreate）
 - `--delete-batch`：默认 `5000`
 - `--strict-sync`：默认 `"true"`（字符串；运行时按 bool 解析）
 - `--write-state`：默认 `"true"`（成功完成后写 `index_state.json`）
