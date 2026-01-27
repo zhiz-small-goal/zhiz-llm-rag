@@ -1,0 +1,181 @@
+---
+title: check_chroma_build.py 使用说明（Chroma build 验收 / 对账）
+version: v1.0
+last_updated: 2026-01-27
+tool_id: check_chroma_build
+
+impl:
+  module: mhy_ai_rag_data.check_chroma_build
+  wrapper: check_chroma_build.py
+
+entrypoints:
+  - python check_chroma_build.py
+  - python -m mhy_ai_rag_data.check_chroma_build
+
+contracts:
+  output: report-output-v2
+
+generation:
+  options: static-ast
+  output_contract: ssot
+
+mapping_status: ok
+timezone: America/Los_Angeles
+cli_framework: argparse
+owner: "zhiz"
+status: "active"
+---
+# check_chroma_build.py 使用说明
+
+> 目标：对已构建的 Chroma collection 做 **plan-driven** 的后置验收：以 `chunk_plan.json` 的 `planned_chunks` 作为 expected，强校验 `collection.count == expected`，并输出 **report-output-v2**（schema_version=2）报告。
+
+## SSOT 与口径入口
+
+- **报告输出 SSOT**：`docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- **build CLI/日志真相表**：`docs/reference/build_chroma_cli_and_logs.md`
+- **WAL/续跑术语表**：`docs/reference/GLOSSARY_WAL_RESUME.md`
+
+> 约束：本文聚焦“怎么验收/怎么排障”；字段口径以 SSOT 文档为准。
+
+## 目录
+- [目的](#目的)
+- [适用场景](#适用场景)
+- [快速开始](#快速开始)
+- [输入口径](#输入口径)
+- [输出说明](#输出说明)
+- [退出码](#退出码)
+- [常见问题](#常见问题)
+
+## 目的
+
+`check_chroma_build.py` 用于在 build 完成后做验收/对账，避免长期依赖手填 `--expected-chunks`：
+
+- **强一致验收**：当提供 `--plan` 时，以 `planned_chunks` 为 expected，若 `collection.count != expected` 则 FAIL。
+- **信息留痕**：把入参、期望来源、计数、抽样信息写入 report-output-v2（便于 CI/回归）。
+- **排障入口**：提供 legacy 控制台输出（包含 `STATUS:` 行）用于 grep/快速定位。
+
+## 适用场景
+
+- 你刚跑完 `build_chroma_index_flagembedding.py build ...`，需要确认库内条目数与 plan 一致。
+- 你看到 `LATEST != current (... changed)`，需要对照当前 plan 与库内 count 是否一致。
+- 你在 CI 中想固定落盘 `check.json` 作为回归证据链。
+
+## 快速开始
+
+### 1) 推荐：plan 驱动强校验（默认控制台为 v2 渲染）
+
+```cmd
+python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json
+```
+
+### 2) 需要 grep / 排障：使用 legacy 控制台输出（包含 `STATUS:`）
+
+```cmd
+python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json --console-format legacy
+```
+
+### 3) 固定落盘 JSON（用于 CI/回归）
+
+```cmd
+python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json --json-out data_processed/build_reports/check.json
+```
+
+### 4) JSON 只打到 stdout（不落盘）
+
+```cmd
+python check_chroma_build.py --db chroma_db --collection rag_chunks --plan data_processed/chunk_plan.json --json-stdout
+```
+
+## 输入口径
+
+### `--plan`（推荐）
+
+`--plan` 指向 `chunk_plan.json`（通常由 `tools/plan_chunks_from_units.py` 生成）。
+
+兼容读取两种形状（避免 plan 升级导致误 FAIL）：
+
+- legacy：`{"planned_chunks": 123, ...}`
+- v2：`{"schema_version": 2, ..., "data": {"planned_chunks": 123, ...}}`
+
+### `--expected-chunks`（legacy override）
+
+- 用于没有 plan 时临时对账。
+- 当你提供了 `--plan` 时会被忽略（以 plan 为准）。
+
+## 输出说明
+
+### 控制台输出
+
+- 默认：`--console-format v2`（基于 report-output-v2 的渲染输出，含 details + summary）。
+- 兼容：`--console-format legacy`（逐行输出，包含 `STATUS: PASS|FAIL|INFO ...`）。
+
+### JSON 输出
+
+- `--json-out <path>`：写入 report-output-v2 JSON 到文件（建议落盘到 `data_processed/build_reports/`）。
+- `--json-stdout`：把同一份 JSON 打到 stdout（不落盘）。
+
+> 说明：若既不提供 `--json-out` 也不提供 `--json-stdout`，该工具仅输出控制台文本。
+
+## 退出码
+
+- `0`：PASS / INFO / WARN（不强制失败）
+- `2`：FAIL（强校验不通过或无法读库）
+- `3`：ERROR（未处理异常）
+
+## 常见问题
+
+### 1) `plan not found`
+
+- 现象：`[FATAL] plan not found: ...`
+- 处理：确认 `--plan` 路径正确，或先生成 plan（参见 OPERATION_GUIDE 的“计划/构建/验收”流程）。
+
+### 2) `plan missing planned_chunks`
+
+- 现象：`[FATAL] cannot load plan: plan missing planned_chunks ...`
+- 处理：确认 plan 文件是本项目的 `plan_chunks_from_units` 产物；若你手工拼接/裁剪了 JSON，需保证存在 `planned_chunks` 或 `data.planned_chunks`。
+
+### 3) count mismatch（expected != got）
+
+- 现象：v2 控制台 summary 为 FAIL；或 legacy 模式出现 `STATUS: FAIL (count mismatch; expected=... got=...)`。
+- 常见原因：
+  - 本次 build 使用的参数口径与当前 plan 不一致（例如 `include_media_stub`、`chunk_conf` 或 embedding 配置变化）。
+  - collection 中存在历史残留（增量写入但未 delete-stale / 未 reset）。
+- 排障建议：
+  - 对照 build 的 `index_state` / `LATEST` 与当前配置是否一致（见 `docs/reference/build_chroma_cli_and_logs.md`）。
+  - 若你要强制全量重建，确保 build 侧确实进入 reset 路径（避免被 WAL 续跑分支覆盖）。
+
+---
+
+**注意**：`check_chroma_build.py` 是兼容入口（AUTO-GENERATED WRAPPER），权威实现位于 `src/mhy_ai_rag_data/check_chroma_build.py`。推荐使用 `python -m mhy_ai_rag_data.check_chroma_build`（或 `rag-check`）。
+
+---
+
+## 自动生成区块（AUTO）
+
+> 本节为派生内容：优先改源码或 SSOT，再运行 `python tools/check_readme_code_sync.py --root . --write` 写回。
+> tool_id: `check_chroma_build`
+> entrypoints: `python check_chroma_build.py`, `python -m mhy_ai_rag_data.check_chroma_build`
+
+<!-- AUTO:BEGIN options -->
+| Flag | Required | Default | Notes |
+|---|---:|---|---|
+| `--collection` | — | 'rag_chunks' | Collection name |
+| `--console-format` | — | 'v2' | Console output format: v2=render schema_version=2 report; legacy=previous line-based output. |
+| `--db` | — | 'chroma_db' | Path to Chroma persistent directory |
+| `--expected-chunks` | — | 0 | type=int；Legacy override expected chunks; set to 0 to disable. Ignored if --plan is provided. |
+| `--json-out` | — | None | JSON 报告输出路径（提供则写入该文件） |
+| `--json-stdout` | — | — | action=store_true；将 JSON 报告打印到 stdout（不落盘） |
+| `--plan` | — | None | Path to chunk_plan.json (generated by tools/plan_chunks_from_units.py). If provided, overrides expected. |
+<!-- AUTO:END options -->
+
+<!-- AUTO:BEGIN output-contract -->
+- `contracts.output`: `report-output-v2`
+- `schema_version`: `2`
+- 规则 SSOT: `docs/reference/REPORT_OUTPUT_ENGINEERING_RULES.md`
+- 工具登记 SSOT: `docs/reference/report_tools_registry.toml`
+<!-- AUTO:END output-contract -->
+
+<!-- AUTO:BEGIN artifacts -->
+（无可机读 artifacts 信息。）
+<!-- AUTO:END artifacts -->
+

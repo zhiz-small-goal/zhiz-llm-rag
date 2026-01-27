@@ -1,5 +1,5 @@
 version: 1
-generated_at: 2026-01-25
+generated_at: 2026-01-27
 scope: tools
 readmes:
   -
@@ -60,6 +60,22 @@ readmes:
     entrypoints:
       - "python tools/check_all.py"
       - "python -m mhy_ai_rag_data.tools.check_all"
+    contracts:
+      output: report-output-v2
+    generation:
+      options: static-ast
+      output_contract: ssot
+    mapping_status: ok
+  -
+    path: tools/check_chroma_build_README.md
+    tool_id: check_chroma_build
+    cli_framework: argparse
+    impl:
+      module: mhy_ai_rag_data.check_chroma_build
+      wrapper: check_chroma_build.py
+    entrypoints:
+      - "python check_chroma_build.py"
+      - "python -m mhy_ai_rag_data.check_chroma_build"
     contracts:
       output: report-output-v2
     generation:
